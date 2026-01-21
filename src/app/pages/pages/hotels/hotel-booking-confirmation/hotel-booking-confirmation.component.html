@@ -1,0 +1,353 @@
+<vex-secondary-toolbar current="Hotel Booking Confirmation">
+  <vex-breadcrumbs [crumbs]="['Hotels', 'Booking Confirmation']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="container p-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="md:col-span-2">
+      <mat-card class="p-4 md:p-6">
+     <div class="flex items-start justify-between gap-4">
+      <div class="flex-1">        <div class="flex items-center gap-3">
+             <button
+               mat-stroked-button
+              color="primary"
+              type="button"
+               (click)="goBackToHotel()"
+              >
+                Back to Hotel
+              </button>
+              <div class="text-2xl font-semibold">{{ hotelName }}</div>
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="flex items-center">
+                <mat-icon *ngFor="let s of stars" class="text-black" [ngClass]="{'text-black': s <= starRating, 'text-gray-300': s > starRating}">
+                  {{ s <= starRating ? 'star' : 'star_border' }}
+                </mat-icon>
+              </span>
+              <span class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold">GST ASSURED</span>
+              <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold"
+                    [ngClass]="isRefundable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                {{ isRefundable ? 'Refundable' : 'Non-Refundable' }}
+              </span>
+            </div>
+            <div class="text-gray-700 mt-2">
+              Check-in: {{ inventory?.check_in_time || '—' }} • Check-out: {{ inventory?.check_out_time || '—' }}
+            </div>
+            <div class="text-gray-600 mt-1">
+              {{ params?.from | date:'dd MMM yyyy' }} → {{ params?.to | date:'dd MMM yyyy' }} • {{ summaryText }}
+            </div>
+            <div class="text-gray-600 mt-2" *ngIf="address">{{ address }}</div>
+          </div>
+          <img [src]="photoUrl" alt="Hotel" style="width: 120px; height: 90px; object-fit: cover; border-radius: 8px;" />
+        </div>
+        <mat-divider class="my-4"></mat-divider>
+
+        <div class="text-lg font-semibold mb-2">{{ selectedRoomName || 'Selected Room' }}</div>
+        <div class="p-3 rounded border">
+          <div *ngIf="roomBreakdowns?.length; else simpleIncluded" class="space-y-3 text-xs text-gray-700">
+            <div *ngFor="let rb of roomBreakdowns">
+              <div class="font-medium">
+                Room {{ rb.roomIndex }} • {{ rb.adults }} Adult<span *ngIf="rb.adults !== 1">s</span>
+                <span *ngIf="rb.children>0">, {{ rb.children }} Child</span>
+                <span *ngIf="rb.extraBeds>0">, {{ rb.extraBeds }} Extra Bed</span>
+              </div>
+              <div class="mt-1">
+                <div class="flex justify-between">
+                  <span>Base Fare</span>
+                  <span>₹ {{ rb.baseTotal | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between" *ngIf="rb.extraAmount">
+                  <span>Extra Bed</span>
+                  <span>₹ {{ rb.extraAmount | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between font-semibold">
+                  <span>Room Total</span>
+                  <span>₹ {{ rb.roomTotal | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="border-t border-dashed mt-2 pt-2" *ngIf="charges">
+              <div class="font-medium mb-1">Total For All Rooms</div>
+              <div class="flex justify-between">
+                <span>Base Fare</span>
+                <span>₹ {{ charges?.total_base_fare || charges?.base_price | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between" *ngIf="charges?.service_fee">
+                <span>Service Fee</span>
+                <span>₹ {{ charges?.service_fee | number:'1.2-2' }}</span>
+              </div>
+              <div
+                class="flex justify-between"
+                *ngIf="(charges?.cgst || 0) + (charges?.sgst || 0) + (charges?.igst || 0)"
+              >
+                <span>Taxes</span>
+                <span>
+                  ₹
+                  {{
+                    (charges?.cgst || 0) +
+                      (charges?.sgst || 0) +
+                      (charges?.igst || 0)
+                      | number:'1.2-2'
+                  }}
+                </span>
+              </div>
+              <div class="flex justify-between font-semibold mt-1">
+                <span>Total</span>
+                <span>₹ {{ charges?.final_total || charges?.total_base_fare | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #simpleIncluded>
+            <div class="text-sm">
+              Included:
+              {{ (selectedDetail?.person || params?.adults) }} Persons
+              <span *ngIf="params?.children>0">, {{ params?.children }} Child</span>
+              <span *ngIf="params?.selected_meal_type_name"> • {{ params?.selected_meal_type_name }}</span>
+            </div>
+            <ul class="text-xs text-gray-700 mt-2 space-y-1">
+              <li *ngIf="selectedDetail?.type">Price Type: {{ selectedDetail?.type === 'weekend_days' ? 'Weekend' : 'Weekday' }}</li>
+              <li *ngIf="selectedDetail?.start_date && selectedDetail?.end_date">Range: {{ selectedDetail?.start_date }} → {{ selectedDetail?.end_date }}</li>
+              <li *ngIf="selectedDetail?.amount !== undefined">Base Amount: ₹ {{ selectedDetail?.amount | number:'1.2-2' }}</li>
+            </ul>
+            <div class="mt-3 text-xs text-gray-700" *ngIf="charges">
+              <div class="font-medium mb-1">Price Breakdown</div>
+              <div class="flex justify-between">
+                <span>Base Fare</span>
+                <span>₹ {{ charges?.total_base_fare || charges?.base_price | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between" *ngIf="charges?.service_fee">
+                <span>Service Fee</span>
+                <span>₹ {{ charges?.service_fee | number:'1.2-2' }}</span>
+              </div>
+              <div
+                class="flex justify-between"
+                *ngIf="(charges?.cgst || 0) + (charges?.sgst || 0) + (charges?.igst || 0)"
+              >
+                <span>Taxes</span>
+                <span>
+                  ₹
+                  {{
+                    (charges?.cgst || 0) +
+                      (charges?.sgst || 0) +
+                      (charges?.igst || 0)
+                      | number:'1.2-2'
+                  }}
+                </span>
+              </div>
+              <div class="flex justify-between font-semibold mt-1">
+                <span>Total</span>
+                <span>₹ {{ charges?.final_total || charges?.total_base_fare | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </ng-template>
+          <div class="mt-3 text-xs text-blue-700">See Inclusions</div>
+        </div>
+
+        <div class="text-lg font-semibold mt-4 mb-2">Important Information</div>
+        <div class="p-3 rounded border text-sm text-gray-700">
+          Primary guest should be at least 18 years of age. Passport, Aadhaar and Driving License are acceptable IDs. Pets are not allowed.
+        </div>
+
+        <div class="text-lg font-semibold mt-4 mb-2">Guest Details</div>
+        <div class="p-3 rounded border" *ngIf="form">
+          <form [formGroup]="form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <mat-form-field appearance="outline">
+              <mat-label>Title</mat-label>
+              <mat-select formControlName="title">
+                <mat-option value="Mr">Mr</mat-option>
+                <mat-option value="Mrs">Mrs</mat-option>
+                <mat-option value="Ms">Ms</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>First Name</mat-label>
+              <input matInput formControlName="firstName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Last Name</mat-label>
+              <input matInput formControlName="lastName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="email" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Mobile</mat-label>
+              <input matInput formControlName="phone" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Country</mat-label>
+              <input matInput formControlName="country" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>State</mat-label>
+              <input matInput formControlName="state" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Pincode</mat-label>
+              <input matInput formControlName="pincode" />
+            </mat-form-field>
+            <mat-form-field class="md:col-span-3" appearance="outline">
+              <mat-label>Address</mat-label>
+              <textarea matInput rows="2" formControlName="address"></textarea>
+            </mat-form-field>
+          </form>
+        </div>
+
+        <div class="text-lg font-semibold mt-4 mb-2">Other Guests</div>
+        <div class="p-3 rounded border">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <mat-form-field appearance="outline">
+              <mat-label>Mobile Number</mat-label>
+              <input matInput [formControl]="mobileNumberControl" placeholder="Enter mobile number" />
+            </mat-form-field>
+            <button mat-stroked-button color="primary" (click)="fetchDetailsByMobile()" [disabled]="!mobileNumberControl.value">Fetch Details</button>
+            <div class="text-xs text-gray-600 md:text-right">
+              Required:
+              <span *ngIf="requiredGuestCounts().Adult>0">{{ requiredGuestCounts().Adult }} Adult</span>
+              <span *ngIf="requiredGuestCounts().Child>0"> • {{ requiredGuestCounts().Child }} Child</span>
+              <span *ngIf="requiredGuestCounts().Infant>0"> • {{ requiredGuestCounts().Infant }} Infant</span>
+            </div>
+          </div>
+          <div class="mt-2 text-red-700 text-xs" *ngIf="pickerError">{{ pickerError }}</div>
+          <div class="mt-2 text-green-700 text-xs" *ngIf="pickerSuccess">{{ pickerSuccess }}</div>
+          <div class="mt-4" *ngIf="showTravelerPicker && availableTravelers.length">
+            <div class="text-sm font-semibold mb-2">Select from saved travelers</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div class="flex items-center justify-between p-2 border rounded" *ngFor="let t of availableTravelers; let i = index">
+                <div>
+                  <div class="font-medium">{{ t.title ? (t.title + ' ') : '' }}{{ t.firstName }} {{ t.lastName }}</div>
+                  <div class="text-xs text-gray-600">{{ t.type }}</div>
+                </div>
+                <button mat-stroked-button color="primary" (click)="addTravelerFromAvailable(i)" [disabled]="!canAddType(t.type)">Add</button>
+              </div>
+            </div>
+          </div>
+          <mat-divider class="my-3"></mat-divider>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="flex items-center justify-between p-2 border-b" *ngFor="let g of otherGuests; let gi = index">
+              <div class="font-medium">{{ g.title ? (g.title + ' ') : '' }}{{ g.firstName }} {{ g.lastName }}</div>
+              <button mat-icon-button aria-label="Remove" (click)="removeOtherGuest(gi)"><mat-icon>close</mat-icon></button>
+            </div>
+          </div>
+          <div class="mt-2 text-blue-700 text-sm cursor-pointer" (click)="openManualGuestForm()">
+            + Add Guest
+          </div>
+          <div class="mt-2 border rounded p-3" *ngIf="showManualGuestForm">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+              <mat-form-field appearance="outline">
+                <mat-label>Type</mat-label>
+                <mat-select [(ngModel)]="newGuestType" name="newGuestType">
+                  <mat-option value="Adult">Adult</mat-option>
+                  <mat-option value="Child">Child</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>First Name</mat-label>
+                <input matInput [(ngModel)]="newGuestFirstName" name="newGuestFirstName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Last Name</mat-label>
+                <input matInput [(ngModel)]="newGuestLastName" name="newGuestLastName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" *ngIf="newGuestType === 'Child'">
+                <mat-label>Age</mat-label>
+                <mat-select [(ngModel)]="newGuestAge" name="newGuestAge">
+                  <mat-option *ngFor="let a of childAgeOptions" [value]="a">
+                    {{ a }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <div class="flex gap-2">
+                <button mat-stroked-button color="primary" type="button" (click)="addManualGuest()">Add</button>
+                <button mat-button type="button" (click)="cancelManualGuest()">Cancel</button>
+              </div>
+            </div>
+            <div class="mt-1 text-xs text-red-600" *ngIf="manualGuestError">
+              {{ manualGuestError }}
+            </div>
+          </div>
+        </div>
+
+        <div class="text-lg font-semibold mt-4 mb-2">PAN Details</div>
+        <div class="p-3 rounded border" *ngIf="form">
+          <form [formGroup]="form">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>PAN</mat-label>
+              <input matInput formControlName="pan" />
+            </mat-form-field>
+          </form>
+        </div>
+
+        <div class="text-lg font-semibold mt-4 mb-2">Special Request</div>
+        <div class="p-3 rounded border" *ngIf="form">
+          <form [formGroup]="form">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Request</mat-label>
+              <textarea matInput rows="3" formControlName="specialRequest"></textarea>
+            </mat-form-field>
+          </form>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <button mat-stroked-button (click)="goBackToHotel()">Back to Hotel</button>
+          <button mat-stroked-button color="primary" *ngIf="canHoldBooking" (click)="onHoldBooking()" [disabled]="holding">Hold Booking</button>
+          <button mat-flat-button color="primary" (click)="onPayNow()" [disabled]="paying">Pay Now</button>
+        </div>
+        <div class="mt-2 text-xs text-gray-700" *ngIf="canHoldBooking && inventory?.hold_booking_limit">
+          Hold duration: {{ inventory?.hold_booking_limit }} hours
+        </div>
+        <div class="mt-2" *ngIf="payError" style="color: #b91c1c; font-size: 0.9rem;">{{ payError }}</div>
+        <div class="mt-2" *ngIf="paySuccess" style="color: #065f46; font-size: 0.9rem;">{{ paySuccess }}</div>
+        <div class="mt-2" *ngIf="holdError" style="color: #b91c1c; font-size: 0.9rem;">{{ holdError }}</div>
+        <div class="mt-2" *ngIf="holdSuccess" style="color: #065f46; font-size: 0.9rem;">{{ holdSuccess }}</div>
+      </mat-card>
+    </div>
+    <div>
+      <mat-card>
+        <div class="text-lg font-semibold mb-2 p-2">Price Breakup</div>
+        <div class="p-3 rounded border">
+          <div class="flex justify-between text-sm py-1">
+            <span>Base Price</span>
+            <span>₹ {{ (charges?.total_base_fare ?? params?.price_total) | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges">
+            <span>Service Fee</span>
+            <span>₹ {{ charges?.service_fee | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges?.is_same_state">
+            <span>CGST</span>
+            <span>₹ {{ charges?.cgst | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges?.is_same_state">
+            <span>SGST</span>
+            <span>₹ {{ charges?.sgst | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges && !charges.is_same_state">
+            <span>IGST</span>
+            <span>₹ {{ charges?.igst | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges">
+            <span>Commission</span>
+            <span>- ₹ {{ charges?.commission | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1" *ngIf="charges">
+            <span>TDS on Commission</span>
+            <span>₹ {{ charges?.tds_on_commission | number:'1.2-2' }}</span>
+          </div>
+          <mat-divider class="my-2"></mat-divider>
+          <div class="flex justify-between font-semibold py-1">
+            <span>Total Amount to be paid</span>
+            <span>₹ {{ (charges?.final_total ?? params?.price_total) | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- <div class="text-sm font-semibold mt-4 mb-1">Coupon Codes</div>
+        <div class="flex items-center gap-2">
+          <input class="border rounded px-2 py-2 flex-1" placeholder="Have a Coupon Code" />
+          <button mat-stroked-button>Apply</button>
+        </div> -->
+      </mat-card>
+    </div>
+  </div>
+</div>

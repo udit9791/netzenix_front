@@ -1,0 +1,136 @@
+<vex-secondary-toolbar current="Hotel Access">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Hotel Access']"></vex-breadcrumbs>
+  <ng-container sidenav>
+
+  </ng-container>
+</vex-secondary-toolbar>
+
+<div class="container p-6">
+  <div class="card p-4 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <mat-form-field appearance="outline" *ngIf="showTenantFilter">
+        <mat-label>Tenant</mat-label>
+        <mat-select [formControl]="tenantCtrl">
+          <mat-option [value]="null">All Tenants</mat-option>
+          <mat-option *ngFor="let t of tenantOptions" [value]="t.id">
+            {{ t.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Search User</mat-label>
+        <input
+          matInput
+          [formControl]="userCtrl"
+          [matAutocomplete]="userAuto"
+          placeholder="Type user name or email"
+        />
+        <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
+          <mat-option *ngFor="let u of filteredUsers$ | async" [value]="u">
+            {{ u.label }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Search Hotel</mat-label>
+        <input
+          matInput
+          [formControl]="hotelQueryCtrl"
+          [disabled]="!selectedCountryId || !selectedStateId || !selectedCityId"
+          [matAutocomplete]="hotelAuto"
+          placeholder="Search and add hotels"
+        />
+        <mat-autocomplete #hotelAuto="matAutocomplete" [displayWith]="displayHotel">
+          <mat-option *ngFor="let h of filteredHotels$ | async" [value]="h">
+            {{ h.label }}
+          </mat-option>
+        </mat-autocomplete>
+        <mat-hint *ngIf="!selectedCountryId || !selectedStateId || !selectedCityId">
+          Select Country, State and City to search hotels
+        </mat-hint>
+      </mat-form-field>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Country</mat-label>
+          <mat-select [formControl]="countryCtrl">
+            <mat-option [value]="null">All Countries</mat-option>
+            <mat-option *ngFor="let c of countries" [value]="c.id">{{ c.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>State</mat-label>
+          <mat-select [formControl]="stateCtrl">
+            <mat-option [value]="null">All States</mat-option>
+            <mat-option *ngFor="let s of states" [value]="s.id">{{ s.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>City</mat-label>
+          <mat-select [formControl]="cityCtrl">
+            <mat-option [value]="null">All Cities</mat-option>
+            <mat-option *ngFor="let ci of cities" [value]="ci.id">{{ ci.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Removed selected hotels chips in search area -->
+  </div>
+
+  <div class="card p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-lg font-semibold">Assigned Hotel Access</div>
+      <button mat-flat-button color="primary" (click)="openAssignDialog()" *ngIf="hasPermission('create_hotel_access')">
+        <mat-icon class="mr-2">add</mat-icon>
+        Add/Update Access
+      </button>
+    </div>
+    <table mat-table [dataSource]="displayAssignments" class="w-full">
+      <ng-container matColumnDef="user">
+        <th mat-header-cell *matHeaderCellDef>User</th>
+        <td mat-cell *matCellDef="let a">{{ a.userName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="hotel">
+        <th mat-header-cell *matHeaderCellDef>Hotel</th>
+        <td mat-cell *matCellDef="let a">{{ a.hotelName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="city">
+        <th mat-header-cell *matHeaderCellDef>City</th>
+        <td mat-cell *matCellDef="let a">{{ a.city }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="state">
+        <th mat-header-cell *matHeaderCellDef>State</th>
+        <td mat-cell *matCellDef="let a">{{ a.state }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="country">
+        <th mat-header-cell *matHeaderCellDef>Country</th>
+        <td mat-cell *matCellDef="let a">{{ a.country }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let a">
+          <button mat-stroked-button color="warn" (click)="deleteAssignment(a.userId)" *ngIf="hasPermission('edit_hotel_access')">
+            <mat-icon class="mr-1">delete</mat-icon>
+            Remove
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+    <div class="text-center text-gray-600 mt-4" *ngIf="assignments.length === 0">No assignments found.</div>
+  </div>
+</div>
+
+<!-- Assign dialog moved to standalone component -->

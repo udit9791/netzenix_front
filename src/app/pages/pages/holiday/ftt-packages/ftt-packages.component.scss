@@ -1,0 +1,68 @@
+.proposal-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background: url('https://picsum.photos/id/1025/1600/900') no-repeat center/cover;
+  min-height: 100vh;
+}
+
+.proposal-card {
+  max-width: 600px;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.section {
+  margin-top: 20px;
+}
+
+.hint {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.destination-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.city-field {
+  flex: 2;
+}
+
+.night-field {
+  flex: 1;
+}
+
+.suggest-btn {
+  height: 56px;
+}
+
+.add-city {
+  font-size: 13px;
+  color: #0d6efd;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.options {
+  margin-top: 12px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.actions {
+  text-align: right;
+  margin-top: 20px;
+}

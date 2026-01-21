@@ -1,0 +1,71 @@
+<div class="rejection-modal">
+  <h2 mat-dialog-title class="text-xl font-semibold text-gray-800 mb-4">
+    Reject Transaction
+  </h2>
+
+  <mat-dialog-content class="pb-4">
+    <div class="mb-4">
+      <p class="text-gray-600 mb-2">
+        You are about to reject transaction <strong>#{{ data.transaction.reference_id }}</strong>
+      </p>
+      <p class="text-sm text-gray-500 mb-4">
+        Amount: <strong>₹{{ data.transaction.amount | number:'1.2-2' }}</strong>
+      </p>
+    </div>
+
+    <form [formGroup]="rejectionForm" class="space-y-4">
+      <div>
+        <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
+          Rejection Reason <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          id="reason"
+          formControlName="reason"
+          rows="4"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Please provide a reason for rejecting this transaction..."
+          [class.border-red-500]="reasonControl?.invalid && reasonControl?.touched"
+        ></textarea>
+        
+        <div *ngIf="reasonControl?.invalid && reasonControl?.touched" class="mt-1">
+          <p *ngIf="reasonControl?.errors?.['required']" class="text-sm text-red-600">
+            Rejection reason is required
+          </p>
+          <p *ngIf="reasonControl?.errors?.['minlength']" class="text-sm text-red-600">
+            Reason must be at least 1 character long
+          </p>
+          <p *ngIf="reasonControl?.errors?.['maxlength']" class="text-sm text-red-600">
+            Reason cannot exceed 1000 characters
+          </p>
+        </div>
+        
+        <div class="mt-1 text-sm text-gray-500">
+          {{ reasonControl?.value?.length || 0 }}/1000 characters
+        </div>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="flex justify-end space-x-3 pt-4 border-t">
+    <button
+      mat-button
+      type="button"
+      (click)="onCancel()"
+      class="px-4 py-2 text-gray-600 hover:text-gray-800"
+      [disabled]="isSubmitting"
+    >
+      Cancel
+    </button>
+    <button
+      mat-raised-button
+      color="warn"
+      type="button"
+      (click)="onReject()"
+      class="px-6 py-2 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+      [disabled]="rejectionForm.invalid || isSubmitting"
+    >
+      <span *ngIf="!isSubmitting">Reject Transaction</span>
+      <span *ngIf="isSubmitting">Rejecting...</span>
+    </button>
+  </mat-dialog-actions>
+</div>

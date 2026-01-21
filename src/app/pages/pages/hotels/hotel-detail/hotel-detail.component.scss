@@ -1,0 +1,154 @@
+.hero {
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.hero-image-wrap {
+  position: relative;
+}
+.hero-image {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.hero-photo-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #0070f3;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.hero-photo-badge .arrow {
+  font-size: 16px;
+}
+.hero-info .title {
+  font-size: 20px;
+  font-weight: 600;
+}
+.hero-info .rating mat-icon {
+  color: #ffcc00;
+}
+.hero-info .rating mat-icon.muted {
+  color: #ddd;
+}
+.hero-price .label {
+  font-size: 12px;
+  color: #666;
+}
+.hero-price .price {
+  font-size: 22px;
+  font-weight: 700;
+}
+.hero-price .muted {
+  font-size: 11px;
+  color: #999;
+}
+.section {
+  padding: 12px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.rooms-list .room-card {
+  display: grid;
+  grid-template-columns: 160px 1fr 220px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+.room-left {
+  position: relative;
+}
+.room-image {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.room-photo-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #0070f3;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.room-photo-badge .arrow {
+  font-size: 14px;
+}
+.room-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.room-meta {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+.room-attributes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 24px;
+  row-gap: 4px;
+}
+.room-attributes span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.room-attributes mat-icon {
+  font-size: 16px;
+}
+.room-features {
+  font-size: 12px;
+  color: #444;
+  margin-top: 6px;
+}
+.room-price .price {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.room-options-full {
+  grid-column: 1 / -1;
+}
+
+.room-amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.room-amenity-chip {
+  font-size: 11px;
+}
+
+.section .location-map {
+  background-size: cover;
+  background-position: center;
+}

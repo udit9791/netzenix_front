@@ -1,0 +1,133 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="title">Your Flight Details</div>
+    <button mat-icon-button (click)="dialogRef.close()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <mat-tab-group class="tabs">
+    <mat-tab label="Flight Detail">
+      <div class="summary-bar">
+        <div class="depart">
+          <div class="label">DEPART</div>
+          <div class="date">{{ departLabel }}</div>
+        </div>
+        <div class="route">
+          <div class="codes">{{ originCode }} → {{ destinationCode }}</div>
+          <div class="meta">{{ summaryStops }} | {{ summaryDuration }}</div>
+        </div>
+        <div class="refundable" [ngClass]="isRefundable ? 'yes' : 'no'">
+          {{ isRefundable ? 'Refundable' : 'Non-Refundable' }}
+        </div>
+      </div>
+
+      <div class="itinerary">
+        <div class="leg" *ngFor="let s of allSegments; let i = index">
+          <div class="left">
+            <div class="dep-time">{{ s.departureTime }}</div>
+            <div class="dep-date">{{ s.flightDateLabel }}</div>
+            <div class="spacer"></div>
+            <div class="arr-time">{{ s.arrivalTime }}</div>
+            <div class="arr-date">{{ s.arrivalDateLabel }}</div>
+          </div>
+          <div class="middle">
+            <div class="node start"></div>
+            <div class="line dotted"></div>
+            <div class="node end"></div>
+          </div>
+          <div class="right">
+            <div class="place">
+              <span class="city-strong">{{ s.fromCity || s.from }}</span>
+              <!-- <span class="code">[{{ s.from }}]</span> -->
+            </div>
+            <div class="sub">Terminal {{ s.depTerminal || '-' }}</div>
+            <div class="duration">{{ s.duration }}</div>
+            <div class="place">
+              <span class="city-strong">{{ s.toCity || s.to }}</span>
+              <!-- <span class="code">[{{ s.to }}]</span> -->
+            </div>
+            <div class="sub">Terminal {{ s.arrTerminal || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="connecting" *ngFor="let s of allSegments; let idx = index">
+          <div *ngIf="connectingTime(idx) && idx < allSegments.length - 1" class="connecting-row">
+            <span class="icon">✈</span>
+            <span>Connecting Time : {{ connectingTime(idx) }}</span>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Fare Summary & Rules">
+      <div class="fare-summary-rules">
+        <div class="fare-details-card">
+          <div class="fare-breakup">
+            <div class="fb-title">Fare Breakup for {{ originCode }}-{{ destinationCode }}</div>
+            <div class="fb-row"><span>Base Fare Adult</span><span>₹ {{ (fareCalculationData?.base_fare_adult || 0) | number:'1.0-0' }} x {{ fareCalculationData?.adult_count || (data.adults || 1) }}</span></div>
+            <div class="fb-row"><span>Service Fee</span><span>₹ {{ (fareCalculationData?.service_fee || 0) | number:'1.0-2' }}</span></div>
+            <ng-container *ngIf="fareCalculationData?.is_same_state === false">
+              <div class="fb-row"><span>Service Fee IGST</span><span>₹ {{ (fareCalculationData?.igst || 0) | number:'1.0-2' }}</span></div>
+            </ng-container>
+            <ng-container *ngIf="fareCalculationData?.is_same_state === true">
+              <div class="fb-row"><span>Service Fee SGST</span><span>₹ {{ (fareCalculationData?.sgst || 0) | number:'1.0-2' }}</span></div>
+              <div class="fb-row"><span>Service Fee CGST</span><span>₹ {{ (fareCalculationData?.cgst || 0) | number:'1.0-2' }}</span></div>
+            </ng-container>
+            <div class="fb-row"><span>Commission</span><span class="neg">-₹ {{ (fareCalculationData?.commission || 0) | number:'1.0-2' }}</span></div>
+            <div class="fb-row"><span>TDS on Commission</span><span>₹ {{ (fareCalculationData?.tds_on_commission || 0) | number:'1.0-2' }}</span></div>
+            <div class="fb-row total"><span>Total Amount</span><span>₹ {{ (fareCalculationData?.final_total || totalAmount) | number:'1.0-1' }}</span></div>
+            <div class="fb-row" *ngIf="loadingCharges"><span>Loading charges…</span><span>—</span></div>
+            <div class="fb-row" *ngIf="!loadingCharges && errorCharges"><span>Error</span><span>{{ errorCharges }}</span></div>
+          </div>
+        </div>
+
+        <div class="fare-rules-card">
+          <div class="rules-header">
+            <div class="route">{{ originCode }} → {{ destinationCode }}</div>
+            <div class="aud-label">ADULT</div>
+          </div>
+
+          <div class="rules-section">
+            <div class="section-title">Cancellation Fee(Per Pax/ Per Journey)</div>
+            <div class="rule-row" *ngFor="let r of displayCancellationRules">
+              <div class="label">{{ r.label }}</div>
+              <div class="value">INR {{ r.amount | number:'1.0-0' }}</div>
+            </div>
+            <div class="rule-row" *ngIf="!displayCancellationRules.length">
+              <div class="label">N/A</div>
+              <div class="value">INR 0</div>
+            </div>
+          </div>
+
+          <!-- <div class="rules-notes">
+            <ul>
+              <li>* GST and RAF charges will be applicable on the cancellation penalty.</li>
+              <li>* The above data is indicatory , fare rules are subject to changes by the Airline from time to time depending upon Fare class and change/cancellation fee amount may also vary based on fluctuations in currency conversion rates.</li>
+              <li>* Although we will try to keep this section updated regularly.</li>
+              <li>* Cancellation/Reissue fees will follow the more restrictive fare type.</li>
+              <li>* Feel free to call our Contact Centre for exact cancellation/change fee.</li>
+              <li>* Cancellation/Date change request will be accepted 30 hrs prior to departure</li>
+            </ul>
+          </div> -->
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Baggage & Inclusions">
+      <div class="baggage-block">
+        <div class="bag-icon"><mat-icon>luggage</mat-icon></div>
+        <div class="bag-info">
+          <div class="bag-title">Check-in</div>
+          <div class="bag-sub">Adult : {{ checkinWeight }}</div>
+          <div class="bag-title">Cabin</div>
+          <div class="bag-sub">Adult : {{ cabinWeight }}</div>
+        </div>
+      </div>
+      <div class="inclusions">
+        <!-- <div class="row"><span>Baggage</span><strong>{{ checkinWeight }}</strong></div> -->
+        <!-- <div class="row"><span>Meal</span><strong>{{ data.fare?.flight_inventory?.meal_option || 'N/A' }}</strong></div>
+        <div class="row"><span>Seat</span><strong>{{ data.fare?.flight_inventory?.seat_option || 'N/A' }}</strong></div>
+        <div class="row" *ngIf="data.fare?.infant_price !== undefined"><span>Infant Price</span><strong>₹{{ (data.fare?.infant_price || 0) | number:'1.0-0' }}</strong></div> -->
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

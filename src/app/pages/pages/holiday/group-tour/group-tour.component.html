@@ -1,0 +1,125 @@
+<div class="group-tour-page" [formGroup]="filtersForm">
+  <div class="container">
+
+    <!-- LEFT: filters -->
+    <aside class="filters" role="region" aria-label="Search filters">
+      <mat-card class="filter-card">
+        <mat-card-content>
+          <h4>Ex-City</h4>
+          <mat-selection-list formControlName="cities">
+            <mat-list-option *ngFor="let c of ['Ahmedabad','Bangalore','Chennai','Delhi','Hyderabad','Kolkata','Mumbai']" [value]="c">
+              {{ c }}
+            </mat-list-option>
+          </mat-selection-list>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="filter-card">
+        <mat-card-content>
+          <h4>Departure dates</h4>
+          <mat-list>
+            <mat-list-item *ngFor="let m of ['September 2025','October 2025','November 2025','December 2025']">
+              <mat-checkbox>{{ m }}</mat-checkbox>
+            </mat-list-item>
+          </mat-list>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="filter-card">
+        <mat-card-content>
+          <h4>Price per person</h4>
+
+          <div class="price-values">
+            <div>Min: ₹{{ filtersForm.value.priceRange[0] | number }}</div>
+            <div>Max: ₹{{ filtersForm.value.priceRange[1] | number }}</div>
+          </div>
+
+          <!-- Use two sliders for range (Angular Material lacks built-in range) -->
+          <!-- <mat-slider min="{{minPrice}}" [max]="maxPrice" step="100" thumbLabel
+                      [value]="filtersForm.value.priceRange[0]"
+                      (input)="onMinPriceChange($any($event.target).value)">
+          </mat-slider>
+
+          <mat-slider min="{{minPrice}}" [max]="maxPrice" step="100" thumbLabel
+                      [value]="filtersForm.value.priceRange[1]"
+                      (input)="onMaxPriceChange($any($event.target).value)">
+          </mat-slider> -->
+
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="filter-card">
+        <mat-card-content>
+          <h4>Operator Brand</h4>
+          <!-- <mat-chip-list>
+            <mat-chip *ngFor="let b of ['Nexus DMC','NexusOne','Voy Holidays']" selectable (click)="toggleOperator(b)">
+              {{ b }}
+            </mat-chip>
+          </mat-chip-list> -->
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="filter-card small">
+        <mat-card-content>
+          <button mat-stroked-button color="primary" (click)="filtersForm.reset({ priceRange: [minPrice, maxPrice], cities: [], rating: 0, durations: [], operatorBrand: [] })">
+            Reset Filters
+          </button>
+        </mat-card-content>
+      </mat-card>
+    </aside>
+
+    <!-- RIGHT: listing -->
+    <main class="listings" role="main">
+      <div class="top-count">
+        <span>{{ packages.length }} results</span>
+        <mat-button-toggle-group value="relevance" name="sort">
+          <mat-button-toggle value="relevance">Relevance</mat-button-toggle>
+          <mat-button-toggle value="price-asc">Price low → high</mat-button-toggle>
+          <mat-button-toggle value="price-desc">Price high → low</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <section class="package-list">
+        <mat-card class="package-card" *ngFor="let pkg of packages">
+          <div class="card-inner">
+            <div class="thumb">
+              <img [src]="pkg.thumb" [alt]="pkg.title" />
+              <div class="days-chip">{{ pkg.days }}</div>
+            </div>
+
+            <div class="content">
+              <div class="title-row">
+                <h3 class="title">{{ pkg.title }}</h3>
+                <div class="price-block">
+                  <div class="price">₹ {{ formatPrice(pkg.price) }}</div>
+                  <div *ngIf="pkg.oldPrice" class="old">₹ {{ formatPrice(pkg.oldPrice) }}</div>
+                </div>
+              </div>
+
+              <p class="short-desc">{{ pkg.shortDesc }}</p>
+
+              <div class="meta-row">
+                <div class="left-meta">
+                  <div class="departure">{{ pkg.departure }}</div>
+                  <div class="highlights">
+                    <!-- <mat-chip-list>
+                      <mat-chip *ngFor="let h of pkg.highlights">{{ h }}</mat-chip>
+                    </mat-chip-list> -->
+                  </div>
+                </div>
+
+                <div class="right-actions">
+                  <button mat-stroked-button color="primary" (click)="onViewDetails(pkg)">View Details</button>
+                </div>
+              </div>
+
+              <div class="tags-row">
+                <mat-chip *ngFor="let t of pkg.tags" class="tag">{{ t }}</mat-chip>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </section>
+    </main>
+  </div>
+</div>

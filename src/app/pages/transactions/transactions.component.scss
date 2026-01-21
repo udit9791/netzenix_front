@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  padding: 16px 24px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.transactions-card {
+  margin-bottom: 16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0 20px;
+}
+
+.toolbar mat-form-field {
+  width: 280px;
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+table {
+  border-radius: 8px;
+}
+
+.loading {
+  padding: 24px;
+}
+
+mat-paginator {
+  margin-top: 12px;
+}
+
+/* Tidy up Material table spacing */
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  padding: 12px 16px;
+}
+
+/* Type coloring */
+.type-credit {
+  color: #2e7d32; /* Material Green 800 */
+  font-weight: 600;
+}
+
+.type-debit {
+  color: #c62828; /* Material Red 800 */
+  font-weight: 600;
+}

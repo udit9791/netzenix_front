@@ -1,0 +1,18 @@
+<h2 mat-dialog-title>Add Money</h2>
+
+<mat-dialog-content>
+  <div class="p-4">
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>Enter amount</mat-label>
+      <input matInput type="number" [(ngModel)]="amount" min="1" required>
+      <span matPrefix>₹&nbsp;</span>
+    </mat-form-field>
+
+    
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button color="primary" [disabled]="!amount || amount <= 0" (click)="proceed()">Proceed</button>
+</mat-dialog-actions>

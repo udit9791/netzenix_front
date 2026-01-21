@@ -1,0 +1,112 @@
+:host {
+  display: block;
+}
+
+//.container {
+  //max-width: 960px;
+///}
+
+.container {
+  max-width: 100% !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+.pricing-table {
+  font-size: 9px;
+  border-collapse: collapse;
+  table-layout: auto;
+  width: max-content;
+}
+.pricing-table th,
+.pricing-table td {
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+.pricing-table .pricing-input {
+  width: 100%;
+  height: 30px;
+  font-size: 13px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 3;
+}
+.pricing-table .p-2 { padding: 4px !important; }
+.pricing-table .p-1 { padding: 2px !important; }
+
+.table-wrap {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  overflow-x: auto;
+}
+
+.meal-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meal-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.meal-label {
+  font-size: 10px;
+  color: #555;
+}
+.category-col {
+  font-weight: 600;
+  width: 110px;
+  min-width: 100px;
+}
+.pricing-table .category-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+}
+.weekday-table thead .category-col {
+  background: #fef3c7;
+}
+.weekend-table thead .category-col {
+  background: #dbeafe;
+}
+.date-col,
+.date-cell {
+  min-width: 140px;
+  position: relative;
+  z-index: 2;
+}
+.tables-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.table-block {
+  flex: 1 1 520px;
+  min-width: 420px;
+}
+.table-title {
+  font-weight: 600;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+}
+.table-title.weekday {
+  background: #fef3c7;
+}
+.table-title.weekend {
+  background: #dbeafe;
+}
+.pricing-table tbody tr.occ-group-alt td {
+  background: #f3f4f6;
+}
+.pricing-table tbody tr.occ-group-alt .category-col {
+  background: #f3f4f6;
+}

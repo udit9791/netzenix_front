@@ -1,0 +1,14 @@
+@media print {
+  .print-only {
+    display: block;
+  }
+  
+  .no-print {
+    display: none;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}

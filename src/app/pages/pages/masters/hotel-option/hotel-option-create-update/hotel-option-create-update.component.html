@@ -1,0 +1,37 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <div mat-dialog-title class="flex items-center justify-between">
+    <h2 class="headline m-0 text-xl font-medium">{{ mode === 'create' ? 'New Hotel Option' : 'Edit Hotel Option' }}</h2>
+    <button mat-dialog-close mat-icon-button type="button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="flex flex-col">
+      <mat-form-field class="mt-4">
+        <mat-label>Type</mat-label>
+        <mat-select formControlName="type" required>
+          <mat-option value="meal_option">Meal Option</mat-option>
+          <mat-option value="bed_type">Bed Type</mat-option>
+          <mat-option value="room_type">Room Type</mat-option>
+          <mat-option value="room_view">Room View</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('type')?.hasError('required')">Type is required</mat-error>
+      </mat-form-field>
+
+      <mat-form-field class="mt-4">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" required maxlength="160" />
+        <mat-error *ngIf="form.get('name')?.hasError('required')">Name is required</mat-error>
+      </mat-form-field>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close type="button">Cancel</button>
+    <button color="primary" mat-raised-button type="submit" [disabled]="form.invalid || isLoading">
+      {{ mode === 'create' ? 'Create' : 'Update' }}
+    </button>
+  </mat-dialog-actions>
+</form>
+

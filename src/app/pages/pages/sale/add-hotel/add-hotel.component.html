@@ -1,0 +1,399 @@
+<vex-secondary-toolbar current="Add Hotel">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Add Hotel']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <a class="text-blue-600 underline" [routerLink]="['/sale/hotels']">Back</a>
+
+  <div class="card mt-4 p-4">
+    <form [formGroup]="hotelForm">
+    <mat-tab-group [selectedIndex]="selectedIndex" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab label="Basic Info">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" formGroupName="basic">
+          <mat-form-field appearance="outline">
+            <mat-label>Property Name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hotel Star Rating</mat-label>
+            <mat-select formControlName="rating">
+              <mat-option *ngFor="let r of [1,2,3,4,5]" [value]="r">{{ r }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>When was this property built</mat-label>
+            <mat-select formControlName="builtYear">
+              <mat-option *ngFor="let y of years" [value]="y">{{ y }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+       
+
+          <div class="flex justify-end w-full mt-2">
+            <button mat-flat-button color="primary" (click)="saveStep1()" [disabled]="basicForm.invalid || saving">Save And Continue</button>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Location" [disabled]="addMode && !step1Completed">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" formGroupName="location">
+          <mat-form-field appearance="outline" floatLabel="always" class="md:col-span-2">
+            <mat-label>Address</mat-label>
+            <input matInput formControlName="address" #addressInput (input)="onAddressInput($event)" />
+          </mat-form-field>
+      
+          <mat-form-field appearance="outline" floatLabel="always">
+            <mat-label>Country</mat-label>
+            <input matInput formControlName="country" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" floatLabel="always">
+            <mat-label>State</mat-label>
+            <input matInput formControlName="state" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" floatLabel="always">
+            <mat-label>City</mat-label>
+            <input matInput formControlName="city" [readonly]="true" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" floatLabel="always">
+            <mat-label>Pincode</mat-label>
+            <input matInput formControlName="pincode" placeholder="Postal Code" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" floatLabel="always" *ngIf="false">
+            <mat-label>Latitude</mat-label>
+            <input matInput formControlName="latitude" placeholder="e.g., 23.0735" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" floatLabel="always" *ngIf="false">
+            <mat-label>Longitude</mat-label>
+            <input matInput formControlName="longitude" placeholder="e.g., 72.5713" />
+          </mat-form-field>
+          <div class="flex justify-end w-full mt-2">
+            <button mat-flat-button color="primary" (click)="saveLocation()">Save And Continue</button>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Amenities" [disabled]="addMode && !step1Completed">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4" formGroupName="amenities">
+          <ng-container *ngIf="amenityOptions?.length; else amenityFallback">
+            <mat-checkbox
+              *ngFor="let a of amenityOptions"
+              [checked]="isAmenitySelected(a.id)"
+              (change)="onAmenityToggle(a.id, $event.checked)"
+            >
+              {{ a.name }}
+            </mat-checkbox>
+          </ng-container>
+          <ng-template #amenityFallback>
+            <mat-checkbox formControlName="wifi">Wi-Fi</mat-checkbox>
+            <mat-checkbox formControlName="parking">Parking</mat-checkbox>
+            <mat-checkbox formControlName="pool">Pool</mat-checkbox>
+            <mat-checkbox formControlName="gym">Gym</mat-checkbox>
+            <mat-checkbox formControlName="spa">Spa</mat-checkbox>
+            <mat-checkbox formControlName="restaurant">Restaurant</mat-checkbox>
+          </ng-template>
+          <div class="md:col-span-3 flex justify-end w-full mt-2">
+            <button mat-flat-button color="primary" (click)="saveAmenities()">Save And Continue</button>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Rooms" [disabled]="addMode && !step1Completed">
+        <div class="mt-4">
+          <div class="flex justify-between items-center mb-2">
+            <div class="font-medium">Rooms</div>
+            <button mat-stroked-button color="primary" (click)="addRoom()">
+              <mat-icon>add</mat-icon>
+              Add Room
+            </button>
+          </div>
+          <div formArrayName="rooms" class="flex flex-col gap-4">
+            <div *ngFor="let group of rooms.controls; let i = index" [formGroupName]="i" class="border rounded p-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <mat-form-field appearance="outline">
+                  <mat-label>Room Name</mat-label>
+                  <input matInput formControlName="roomName" placeholder="Enter Room Name" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Number of Available Room(s)</mat-label>
+                  <input matInput formControlName="availableRooms" type="number" placeholder="Enter Room Count" />
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="w-full mt-2">
+                <mat-label>Room Description</mat-label>
+                <textarea matInput formControlName="roomDescription" rows="3" placeholder="Enter Room Description"></textarea>
+                <mat-hint>0 of 500</mat-hint>
+              </mat-form-field>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Meal Options</mat-label>
+                  <mat-select formControlName="mealOption">
+                    <ng-container *ngIf="mealOptions?.length; else mealOptionFallback">
+                      <mat-option *ngFor="let m of mealOptions" [value]="m.id">{{ m.name }}</mat-option>
+                    </ng-container>
+                    <ng-template #mealOptionFallback>
+                      <mat-option *ngFor="let m of ['Room Only','Breakfast','Half Board','Full Board','All Inclusive']" [value]="m">{{ m }}</mat-option>
+                    </ng-template>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Bed Type</mat-label>
+                  <mat-select formControlName="bedType">
+                    <ng-container *ngIf="bedTypes?.length; else bedTypeFallback">
+                      <mat-option *ngFor="let b of bedTypes" [value]="b.id">{{ b.name }}</mat-option>
+                    </ng-container>
+                    <ng-template #bedTypeFallback>
+                      <mat-option *ngFor="let b of ['Single','Double','Twin','Queen','King']" [value]="b">{{ b }}</mat-option>
+                    </ng-template>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Room Type</mat-label>
+                  <mat-select formControlName="roomType">
+                    <ng-container *ngIf="roomTypes?.length; else roomTypeFallback">
+                      <mat-option *ngFor="let t of roomTypes" [value]="t.id">{{ t.name }}</mat-option>
+                    </ng-container>
+                    <ng-template #roomTypeFallback>
+                      <mat-option *ngFor="let t of ['Standard','Deluxe','Suite','Family','Studio']" [value]="t">{{ t }}</mat-option>
+                    </ng-template>
+                  </mat-select>
+                </mat-form-field>
+
+                <div formGroupName="roomSize" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Room Size (Area)</mat-label>
+                    <input matInput formControlName="value" type="number" placeholder="00" />
+                  </mat-form-field>
+                  <div class="flex items-center gap-2">
+                    <mat-button-toggle-group formControlName="unit" value="sqft">
+                      <mat-button-toggle value="sqft">square feet</mat-button-toggle>
+                      <mat-button-toggle value="sqm">square meter</mat-button-toggle>
+                    </mat-button-toggle-group>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Room View (Optional)</mat-label>
+                  <mat-select formControlName="roomView">
+                    <ng-container *ngIf="roomViews?.length; else roomViewFallback">
+                      <mat-option *ngFor="let v of roomViews" [value]="v.id">{{ v.name }}</mat-option>
+                    </ng-container>
+                    <ng-template #roomViewFallback>
+                      <mat-option *ngFor="let v of ['City','Garden','Sea','Pool','Mountain']" [value]="v">{{ v }}</mat-option>
+                    </ng-template>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Smoking Allowed</mat-label>
+                <mat-select formControlName="smokingAllowed">
+                  <mat-option value="no">No</mat-option>
+                  <mat-option value="yes">Yes</mat-option>
+                </mat-select>
+              </mat-form-field>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Max Adult</mat-label>
+                  <input matInput formControlName="maxAdult" type="number" min="0" placeholder="0" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Max Infant</mat-label>
+                  <input matInput formControlName="maxInfant" type="number" min="0" placeholder="0" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Max Child</mat-label>
+                  <input matInput formControlName="maxChild" type="number" min="0" placeholder="0" />
+                </mat-form-field>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <mat-form-field appearance="outline" class="md:col-span-1">
+                  <mat-label>Max Occupancy</mat-label>
+                  <input matInput formControlName="maxOccupancy" type="number" min="0" placeholder="0" />
+                </mat-form-field>
+              </div>
+
+        <div class="mt-4" formGroupName="roomAmenities">
+          <div class="font-medium mb-2">Room Amenities</div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <ng-container *ngIf="roomAmenityOptions?.length; else roomAmenityFallback">
+              <mat-checkbox
+                *ngFor="let a of roomAmenityOptions"
+                [checked]="isRoomAmenitySelected(i, a.id)"
+                (change)="onRoomAmenityToggle(i, a.id, $event.checked)"
+              >
+                {{ a.name }}
+              </mat-checkbox>
+            </ng-container>
+            <ng-template #roomAmenityFallback>
+              <mat-checkbox formControlName="wifi">Wi‑Fi</mat-checkbox>
+              <mat-checkbox formControlName="ac">AC</mat-checkbox>
+              <mat-checkbox formControlName="tv">TV</mat-checkbox>
+              <mat-checkbox formControlName="minibar">Mini Bar</mat-checkbox>
+              <mat-checkbox formControlName="balcony">Balcony</mat-checkbox>
+              <mat-checkbox formControlName="kettle">Kettle</mat-checkbox>
+              <mat-checkbox formControlName="toiletries">Toiletries</mat-checkbox>
+              <mat-checkbox formControlName="safe">Safe</mat-checkbox>
+              <mat-checkbox formControlName="desk">Desk</mat-checkbox>
+            </ng-template>
+          </div>
+        </div>
+
+              <div class="mt-4">
+                <div class="font-medium mb-2">Upload Room Photos</div>
+                <div
+                  class="border-2 border-dashed rounded p-6 text-center"
+                  (dragover)="preventDefault($event)"
+                  (drop)="onRoomDrop(i, $event)"
+                >
+                  Drag & Drop files here
+                </div>
+                <div class="mt-2 flex items-center gap-2">
+                  <input type="file" accept="image/*" multiple (change)="onRoomPhotosSelected(i, $event)" />
+                  <button mat-stroked-button color="primary" (click)="uploadRoomPhotos(i)" [disabled]="!getRoomId(i) || uploadingRoomId === getRoomId(i)">
+                    Upload Photos
+                  </button>
+                </div>
+                <div class="text-sm mt-1" *ngIf="getRoomSelectedCount(i) > 0">
+                  {{ getRoomSelectedCount(i) }} file(s) selected
+                </div>
+                <div class="text-sm text-gray-500 mt-1" *ngIf="!getRoomId(i)">
+                  Save room details to enable uploads
+                </div>
+              </div>
+
+              <div class="mt-3" *ngIf="getRoomExistingPhotos(i)?.length">
+                <div class="font-medium mb-2">Existing Photos</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div *ngFor="let p of getRoomExistingPhotos(i)" class="relative group">
+                    <img
+                      [src]="fullMediaUrl(p)"
+                      class="w-full h-24 object-cover rounded border"
+                      loading="lazy"
+                      alt="Room photo"
+                    />
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      class="absolute top-1 right-1 bg-white/80"
+                      (click)="deletePhoto(p)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center mt-4">
+                <button mat-icon-button color="warn" (click)="removeRoom(i)"><mat-icon>delete</mat-icon></button>
+                <button mat-flat-button color="primary" (click)="saveRooms()">Save And Continue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Photos and Videos" [disabled]="addMode && !step1Completed">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" formGroupName="media">
+          <div class="border rounded p-4 md:col-span-2">
+           
+            <div class="mt-4">
+              <div class="font-medium mb-2">Upload by Category</div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div *ngFor="let t of photoTypeOptions" class="flex flex-col gap-2">
+                  <label class="font-medium">{{ t.name }}</label>
+                  <div
+                    class="border-2 border-dashed rounded p-6 text-center"
+                    (dragover)="preventDefault($event)"
+                    (drop)="onCategoryDrop(t.id, $event)"
+                  >
+                    Drag & Drop files here
+                  </div>
+                  <input type="file" accept="image/*" multiple (change)="onCategoryPhotosSelected(t.id, $event)" />
+                  <div class="text-sm" *ngIf="categorySelectedNames[t.id]?.length">
+                    {{ categorySelectedNames[t.id].length }} file(s) selected
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-2" *ngIf="mediaPhotos?.length">
+            <div class="font-medium mb-2">Existing Photos</div>
+            <ng-container *ngFor="let t of photoTypeOptions">
+              <div class="mt-3" *ngIf="hasPhotosOfType(t.id)">
+                <div class="font-medium mb-2">{{ t.name }}</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div *ngFor="let p of photosOfType(t.id)" class="relative group">
+                    <img
+                      [src]="fullMediaUrl(p)"
+                      class="w-full h-32 object-cover rounded border"
+                      loading="lazy"
+                      alt="Hotel photo"
+                    />
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      class="absolute top-1 right-1 bg-white/80"
+                      (click)="deletePhoto(p)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <div class="flex justify-between w-full mt-2 md:col-span-2">
+            <button mat-flat-button color="primary" (click)="uploadAndContinue()" [disabled]="uploading">Save And Continue</button>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Policies" [disabled]="addMode && !step1Completed">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" formGroupName="policies">
+          <mat-form-field appearance="outline">
+            <mat-label>Check-in Time</mat-label>
+            <mat-select formControlName="checkIn">
+              <mat-option *ngFor="let t of timeOptions" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Check-out Time</mat-label>
+            <mat-select formControlName="checkOut">
+              <mat-option *ngFor="let t of timeOptions" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="md:col-span-2">
+            <mat-label>Cancellation Policy</mat-label>
+            <textarea matInput formControlName="cancellation" rows="4"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="md:col-span-2">
+            <mat-label>Child Policy</mat-label>
+            <textarea matInput formControlName="childPolicy" rows="3"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="md:col-span-2">
+            <mat-label>TBA Detail</mat-label>
+            <textarea matInput formControlName="tbaDetail" rows="2"></textarea>
+          </mat-form-field>
+          <div class="flex justify-end w-full mt-2">
+            <button mat-flat-button color="primary" (click)="saveAllDetails()">Save And Continue</button>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,62 @@
+<div class="p-6 container">
+  <form class="card p-4 w-full" [formGroup]="form">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      <mat-form-field appearance="outline" class="md:col-span-2">
+        <mat-label>CITY/AREA/LANDMARK/PROPERTY NAME</mat-label>
+        <input
+          matInput
+          [formControl]="locationCtrl"
+          [matAutocomplete]="auto"
+          placeholder="Search location or hotel"
+          [readonly]="locationReadonly"
+        />
+        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectLocation.emit($event.option.value)">
+          <ng-container *ngFor="let group of filteredOptions$ | async">
+            <mat-optgroup [label]="group.label">
+              <mat-option *ngFor="let opt of group.items" [value]="opt">
+                <span>{{ opt.label }}</span>
+                <span class="text-xs text-gray-500 ml-2" *ngIf="opt.type === 'hotel'">Hotel</span>
+                <span class="text-xs text-gray-500 ml-2" *ngIf="opt.type === 'city'">City</span>
+              </mat-option>
+            </mat-optgroup>
+          </ng-container>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="md:col-span-2">
+        <mat-date-range-input [rangePicker]="picker">
+          <input matStartDate formControlName="checkIn" placeholder="Check-In" [min]="minCheckIn" (dateChange)="checkInChange.emit($event.value)" (click)="picker.open()" />
+          <input matEndDate formControlName="checkOut" placeholder="Check-Out" [min]="minCheckOut" (click)="picker.open()" />
+        </mat-date-range-input>
+        <button mat-icon-button matSuffix aria-label="Open calendar" (click)="picker.open()">
+          <mat-icon>event</mat-icon>
+        </button>
+        <mat-date-range-picker #picker></mat-date-range-picker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="rooms-guests-field">
+        <mat-label>Rooms & Guests</mat-label>
+        <mat-icon matPrefix class="rg-caret">expand_more</mat-icon>
+        <input matInput [value]="roomsGuestsLabel" readonly (click)="openRoomsGuests.emit()" />
+      </mat-form-field>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-3 items-end">
+      <mat-form-field appearance="outline" class="md:col-span-2">
+        <mat-label>Purpose Of Stay</mat-label>
+        <mat-select formControlName="intent">
+          <mat-option value="">Select Intent</mat-option>
+          <mat-option value="business">Business</mat-option>
+          <mat-option value="leisure">Leisure</mat-option>
+          <mat-option value="event">Event</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div class="md:col-span-1 flex justify-end">
+        <button mat-flat-button color="primary" (click)="searchClicked.emit()">
+          <mat-icon class="mr-2">search</mat-icon>
+          SEARCH
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

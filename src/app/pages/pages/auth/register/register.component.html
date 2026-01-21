@@ -1,0 +1,292 @@
+<div class="w-full min-h-full bg-pattern flex flex-col items-center py-6">
+  <div class="card overflow-hidden w-full max-w-6xl" @fadeInUp>
+    <div class="p-6 pb-2 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img class="w-10" src="assets/img/logo/logo.svg" />
+        <h2 class="title m-0">Create an Account</h2>
+      </div>
+    </div>
+
+    <form [formGroup]="form" class="p-6 pt-0 overflow-y-auto max-h-[75vh]" >
+      <mat-horizontal-stepper [linear]="true" class="mb-6 pb-4 register-stepper" #stepper>
+        <mat-step label="Authorized Signatory Details" [stepControl]="form.get('signatory')!" [completed]="emailVerified && !!form.get('signatory')?.valid">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4"  formGroupName="signatory" style="padding-top:10px;">
+            <div class="md:col-span-3 space-y-2">
+              <div class="flex items-center gap-4">
+                <span class="text-sm">Are you a *</span>
+                <mat-radio-group formControlName="userType" class="flex items-center gap-4">
+                  <mat-radio-button value="buyer">Buyer</mat-radio-button>
+                  <mat-radio-button value="seller">Seller</mat-radio-button>
+                </mat-radio-group>
+              </div>
+              <div class="text-xs text-secondary">
+                <div>Buyer: You will use this account to purchase travel services.</div>
+                <div>Seller: You will use this account to sell or supply travel services.</div>
+              </div>
+            </div>
+            <mat-form-field>
+              <mat-label>First Name *</mat-label>
+              <input matInput formControlName="firstName" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Last Name *</mat-label>
+              <input matInput formControlName="lastName" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Mobile Number *</mat-label>
+              <input matInput formControlName="mobile" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Whatsapp Number</mat-label>
+              <input matInput formControlName="whatsapp" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Alternate Number</mat-label>
+              <input matInput formControlName="alternate" />
+            </mat-form-field>
+            <div class="flex items-center gap-2 flex-wrap md:flex-nowrap">
+              <mat-form-field class="flex-1 min-w-[220px]">
+                <mat-label>Email Address *</mat-label>
+                <input matInput formControlName="email" [disabled]="emailVerified" />
+              </mat-form-field>
+              <button type="button" mat-raised-button color="primary" (click)="sendOtp()" class="h-[56px] flex-none" [disabled]="!form.get('signatory.email')?.valid || isSendingOtp || emailVerified">Send OTP</button>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap md:flex-nowrap mt-2" *ngIf="otpSent && !emailVerified">
+              <mat-form-field class="flex-1 min-w-[180px]">
+                <mat-label>Enter OTP</mat-label>
+                <input matInput formControlName="otpCode" />
+              </mat-form-field>
+              <button type="button" mat-stroked-button color="primary" (click)="verifyOtp()" class="h-[56px] flex-none" [disabled]="!form.get('signatory.otpCode')?.value || isVerifyingOtp">Verify</button>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-end gap-2">
+            <button mat-stroked-button (click)="saveSignatoryStep(stepper)" [disabled]="!form.get('signatory')?.valid || !emailVerified">Next</button>
+          </div>
+        </mat-step>
+
+        <mat-step label="Business Details" [stepControl]="form.get('business')!" [completed]="panVerified && !!form.get('business')?.valid">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="business" style="padding-top:10px;">
+            <mat-form-field>
+              <mat-label>Business/Agency Name *</mat-label>
+              <input matInput formControlName="agencyName" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Business Type *</mat-label>
+              <mat-select formControlName="businessType">
+                <mat-option value="">- Select -</mat-option>
+                <mat-option value="sole">Sole Proprietor</mat-option>
+                <mat-option value="partnership">Partnership</mat-option>
+                <mat-option value="private">Private Ltd</mat-option>
+                <mat-option value="public">Public Ltd</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Nature Of Business *</mat-label>
+              <mat-select formControlName="natureOfBusiness">
+                <mat-option value="">- Select -</mat-option>
+                <mat-option value="travel">Travel Agency</mat-option>
+                <mat-option value="corporate">Corporate</mat-option>
+                <mat-option value="other">Other</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>TDS Exemption</mat-label>
+              <mat-select formControlName="tdsExemption">
+                <mat-option value="NO">NO</mat-option>
+                <mat-option value="YES">YES</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>TDS (% for exemption)</mat-label>
+              <input matInput formControlName="tdsPercent" placeholder="Please Enter TDS Percentage in Number" />
+            </mat-form-field>
+            <div class="flex items-center">
+              <label class="mr-3 text-sm">TDS Certificate</label>
+              <input type="file" (change)="onFileChange('business.tdsCertificate', $event)" />
+            </div>
+            <mat-form-field>
+              <mat-label>IATA Code</mat-label>
+              <input matInput formControlName="iataCode" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>PAN Number *</mat-label>
+              <input matInput formControlName="panNumber" maxlength="10" />
+              <mat-error *ngIf="form.get('business.panNumber')?.hasError('required')">PAN is required</mat-error>
+              <mat-error *ngIf="form.get('business.panNumber')?.hasError('pattern')">Enter a valid PAN (AAAAA9999A)</mat-error>
+            </mat-form-field>
+            <div class="flex items-center">
+              <label class="mr-3 text-sm">Upload PAN *</label>
+              <input type="file" (change)="onFileChange('business.uploadPan', $event)" />
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <button type="button" mat-stroked-button color="primary" (click)="reverifyPan()" [disabled]="isVerifyingPan">Verify PAN</button>
+              <span class="text-sm" [class.text-green-600]="panVerified" [class.text-red-600]="!panVerified">{{ panVerified ? 'Verified' : 'Not Verified' }}</span>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-between gap-2">
+            <button mat-button matStepperPrevious [disabled]="minAllowedStepIndex > 0">Back</button>
+            <button mat-stroked-button (click)="saveBusinessStep(stepper)" [disabled]="!form.get('business')?.valid || !panVerified">Next</button>
+          </div>
+        </mat-step>
+
+        <mat-step label="GST" [stepControl]="form.get('business')!" [completed]="!form.get('business.hasGst')?.value || gstVerified">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="business" style="padding-top:10px;">
+            <div class="col-span-1 md:col-span-3">
+              <mat-radio-group formControlName="hasGst" class="flex gap-6">
+                <mat-radio-button [value]="true">Yes, we have GST</mat-radio-button>
+                <mat-radio-button [value]="false">No</mat-radio-button>
+              </mat-radio-group>
+            </div>
+            <mat-form-field *ngIf="form.get('business.hasGst')?.value">
+              <mat-label>GST Number</mat-label>
+              <input matInput formControlName="gstNumber" maxlength="15" />
+              <mat-error *ngIf="form.get('business.gstNumber')?.hasError('required')">GST is required</mat-error>
+              <mat-error *ngIf="form.get('business.gstNumber')?.hasError('minlength') || form.get('business.gstNumber')?.hasError('maxlength')">GST must be 15 characters</mat-error>
+              <mat-error *ngIf="form.get('business.gstNumber')?.hasError('pattern')">Enter a valid GSTIN (AA9999 format with Z at 14th)</mat-error>
+            </mat-form-field>
+            <div class="flex items-center" *ngIf="form.get('business.hasGst')?.value">
+              <label class="mr-3 text-sm">Upload GST Certificate</label>
+              <input type="file" (change)="onFileChange('business.uploadGstCertificate', $event)" />
+            </div>
+            <div class="flex items-center gap-2" *ngIf="form.get('business.hasGst')?.value">
+              <button type="button" mat-stroked-button color="primary" (click)="verifyGst()" [disabled]="isVerifyingGst || !form.get('business.gstNumber')?.valid">Verify GST</button>
+              <span class="text-sm" [class.text-green-600]="gstVerified" [class.text-red-600]="!gstVerified">{{ gstVerified ? 'Verified' : 'Not Verified' }}</span>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-between gap-2">
+            <button mat-button matStepperPrevious [disabled]="minAllowedStepIndex > 0">Back</button>
+            <button mat-stroked-button (click)="saveGstStep(stepper)" [disabled]="form.get('business.hasGst')?.value && !gstVerified">Next</button>
+          </div>
+        </mat-step>
+
+        <mat-step label="Bank Verification" [stepControl]="form.get('bank')!" [completed]="bankVerified && !!form.get('bank')?.valid">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="bank" style="padding-top:10px;">
+            <mat-form-field>
+              <mat-label>Account Holder Name *</mat-label>
+              <input matInput formControlName="accountName" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Account Number *</mat-label>
+              <input matInput formControlName="accountNumber" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>IFSC *</mat-label>
+              <input matInput formControlName="ifsc" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone" />
+            </mat-form-field>
+            <div class="flex items-center gap-2 mt-2">
+              <button type="button" mat-stroked-button color="primary" (click)="verifyBank()" [disabled]="isVerifyingBank">Verify Bank</button>
+              <span class="text-sm" [class.text-green-600]="bankVerified" [class.text-red-600]="!bankVerified">{{ bankVerified ? 'Verified' : 'Not Verified' }}</span>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-between gap-2">
+            <button mat-button matStepperPrevious [disabled]="minAllowedStepIndex > 0">Back</button>
+            <button mat-stroked-button (click)="saveBankStep(stepper)" [disabled]="!form.get('bank')?.valid || !bankVerified">Next</button>
+          </div>
+        </mat-step>
+
+        <mat-step label="Office Address & Referred By" [stepControl]="form.get('address')!">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="address" style="padding-top:10px;">
+            <mat-form-field>
+              <mat-label>Address Line 1 *</mat-label>
+              <input matInput formControlName="addressLine1" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Address Line 2</mat-label>
+              <input matInput formControlName="addressLine2" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Postal Code *</mat-label>
+              <input matInput formControlName="postalCode" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Country *</mat-label>
+              <mat-select formControlName="countryId">
+                <mat-option [value]="null">- Select -</mat-option>
+                <mat-option *ngFor="let c of countries" [value]="c.id">{{ c.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <ng-container *ngIf="isIndia; else stateTextField">
+              <mat-form-field>
+                <mat-label>State *</mat-label>
+                <mat-select formControlName="stateId">
+                  <mat-option [value]="null">- Select -</mat-option>
+                  <mat-option *ngFor="let s of states" [value]="s.id">{{ s.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </ng-container>
+            <ng-template #stateTextField>
+              <mat-form-field>
+                <mat-label>State *</mat-label>
+                <input matInput formControlName="state" />
+              </mat-form-field>
+            </ng-template>
+            <mat-form-field>
+              <mat-label>City *</mat-label>
+              <input matInput formControlName="city" />
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Address Documents *</mat-label>
+              <mat-select formControlName="addressDocuments">
+                <mat-option value="">- Select -</mat-option>
+                <mat-option value="lease">Lease Agreement</mat-option>
+                <mat-option value="utility">Utility Bill</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <div class="flex items-center">
+              <label class="mr-3 text-sm">Address Proof Documents *</label>
+              <input type="file" (change)="onFileChange('address.addressProofDocuments', $event)" />
+            </div>
+            <mat-form-field>
+              <mat-label>Second Address Documents</mat-label>
+              <mat-select formControlName="secondAddressDocuments">
+                <mat-option value="">- Select -</mat-option>
+                <mat-option value="lease">Lease Agreement</mat-option>
+                <mat-option value="utility">Utility Bill</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <div class="flex items-center">
+              <label class="mr-3 text-sm">Second Address Proof Documents</label>
+              <input type="file" (change)="onFileChange('address.secondAddressProofDocuments', $event)" />
+            </div>
+            <mat-form-field>
+              <mat-label>Aadhaar Number</mat-label>
+              <input matInput formControlName="aadhaarNumber" maxlength="12" />
+            </mat-form-field>
+            <div class="flex items-center gap-2 mt-2">
+              <button type="button" mat-stroked-button color="primary" (click)="verifyAadhaar()" [disabled]="isVerifyingAadhaar">Verify Aadhaar</button>
+              <span class="text-sm" [class.text-green-600]="aadhaarVerified" [class.text-red-600]="!aadhaarVerified">{{ aadhaarVerified ? 'Verified' : 'Not Verified' }}</span>
+            </div>
+          </div>
+          <mat-divider class="my-6"></mat-divider>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="referral" style="padding-top:10px;">
+            <mat-form-field>
+              <mat-label>Referred By *</mat-label>
+              <mat-select formControlName="referredBy">
+                <mat-option value="">- Select -</mat-option>
+                <mat-option value="agent">Agent</mat-option>
+                <mat-option value="employee">Employee</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Name or ID *</mat-label>
+              <input matInput formControlName="referralNameOrId" />
+            </mat-form-field>
+            <div class="flex items-center">
+              <mat-checkbox formControlName="termsAccepted">I have read and agree to the <a class="underline">Terms & Conditions</a></mat-checkbox>
+            </div>
+          </div>
+
+          <div class="mt-6 flex items-center gap-4">
+            <button type="button" color="primary" mat-raised-button (click)="completeRegistration()" [disabled]="isVerifyingPan || !panVerified || (form.get('business.hasGst')?.value && !gstVerified) || !bankVerified || form.get('address')?.invalid || form.get('referral')?.invalid">Complete Registration</button>
+            <span class="text-secondary">Already have an account? <a [routerLink]="['/login']" class="underline">Sign in</a></span>
+          </div>
+        </mat-step>
+
+      </mat-horizontal-stepper>
+    </form>
+  </div>
+</div>

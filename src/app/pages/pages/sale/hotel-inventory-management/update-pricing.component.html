@@ -1,0 +1,122 @@
+<vex-secondary-toolbar current="Update Pricing">
+  <vex-breadcrumbs [crumbs]="['Sale','Hotel Inventory Management','Update Pricing']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card p-4">
+    <form [formGroup]="form">
+
+      <ng-container *ngFor="let rid of selectedRoomIds">
+
+        <div class="mt-6 mb-2 text-base font-semibold">
+          Room: {{ roomNameFor(rid) || rid }}
+        </div>
+
+        <div class="mt-4 flex items-center gap-3 flex-wrap">
+          <span class="text-sm">Weekend Days:</span>
+          <mat-checkbox (change)="toggleWeekendDay(rid,'fri',$event.checked)"
+            [checked]="getWeekendDays(rid).value.includes('fri')">Fri</mat-checkbox>
+          <mat-checkbox (change)="toggleWeekendDay(rid,'sat',$event.checked)"
+            [checked]="getWeekendDays(rid).value.includes('sat')">Sat</mat-checkbox>
+          <mat-checkbox (change)="toggleWeekendDay(rid,'sun',$event.checked)"
+            [checked]="getWeekendDays(rid).value.includes('sun')">Sun</mat-checkbox>
+        </div>
+
+        <div class="mt-4 tables-grid" *ngIf="getDateRanges(rid).length">
+
+          <!-- WEEKDAY TABLE -->
+          <div class="table-block">
+            <div class="table-title weekday">Weekday</div>
+
+            <table class="border pricing-table weekday-table">
+              <thead>
+                <tr>
+                  <th class="p-2 border">Category</th>
+                  <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByRangeKey">
+                    <th class="p-2 border bg-yellow-100">
+                      {{ rg.value.from | date:'dd-MM-yyyy' }} to {{ rg.value.to | date:'dd-MM-yyyy' }}
+                    </th>
+                  </ng-container>
+                </tr>
+              </thead>
+
+              <tbody>
+                <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let pi = index; trackBy: trackByOccKey">
+                  <ng-container *ngFor="let mk of mealKeyItems; trackBy: trackByMealKey">
+                    <tr>
+                      <td class="p-2 border">{{ pi+1 }} - {{ mk.label }}</td>
+
+                      <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByRangeKey">
+                        <td class="p-1 border">
+                          <ng-container [formGroup]="rg">
+                            <ng-container formGroupName="prices">
+                              <ng-container formGroupName="weekday">
+                                <ng-container [formGroupName]="occKey">
+                                  <input type="text" class="pricing-input" [formControlName]="mk.key" />
+                                </ng-container>
+                              </ng-container>
+                            </ng-container>
+                          </ng-container>
+                        </td>
+                      </ng-container>
+                    </tr>
+                  </ng-container>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- WEEKEND TABLE -->
+          <div class="table-block" *ngIf="true">
+            <div class="table-title weekend">Week Off Days</div>
+
+            <table class="border pricing-table weekend-table">
+              <thead>
+                <tr>
+                  <th class="p-2 border">Category</th>
+                  <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByRangeKey">
+                    <th class="p-2 border bg-blue-100">
+                      {{ rg.value.from | date:'dd-MM-yyyy' }} to {{ rg.value.to | date:'dd-MM-yyyy' }}
+                    </th>
+                  </ng-container>
+                </tr>
+              </thead>
+
+              <tbody>
+                <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let pi = index; trackBy: trackByOccKey">
+                  <ng-container *ngFor="let mk of mealKeyItems; trackBy: trackByMealKey">
+                    <tr>
+                      <td class="p-2 border">{{ pi+1 }} - {{ mk.label }}</td>
+
+                      <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByRangeKey">
+                        <td class="p-1 border">
+                          <ng-container [formGroup]="rg">
+                            <ng-container formGroupName="prices">
+                              <ng-container formGroupName="weekend">
+                                <ng-container [formGroupName]="occKey">
+                                  <input type="text" class="pricing-input" [formControlName]="mk.key" />
+                                </ng-container>
+                              </ng-container>
+                            </ng-container>
+                          </ng-container>
+                        </td>
+                      </ng-container>
+                    </tr>
+                  </ng-container>
+                </ng-container>
+              </tbody>
+            </table>
+
+          </div>
+
+        </div>
+      </ng-container>
+
+      <div class="flex gap-3 mt-6">
+        <button mat-stroked-button color="primary" type="button" (click)="save()" [disabled]="saving">Save</button>
+        <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+      </div>
+
+    </form>
+  </div>
+</div>

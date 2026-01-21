@@ -1,0 +1,485 @@
+<div class="card p-4 text-sm">
+  <h2 class="title mb-2">Add Flight Inventory</h2>
+
+  <form [formGroup]="flightForm" (ngSubmit)="submit()" class="flex flex-col gap-4" style="text-transform: uppercase;">
+    <style>
+      input.mat-input-element, 
+      .mat-select-value-text, 
+      .mat-option-text,
+      .mat-input-element,
+      .mat-form-field-infix,
+      .mat-form-field input,
+      .mat-form-field-flex,
+      .mat-form-field {
+        text-transform: uppercase !important;
+      }
+    </style>
+
+    <!-- Onward Flights -->
+    <h3 class="text-base font-semibold">Onward Flight Details</h3>
+    <div formArrayName="onwardFlights">
+      <div *ngFor="let flight of onwardFlights.controls; let i=index"
+           [formGroupName]="i"
+           class="flex flex-col gap-2 mb-3 border p-2 rounded">
+
+        <!-- Row 1: Airline, Flight No, PNR, Baggage, Cabin Baggage -->
+        <div class="flex gap-2">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Airline</mat-label>
+            <input type="text" 
+                   matInput 
+                   formControlName="airlineSearch" 
+                   [matAutocomplete]="airlineAuto"
+                   placeholder="Search airline">
+            <mat-autocomplete #airlineAuto="matAutocomplete" (optionSelected)="updateFlightNumber(i, 'onward', $event)">
+              <mat-option *ngFor="let airline of filteredAirlines[i] | async" [value]="airline">
+                {{ airline.code }} - {{ airline.name }}
+              </mat-option>
+            </mat-autocomplete>
+            <input type="hidden" formControlName="airlineCode">
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Flight No.</mat-label>
+            <input matInput formControlName="flightNumber" placeholder="Number" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>PNR Number</mat-label>
+            <input matInput formControlName="pnrNumber" placeholder="PNR" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Baggage</mat-label>
+            <input matInput 
+                   formControlName="baggage" 
+                   placeholder="e.g. 20" 
+                   type="number" 
+                   min="0" 
+                   (keydown)="preventNegativeInput($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Cabin Baggage (kg)</mat-label>
+            <input matInput 
+                   formControlName="cabinBaggage" 
+                   placeholder="e.g. 7" 
+                   type="number" 
+                   min="0" 
+                   (keydown)="preventNegativeInput($event)" />
+          </mat-form-field>
+        </div>
+
+        <!-- Row 2: From, Departure Terminal, To, Arrival Terminal -->
+        <div class="flex gap-2">
+          <mat-form-field appearance="outline" class="flex-1 select2-like">
+            <mat-label>From</mat-label>
+            <input matInput formControlName="fromAirport" placeholder="Search airport..." 
+                   [matAutocomplete]="fromAuto" />
+            <mat-autocomplete #fromAuto="matAutocomplete" [displayWith]="displayAirport">
+              <mat-option *ngFor="let airport of filteredFromAirports[i] | async" 
+                          [value]="airport">
+                <div class="airport-option">
+                  <span class="airport-code">{{ airport.code }}</span>
+                  <span class="airport-name">{{ airport.name }}</span>
+                  <span class="airport-city">({{ airport.city }} )</span>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Departure Terminal</mat-label>
+            <input matInput formControlName="terminal" placeholder="e.g. T3" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1 select2-like">
+            <mat-label>To</mat-label>
+            <input matInput formControlName="toAirport" placeholder="Search airport..." 
+                   [matAutocomplete]="toAuto" />
+            <mat-autocomplete #toAuto="matAutocomplete" [displayWith]="displayAirport">
+              <mat-option *ngFor="let airport of filteredToAirports[i] | async" 
+                          [value]="airport">
+                <div class="airport-option">
+                  <span class="airport-code">{{ airport.code }}</span>
+                  <span class="airport-name">{{ airport.name }}</span>
+                  <span class="airport-city">({{ airport.city }})</span>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Arrival Terminal</mat-label>
+            <input matInput formControlName="arrivalTerminal" placeholder="e.g. T2" />
+          </mat-form-field>
+        </div>
+
+        <!-- Row 3: Departure Date, Departure Time, Arrival Date, Arrival Time -->
+        <div class="flex gap-2">
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Departure Date</mat-label>
+            <input matInput [matDatepicker]="onwardDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(onwardFlights.at(i-1).get('arrivalDate')?.value) : null" />
+            <mat-datepicker-toggle matSuffix [for]="onwardDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #onwardDatePicker></mat-datepicker>
+            <mat-error *ngIf="onwardFlights.at(i).get('departureDate')?.hasError('matDatepickerMin')">Departure date cannot be before previous leg's arrival</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Dep Time</mat-label>
+            <input type="text" matInput formControlName="departureTime" [matAutocomplete]="onwardDepAuto" placeholder="Search time (e.g. 17:45)" />
+            <mat-autocomplete #onwardDepAuto="matAutocomplete" autoActiveFirstOption>
+              <mat-optgroup *ngFor="let g of filteredDepTimesOnward[i] | async" [label]="g.label">
+                <mat-option *ngFor="let t of g.items" [value]="t">{{ t }}</mat-option>
+              </mat-optgroup>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Arrival Date</mat-label>
+            <input matInput [matDatepicker]="onwardArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(onwardFlights.at(i).get('departureDate')?.value)" />
+            <mat-datepicker-toggle matSuffix [for]="onwardArrivalDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #onwardArrivalDatePicker></mat-datepicker>
+            <mat-error *ngIf="onwardFlights.at(i).get('arrivalDate')?.hasError('arrivalBeforeDeparture') || onwardFlights.at(i).get('arrivalDate')?.hasError('matDatepickerMin')">Arrival date cannot be before departure date</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Arr Time</mat-label>
+            <input type="text" matInput formControlName="arrivalTime" [matAutocomplete]="onwardArrAuto" placeholder="Search arrival time" />
+            <mat-autocomplete #onwardArrAuto="matAutocomplete" autoActiveFirstOption>
+              <mat-optgroup *ngFor="let g of filteredArrTimesOnward[i] | async" [label]="g.label">
+                <mat-option *ngFor="let t of g.items" [value]="t">{{ t }}</mat-option>
+              </mat-optgroup>
+            </mat-autocomplete>
+          </mat-form-field>
+        </div>
+
+        <button mat-icon-button color="warn" type="button" *ngIf="onwardFlights.length > 1"
+                (click)="removeOnwardFlight(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    </div>
+    <button mat-stroked-button color="primary" type="button" (click)="addOnwardFlight()">
+      + Add Connecting Flight
+    </button>
+
+    <!-- Return Flights -->
+    <h3 class="text-base font-semibold">Return Flight Details</h3>
+    <mat-checkbox formControlName="hasReturn" [disabled]="!canEnableReturn()">Has Return Flight</mat-checkbox>
+
+    <div *ngIf="flightForm.get('hasReturn')?.value" formArrayName="returnFlights">
+      <div *ngFor="let flight of returnFlights.controls; let i=index"
+           [formGroupName]="i"
+           class="flex flex-col gap-2 mb-3 border p-2 rounded">
+
+        <!-- Row 1: Airline, Flight No, PNR, Baggage, Cabin Baggage -->
+        <div class="flex gap-2">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Airline</mat-label>
+            <input type="text" 
+                   matInput 
+                   formControlName="airlineSearch" 
+                   [matAutocomplete]="returnAirlineAuto"
+                   placeholder="Search airline">
+            <mat-autocomplete #returnAirlineAuto="matAutocomplete" (optionSelected)="updateFlightNumber(i, 'return', $event)">
+              <mat-option *ngFor="let airline of filteredAirlines[i+100] | async" [value]="airline">
+                {{ airline.code }} - {{ airline.name }}
+              </mat-option>
+            </mat-autocomplete>
+            <input type="hidden" formControlName="airlineCode">
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Flight No.</mat-label>
+            <input matInput formControlName="flightNumber" placeholder="Number" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>PNR Number</mat-label>
+            <input matInput formControlName="pnrNumber" placeholder="PNR" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Baggage</mat-label>
+            <input matInput 
+                   formControlName="baggage" 
+                   placeholder="e.g. 20" 
+                   type="number" 
+                   min="0" 
+                   (keydown)="preventNegativeInput($event)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Cabin Baggage (kg)</mat-label>
+            <input matInput 
+                   formControlName="cabinBaggage" 
+                   placeholder="e.g. 7" 
+                   type="number" 
+                   min="0" 
+                   (keydown)="preventNegativeInput($event)" />
+          </mat-form-field>
+        </div>
+
+        <!-- Row 2: From, Departure Terminal, To, Arrival Terminal -->
+        <div class="flex gap-2">
+          <mat-form-field appearance="outline" class="flex-1 select2-like">
+            <mat-label>From</mat-label>
+            <input matInput formControlName="fromAirport" placeholder="Search airport..." 
+                   [matAutocomplete]="returnFromAuto" />
+            <mat-autocomplete #returnFromAuto="matAutocomplete" [displayWith]="displayAirport">
+              <mat-option *ngFor="let airport of filteredReturnFromAirports[i] | async" 
+                          [value]="airport">
+                <div class="airport-option">
+                  <span class="airport-code">{{ airport.code }}</span>
+                  <span class="airport-name">{{ airport.name }}</span>
+                  <span class="airport-city">({{ airport.city }})</span>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Departure Terminal</mat-label>
+            <input matInput formControlName="terminal" placeholder="e.g. T3" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1 select2-like">
+            <mat-label>To</mat-label>
+            <input matInput formControlName="toAirport" placeholder="Search airport..." 
+                   [matAutocomplete]="returnToAuto" />
+            <mat-autocomplete #returnToAuto="matAutocomplete" [displayWith]="displayAirport">
+              <mat-option *ngFor="let airport of filteredReturnToAirports[i] | async" 
+                          [value]="airport">
+                <div class="airport-option">
+                  <span class="airport-code">{{ airport.code }}</span>
+                  <span class="airport-name">{{ airport.name }}</span>
+                  <span class="airport-city">({{ airport.city }})</span>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Arrival Terminal</mat-label>
+            <input matInput formControlName="arrivalTerminal" placeholder="e.g. T2" />
+          </mat-form-field>
+        </div>
+
+        <!-- Row 3: Departure Date, Departure Time, Arrival Date, Arrival Time -->
+        <div class="flex gap-2">
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Departure Date</mat-label>
+            <input matInput [matDatepicker]="returnDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(returnFlights.at(i-1).get('arrivalDate')?.value) : null" />
+            <mat-datepicker-toggle matSuffix [for]="returnDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #returnDatePicker></mat-datepicker>
+            <mat-error *ngIf="returnFlights.at(i).get('departureDate')?.hasError('matDatepickerMin')">Departure date cannot be before previous leg's arrival</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Dep Time</mat-label>
+            <input type="text" matInput formControlName="departureTime" [matAutocomplete]="returnDepAuto" placeholder="Search time" />
+            <mat-autocomplete #returnDepAuto="matAutocomplete" autoActiveFirstOption>
+              <mat-optgroup *ngFor="let g of filteredDepTimesReturn[i] | async" [label]="g.label">
+                <mat-option *ngFor="let t of g.items" [value]="t">{{ t }}</mat-option>
+              </mat-optgroup>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Arrival Date</mat-label>
+            <input matInput [matDatepicker]="returnArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(returnFlights.at(i).get('departureDate')?.value)" />
+            <mat-datepicker-toggle matSuffix [for]="returnArrivalDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #returnArrivalDatePicker></mat-datepicker>
+            <mat-error *ngIf="returnFlights.at(i).get('arrivalDate')?.hasError('arrivalBeforeDeparture') || returnFlights.at(i).get('arrivalDate')?.hasError('matDatepickerMin')">Arrival date cannot be before departure date</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Arr Time</mat-label>
+            <input type="text" matInput formControlName="arrivalTime" [matAutocomplete]="returnArrAuto" placeholder="Search arrival time" />
+            <mat-autocomplete #returnArrAuto="matAutocomplete" autoActiveFirstOption>
+              <mat-optgroup *ngFor="let g of filteredArrTimesReturn[i] | async" [label]="g.label">
+                <mat-option *ngFor="let t of g.items" [value]="t">{{ t }}</mat-option>
+              </mat-optgroup>
+            </mat-autocomplete>
+          </mat-form-field>
+        </div>
+
+        <button mat-icon-button color="warn" type="button" (click)="removeReturnFlight(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <button mat-stroked-button color="primary" type="button" (click)="addReturnFlight()">
+        + Add Connecting Flight
+      </button>
+    </div>
+
+    <!-- Meal and Seat Options -->
+    <h3 class="text-base font-semibold">Meal and Seat Options</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <h4 class="text-sm font-medium mb-2">Meal Option</h4>
+        <mat-radio-group formControlName="mealOption" class="flex flex-col gap-2">
+          <mat-radio-button value="complimentary">Complimentary</mat-radio-button>
+          <mat-radio-button value="chargeable">Chargeable</mat-radio-button>
+        </mat-radio-group>
+      </div>
+      <div>
+        <h4 class="text-sm font-medium mb-2">Seat Selection</h4>
+        <mat-radio-group formControlName="seatOption" class="flex flex-col gap-2">
+          <mat-radio-button value="complimentary">Complimentary</mat-radio-button>
+          <mat-radio-button value="chargeable">Chargeable</mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </div>
+    
+    <!-- Series Details -->
+    <h3 class="text-base font-semibold">Series Details</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+      <mat-form-field appearance="outline">
+        <mat-label>Seats</mat-label>
+        <input matInput type="number" formControlName="availableSeats" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Available For</mat-label>
+        <mat-select formControlName="availableFor">
+          <mat-option value="anywhere">Anywhere</mat-option>
+          <mat-option value="domestic">Domestic</mat-option>
+          <mat-option value="international">International</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Booking Cut-off (days)</mat-label>
+        <input matInput type="number" formControlName="bookingCutOff" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Naming Cut-off (days)</mat-label>
+        <input matInput type="number" formControlName="namingCutOff" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Price/Seat</mat-label>
+        <input matInput type="number" formControlName="pricePerSeat" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Infant Price</mat-label>
+        <input matInput type="number" formControlName="infantPrice" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Special Tag</mat-label>
+        <input matInput formControlName="specialTag" placeholder="e.g. Premium, VIP" />
+      </mat-form-field>
+
+      <div class="flex items-center">
+        <mat-checkbox formControlName="allowTbaUser">Allow TBA User</mat-checkbox>
+      </div>
+
+      <div class="flex items-center">
+        <mat-checkbox formControlName="allowHoldBooking">Allow Hold Booking</mat-checkbox>
+      </div>
+    </div>
+
+    <!-- Hold Booking Options (visible only when Allow Hold Booking is checked) -->
+    <div *ngIf="flightForm.get('allowHoldBooking')?.value" class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+           <mat-form-field appearance="outline">
+        <mat-label>Amount Type</mat-label>
+        <mat-select formControlName="holdBookingType">
+          <mat-option value="percentage">Percentage</mat-option>
+          <mat-option value="flat">Flat</mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline">
+        <mat-label>{{ flightForm.get('holdBookingType')?.value === 'percentage' ? 'Hold Booking Percentage' : 'Hold Booking Amount' }}</mat-label>
+        <input matInput type="number" formControlName="holdBookingAmount" min="0" />
+        <mat-error *ngIf="flightForm.get('holdBookingAmount')?.hasError('required')">{{ flightForm.get('holdBookingType')?.value === 'percentage' ? 'Percentage' : 'Amount' }} is required</mat-error>
+        <mat-error *ngIf="flightForm.get('holdBookingAmount')?.hasError('min')">{{ flightForm.get('holdBookingType')?.value === 'percentage' ? 'Percentage' : 'Amount' }} cannot be negative</mat-error>
+        <mat-error *ngIf="flightForm.get('holdBookingAmount')?.hasError('max')">Percentage cannot exceed 100%</mat-error>
+        <mat-error *ngIf="flightForm.get('holdBookingAmount')?.hasError('exceedsPrice')">Amount cannot exceed seat price</mat-error>
+      </mat-form-field>
+
+ 
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hold Booking Cut-off (days)</mat-label>
+        <input matInput type="number" formControlName="holdBookingCutOffDays" min="1" />
+                <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('required')">Cut-off days is required</mat-error>
+                <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('min')">Must be at least 1 day</mat-error>
+                <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('maxDaysExceeded')">Cannot exceed 30 days</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hold Booking Limit (hours)</mat-label>
+        <input matInput type="number" formControlName="holdBookingLimit" min="1" />
+                <mat-error *ngIf="flightForm.get('holdBookingLimit')?.hasError('required')">Hold booking limit is required</mat-error>
+                <mat-error *ngIf="flightForm.get('holdBookingLimit')?.hasError('min')">Must be at least 1</mat-error>
+                <mat-error *ngIf="flightForm.get('holdBookingLimit')?.hasError('limitExceedsCutOff')">Cannot exceed hold booking cut-off hours</mat-error>
+      </mat-form-field>
+    </div>
+
+    <!-- Refundable/Non-Refundable Section (visible only when price and departure date are filled) -->
+    <ng-container *ngIf="flightForm.get('pricePerSeat')?.value && onwardFlights.at(0)?.get('departureDate')?.value">
+      <h3 class="text-base font-semibold">Refund Policy</h3>
+      <div class="mb-4">
+        <mat-radio-group formControlName="isRefundable" class="flex gap-4">
+          <mat-radio-button value="refundable">Refundable</mat-radio-button>
+          <mat-radio-button value="non-refundable">Non-Refundable</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <!-- Fare Rules Section (visible only when Refundable is selected) -->
+      <div *ngIf="flightForm.get('isRefundable')?.value === 'refundable'" class="mb-4">
+      <h4 class="text-base font-medium mb-2">Fare Rules</h4>
+      <div formArrayName="fareRules" class="border p-4 rounded-md bg-gray-50">
+        <div *ngFor="let rule of fareRules.controls; let i=index" [formGroupName]="i" 
+             class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pb-3 border-b last:border-b-0 last:mb-0 last:pb-0">
+          <mat-form-field appearance="outline">
+            <mat-label>Days before departure</mat-label>
+            <input matInput type="number" formControlName="days" min="1" />
+            <mat-error *ngIf="fareRules.at(i).get('days')?.hasError('required')">Days is required</mat-error>
+            <mat-error *ngIf="fareRules.at(i).get('days')?.hasError('min')">Must be at least 1 day</mat-error>
+            <mat-error *ngIf="fareRules.at(i).get('days')?.hasError('exceedsDeparture')">Days cannot exceed time until departure</mat-error>
+          </mat-form-field>
+
+          <div class="flex items-center gap-2">
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Refundable Amount (₹)</mat-label>
+              <input matInput type="number" formControlName="amount" min="0" [max]="flightForm.get('pricePerSeat')?.value" />
+              <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('required')">Amount is required</mat-error>
+              <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('min')">Amount cannot be negative</mat-error>
+              <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('exceedsPrice')">Amount cannot exceed price per seat</mat-error>
+            </mat-form-field>
+            
+            <button mat-icon-button color="warn" type="button" (click)="removeFareRule(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="fareRules.length === 0" class="text-gray-500 italic text-center py-2">
+          No refund rules added yet. Add at least one rule.
+        </div>
+
+        <div class="mt-3">
+          <button mat-stroked-button color="primary" type="button" (click)="addFareRule()">
+            <mat-icon>add</mat-icon> Add Refund Rule
+          </button>
+         </div>
+       </div>
+     </div>
+     </ng-container>
+
+     <!-- Submit -->
+    <div class="flex justify-end mt-2">
+      <button mat-flat-button color="primary" type="submit">
+        ADD NEW FLIGHT DEAL
+      </button>
+    </div>
+  </form>
+</div>

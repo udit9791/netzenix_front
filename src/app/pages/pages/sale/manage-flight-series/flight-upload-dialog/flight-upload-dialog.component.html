@@ -1,0 +1,53 @@
+<div class="p-6">
+  <h2 class="text-xl font-bold mb-6">Upload Flight Inventory Excel</h2>
+  
+  <div class="mb-6">
+    <p class="text-sm text-gray-600 mb-2">Upload an Excel file to create flight inventory records.</p>
+    <button mat-stroked-button color="primary" (click)="downloadSampleFile()" class="mb-4">
+      <mat-icon>download</mat-icon>
+      Download Sample File
+    </button>
+  </div>
+
+  <div class="bg-gray-50 rounded-lg p-6 text-center mb-6">
+    <input type="file" #fileInput hidden (change)="onFileSelected($event)" accept=".xlsx,.xls">
+    
+    <div *ngIf="!selectedFile" class="flex flex-col items-center">
+      <mat-icon class="text-4xl text-gray-400 mb-2">upload_file</mat-icon>
+      <p class="mb-4">Select an Excel file to upload</p>
+      <button mat-flat-button color="primary" (click)="fileInput.click()">Browse Files</button>
+    </div>
+    
+    <div *ngIf="selectedFile" class="flex flex-col items-center">
+      <mat-icon class="text-4xl text-primary mb-2">description</mat-icon>
+      <p class="mb-1">{{ selectedFile.name }}</p>
+      <p class="text-sm text-gray-500 mb-4">{{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
+      <button mat-stroked-button color="warn" (click)="selectedFile = null">
+        <mat-icon>delete</mat-icon>
+        Remove
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="uploadError" class="bg-red-50 text-red-700 p-3 rounded mb-4">
+    {{ uploadError }}
+  </div>
+
+  <div *ngIf="uploadSuccess" class="bg-green-50 text-green-700 p-3 rounded mb-4">
+    File uploaded successfully!
+  </div>
+
+  <div *ngIf="isUploading" class="mb-4">
+    <p class="mb-2">Uploading: {{ uploadProgress }}%</p>
+    <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <button mat-button (click)="closeDialog()">Cancel</button>
+    <button mat-flat-button color="primary" 
+            [disabled]="!selectedFile || isUploading" 
+            (click)="uploadFile()">
+      Upload
+    </button>
+  </div>
+</div>

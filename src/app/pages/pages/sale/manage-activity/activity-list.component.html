@@ -1,0 +1,156 @@
+<vex-secondary-toolbar current="Activities">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Activities']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card flex-auto">
+    <div class="flex flex-wrap items-center justify-between gap-4 p-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <mat-form-field appearance="outline" class="w-64">
+          <mat-label>Search</mat-label>
+          <input
+            matInput
+            (keyup)="onFilterKeyup($event)"
+            placeholder="Search activities"
+          />
+        </mat-form-field>
+
+        <ng-container *ngIf="showTenantFilter">
+          <mat-form-field appearance="outline" class="w-56">
+            <mat-label>Tenant</mat-label>
+            <mat-select
+              [formControl]="tenantCtrl"
+              subscriptSizing="dynamic"
+            >
+              <mat-option [value]="null">All Tenants</mat-option>
+              <mat-option
+                *ngFor="let t of tenantOptions"
+                [value]="t.id"
+              >
+                {{ t.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+
+        <mat-form-field appearance="outline" class="w-40">
+          <mat-label>Country</mat-label>
+          <mat-select
+            [formControl]="countryCtrl"
+            (selectionChange)="onCountryChange($event.value)"
+          >
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let c of countries" [value]="c.id">
+              {{ c.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-40">
+          <mat-label>State</mat-label>
+          <mat-select
+            [formControl]="stateCtrl"
+            (selectionChange)="onStateChange($event.value)"
+          >
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let s of states" [value]="s.id">
+              {{ s.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-40">
+          <mat-label>City</mat-label>
+          <mat-select
+            [formControl]="cityCtrl"
+            (selectionChange)="onCityChange($event.value)"
+          >
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let c of cities" [value]="c.id">
+              {{ c.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <button
+        mat-flat-button
+        color="primary"
+        [routerLink]="['/sale/manage-activity/add']"
+      >
+        <mat-icon>add</mat-icon>
+        <span class="ml-2">Add Activity</span>
+      </button>
+    </div>
+
+    <div class="overflow-auto">
+      <table mat-table [dataSource]="dataSource" matSort class="w-full">
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+            Activity
+          </th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.title }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="location">
+          <th mat-header-cell *matHeaderCellDef>
+            Location
+          </th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.city }}, {{ row.state }}, {{ row.country }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="has_time_slot">
+          <th mat-header-cell *matHeaderCellDef>
+            Time Slots
+          </th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.has_time_slot ? 'Yes' : 'No' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <td mat-cell *matCellDef="let row">
+            <div class="flex items-center">
+              <mat-slide-toggle
+                [checked]="row.is_active"
+                (change)="toggleStatus(row)"
+                color="primary">
+              </mat-slide-toggle>
+              <span class="ml-2">{{ row.is_active ? 'Active' : 'Inactive' }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>
+            Actions
+          </th>
+          <td mat-cell *matCellDef="let row" class="flex items-center gap-2">
+            <button
+              mat-icon-button
+              color="primary"
+              [routerLink]="['/sale/manage-activity/edit', row.id]"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+
+    <mat-paginator
+      [pageSize]="10"
+      [pageSizeOptions]="[10, 25, 50]"
+      showFirstLastButtons
+    >
+    </mat-paginator>
+  </div>
+</div>

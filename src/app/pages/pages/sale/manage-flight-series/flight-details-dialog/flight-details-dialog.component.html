@@ -1,0 +1,88 @@
+<div class="p-4 w-[500px]">
+  <!-- Date -->
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="font-bold text-lg">Price: {{ data.price | number:'1.0-2' }}</h2>
+
+    
+    <div class="text-right font-semibold">
+      {{ data.flight_date | date: 'dd MMM' }}
+    </div>
+  </div>
+
+  <!-- Onward -->
+  <div *ngIf="data.depTime" class="my-4">
+    <div class="flex justify-between items-center">
+      <div class="text-center">
+        <div class="text-xl font-bold">{{ data.depTime }}</div>
+        <div class="text-xs text-gray-500">{{ data.fromCode }}</div>
+      </div>
+      <div class="text-center">
+        <span class="text-xs text-gray-600">{{ data.stops }}</span>
+        <div class="text-xs font-semibold text-blue-600">{{ data.flightNumbers || data.airline || 'N/A' }}</div>
+      </div>
+      <div class="text-center">
+        <div class="text-xl font-bold">{{ data.arrTime }}</div>
+        <div class="text-xs text-gray-500">{{ data.toCode }}</div>
+      </div>
+    </div>
+    
+    <!-- Connecting Flights -->
+    <div *ngIf="data.connectingFlights && data.connectingFlights.length > 0" class="mt-2 border-t pt-2">
+      <div *ngFor="let flight of data.connectingFlights" class="flex justify-between items-center mt-2 text-sm">
+        <div class="text-center">
+          <div class="font-semibold">{{ flight.depTime }}</div>
+          <div class="text-xs text-gray-500">{{ flight.from }}</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xs font-semibold text-blue-600">{{ flight.flightNumber }}</div>
+        </div>
+        <div class="text-center">
+          <div class="font-semibold">{{ flight.arrTime }}</div>
+          <div class="text-xs text-gray-500">{{ flight.to }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Return -->
+  <div *ngIf="data.returnDepTime" class="my-4 border-t pt-3">
+    <div class="flex justify-between items-center">
+      <div class="text-center">
+        <div class="text-xl font-bold">{{ data.returnDepTime }}</div>
+        <div class="text-xs text-gray-500">{{ data.returnFromCode }}</div>
+      </div>
+      <div class="text-center">
+        <span class="text-xs text-gray-600">Return</span>
+        <!-- <div class="text-xs font-semibold text-blue-600">{{ data.flightNumbers || data.airline || 'N/A' }}</div> -->
+        <div class="text-xs font-semibold text-green-600" *ngIf="data.price">Price: {{ data.price | number:'1.0-2' }}</div>
+      </div>
+      <div class="text-center">
+        <div class="text-xl font-bold">{{ data.returnArrTime }}</div>
+        <div class="text-xs text-gray-500">{{ data.returnToCode }}</div>
+      </div>
+    </div>
+    
+    <!-- Return Connecting Flights -->
+    <div *ngIf="data.returnConnectingFlights && data.returnConnectingFlights.length > 0" class="mt-2 border-t pt-2">
+      <div *ngFor="let flight of data.returnConnectingFlights" class="flex justify-between items-center mt-2 text-sm">
+        <div class="text-center">
+          <div class="font-semibold">{{ flight.depTime }}</div>
+          <div class="text-xs text-gray-500">{{ flight.from }}</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xs font-semibold text-blue-600">{{ flight.flightNumber }}</div>
+        </div>
+        <div class="text-center">
+          <div class="font-semibold">{{ flight.arrTime }}</div>
+          <div class="text-xs text-gray-500">{{ flight.to }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="flex justify-center gap-4 mt-6">
+    <button mat-flat-button color="primary" class="px-4" (click)="updateFlight()">Update Flight Details</button>
+    <!-- <button mat-flat-button color="accent" class="px-4" (click)="copyFlight()">Copy to Other Dates</button> -->
+  </div>
+</div>

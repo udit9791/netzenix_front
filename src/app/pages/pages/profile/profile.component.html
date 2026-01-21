@@ -1,0 +1,42 @@
+<vex-secondary-toolbar current="Profile">
+  <vex-breadcrumbs [crumbs]="['Pages', 'Profile']" class="flex-auto"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div [@stagger]="true" class="p-6 container">
+  <div class="card flex-auto" @fadeInUp>
+    <div class="px-6 py-4 border-b flex items-center">
+      <h2 class="title m-0">Update Profile</h2>
+    </div>
+
+    <form class="px-6 py-4 flex flex-col gap-4" [formGroup]="profileForm" (ngSubmit)="onSubmit()">
+      <!-- Name -->
+      <mat-form-field>
+        <mat-label>Full Name</mat-label>
+        <input matInput formControlName="name" placeholder="Enter your full name…" required />
+      </mat-form-field>
+
+      <!-- Email -->
+      <mat-form-field>
+        <mat-label>Email Address</mat-label>
+        <input matInput formControlName="email" placeholder="Enter your email…" required />
+      </mat-form-field>
+
+      <!-- Phone -->
+      <mat-form-field>
+        <mat-label>Phone</mat-label>
+        <input matInput formControlName="phone" placeholder="Enter your phone number…" />
+      </mat-form-field>
+
+      <!-- Password -->
+      <mat-form-field>
+        <mat-label>New Password</mat-label>
+        <input matInput type="password" formControlName="password" placeholder="Enter new password…" />
+      </mat-form-field>
+
+      <div class="flex items-center justify-end gap-2">
+        <button mat-button type="button" (click)="resetForm()">Cancel</button>
+        <button color="primary" mat-flat-button type="submit" [disabled]="profileForm.invalid">Update</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<div class="dialog-wrapper" *ngIf="!loading; else loadingTpl">
+  <div class="dialog-header">
+    <h2>Proceed Cancellation</h2>
+    <div class="sub">Order ID: <strong>{{ data.orderId }}</strong></div>
+  </div>
+
+  <div class="dialog-body">
+    <div class="section">
+      <div class="section-title">Refund Amount</div>
+      <div class="summary">
+        <mat-form-field appearance="outline" class="amount-field">
+          <mat-label>Amount</mat-label>
+          <input matInput type="number" [(ngModel)]="amount" />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section">
+      <div class="section-title">Price Summary</div>
+      <div class="charges">
+        <div class="row"><span>Total Amount</span><strong>{{ format(order?.total_amount) }}</strong></div>
+        <div class="row"><span>Service Fee</span><strong>{{ format(order?.service_fee) }}</strong></div>
+        <div class="row"><span>Commission</span><strong>{{ format(order?.commission) }}</strong></div>
+        <div class="row" *ngIf="!hasIGST()"><span>SGST</span><strong>{{ format(order?.sgst) }}</strong></div>
+        <div class="row" *ngIf="!hasIGST()"><span>CGST</span><strong>{{ format(order?.cgst) }}</strong></div>
+        <div class="row" *ngIf="hasIGST()"><span>IGST</span><strong>{{ format(order?.igst) }}</strong></div>
+        <div class="row"><span>TDS on Commission</span><strong>{{ format(order?.tds_on_commission) }}</strong></div>
+        <div class="row total"><span>Final Total</span><strong>{{ format(order?.final_total) }}</strong></div>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section">
+      <div class="section-title">Traveler Details</div>
+      <div class="table-wrapper" *ngIf="orderDetails?.length; else noDetails">
+        <table mat-table [dataSource]="orderDetails" class="mat-elevation-z1">
+          <ng-container matColumnDef="traveler">
+            <th mat-header-cell *matHeaderCellDef>Traveler</th>
+            <td mat-cell *matCellDef="let d">{{ (d.first_name || '') + ' ' + (d.last_name || '') }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let d">{{ getStatusName(d.status) }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+
+      <ng-template #noDetails>
+        <div class="empty">No order details found</div>
+      </ng-template>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-stroked-button color="primary" (click)="confirm()">Confirm</button>
+    <button mat-stroked-button color="warn" (click)="cancel()">Cancel</button>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+</ng-template>

@@ -1,0 +1,174 @@
+<div class="container mx-auto p-4 print:p-0">
+  <!-- Loading state -->
+  <div *ngIf="loading" class="flex justify-center items-center h-64">
+    <p>Loading ticket details...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+    <p>{{ error }}</p>
+    <button mat-button color="primary" (click)="goBack()">Go Back</button>
+  </div>
+
+  <!-- Ticket content -->
+  <div id="printSection" *ngIf="!loading && !error && orderDetails" class="bg-white border rounded-lg shadow-lg print:shadow-none print:border-0">
+    <!-- Header -->
+    <div class="p-4 border-b flex justify-between items-center company-info">
+      <h1 class="text-xl font-bold">{{ orderDetails?.company_name || 'Sunabha Green Technologies Pvt Ltd' }}</h1>
+      <div class="text-right">
+        <p>{{ orderDetails?.company_email || 'trip@subcrm.com' }}</p>
+        <p>{{ orderDetails?.company_phone || '9724000401' }}</p>
+      </div>
+    </div>
+
+    <!-- PNR Section -->
+    <div class="p-4 border-b flex justify-between items-center">
+      <div></div>
+      <div class="text-center">
+        <p class="text-sm">AIRLINE PNR</p>
+        <h2 class="text-2xl font-bold">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</h2>
+      </div>
+    </div>
+
+    <!-- Flight Info -->
+    <div class="p-4 border-b">
+      <div class="bg-black text-white p-2 mb-4">
+        <h2 class="font-bold">Your flight from {{ flightDetails?.details?.[0]?.from || 'Ahmedabad' }} — {{ flightDetails?.details?.[0]?.to || 'Bagdogra' }}</h2>
+        <p class="text-xs">* Please verify flight times with the airline prior to departure</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <div class="flex items-center mb-2">
+            <img src="assets/img/airlines/{{ flightDetails?.details?.[0]?.airline_code || 'G8' }}.png" alt="Airline Logo" class="w-10 h-10 mr-2">
+            <div>
+              <p class="font-bold">{{ flightDetails?.details?.[0]?.airline || 'Akasa Air' }}</p>
+              <p class="text-xs">{{ flightDetails?.details?.[0]?.airline_code || 'G8' }}-{{ flightDetails?.details?.[0]?.flight_number || '1305' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs">{{ flightDetails?.details?.[0]?.from || 'Ahmedabad (AMD)' }}</p>
+          <p class="font-bold">{{ flightDetails?.details?.[0]?.from_city || 'Ahmedabad' }}</p>
+          <p>{{ flightDetails?.details?.[0]?.dep_date ? (flightDetails?.details?.[0]?.dep_date + ' ' + flightDetails?.details?.[0]?.dep_time | date:'EEE, dd MMM, yyyy, HH:mm') : (flightDetails?.details?.[0]?.dep_time || 'Thu, 14 Aug, 2025, 04:35 PM') }}</p>
+        </div>
+
+        <div>
+          <p class="text-xs">{{ flightDetails?.details?.[0]?.to || 'Bagdogra (IXB)' }}</p>
+          <p class="font-bold">{{ flightDetails?.details?.[0]?.to_city || 'Bagdogra' }}</p>
+          <p>{{ flightDetails?.details?.[0]?.arr_date ? (flightDetails?.details?.[0]?.arr_date + ' ' + flightDetails?.details?.[0]?.arr_time | date:'EEE, dd MMM, yyyy, HH:mm') : (flightDetails?.details?.[0]?.arr_time || 'Thu, 14 Aug, 2025, 07:20 PM') }}</p>
+        </div>
+      </div>
+
+      <div class="bg-gray-100 p-3 rounded">
+        <div class="flex flex-col">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="font-semibold">Trip Type:</div>
+            <div>{{ flightDetails?.inventory?.trip_type || 'One Way' }}</div>
+            
+            <div class="font-semibold">Class:</div>
+            <div>Economy</div>
+            
+            <div class="font-semibold">Baggage:</div>
+            <div>Checked-In: 15 KG</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Passenger Details -->
+    <div class="p-4 border-b">
+      <h2 class="font-bold mb-4">Passenger Details</h2>
+      <table class="w-full border-collapse">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border p-2 text-left">Sl No</th>
+            <th class="border p-2 text-left">Passenger Name</th>
+            <th class="border p-2 text-left">Type</th>
+            <th class="border p-2 text-left">PNR</th>
+            <th class="border p-2 text-left">Ticket Number</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let traveler of orderDetails?.details; let i = index">
+            <td class="border p-2">{{ i + 1 }}</td>
+            <td class="border p-2">{{ traveler?.title }} {{ traveler?.first_name }} {{ traveler?.last_name }}</td>
+            <td class="border p-2">{{ traveler?.passanger_type || 'Adult' }}</td>
+            <td class="border p-2">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</td>
+            <td class="border p-2">{{ traveler?.ticket_number || '' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Barcode for each passenger -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div *ngFor="let traveler of orderDetails?.details; let i = index" class="text-center">
+          <img [src]="flightDetails?.details?.[0]?.barcode || 'assets/img/barcode-placeholder.png'" alt="Barcode" class="mx-auto h-20">
+          <p class="text-xs mt-1">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Details -->
+    <div class="p-4 border-b payment-details">
+      <div class="flex justify-between">
+        <h2 class="font-bold mb-4">Payment Details</h2>
+        <div class="text-right">
+          <p class="text-sm">Amount (INR)</p>
+        </div>
+      </div>
+      
+      <div class="flex justify-between border-b pb-2">
+        <p>Fare</p>
+        <p>{{ orderDetails?.total_amount || '0.00' }}</p>
+      </div>
+      
+      <div class="flex justify-between border-b pb-2">
+        <p>Taxes, Surcharge & Fees</p>
+        <p>{{ (orderDetails?.sgst + orderDetails?.cgst + orderDetails?.service_fee) || '0.00' }}</p>
+      </div>
+      
+      <div class="flex justify-between font-bold pt-2">
+        <p>Total</p>
+        <p>{{ orderDetails?.final_total || '0.00' }}</p>
+      </div>
+    </div>
+
+    <!-- Important Information -->
+    <div class="p-4 border-b">
+      <h2 class="font-bold mb-4">Important Information</h2>
+      <ul class="text-xs space-y-2">
+        <li>• We kindly request you to inform us of any required name updates for your return flight at least 48 hours before the departure of your onward flight.</li>
+        <li>• This ticket is Non Refundable & Non Changeable</li>
+        <li>• All Guests, including children and infants, must present valid identification at check-in</li>
+        <li>• Check-in begins 2 hours prior to the flight for seat assignment and closes 45 minutes prior to the scheduled departure</li>
+        <li>• Please contact airlines for Terminal Queries</li>
+        <li>• Charged fare is totally agreed between "BUYER & SELLER", any issues related to fare thereafter will not be entertained</li>
+        <li>• Please check the fare/tax as they may change time to time without any notice to the passenger</li>
+        <li>• We are not responsible for any flight delay/cancellation from the airline's end. Kindly contact the airline at least 24 hrs before to reconfirm your flight timings using reference of airline PNR number.</li>
+        <li>• Name changes are not permitted for any flights.</li>
+        <li>• For infants valid birth certificate is required</li>
+        <li>• As per government directives, Web Check in is mandatory for all passengers before the scheduled departure of their domestic flight. Changes may apply.</li>
+        <li>• Carriage and other services provided by the carrier are subject to conditions of carriage, which are hereby incorporated by reference. These conditions may be obtained from the issuing carrier.</li>
+        <li>• Transportation and other services provided by the carrier are subjected to conditions of contract and other important notices. Please ensure that you have received these notices, and if not, contact the booking partner or carrier to obtain a copy prior to the commencement of your trip.</li>
+        <li>• If the passenger journey involves an ultimate destination or stop in a country other than the country of departure, the Warsaw Convention may be applicable and the convention governs and in most case limits the liability of carriers for death or personal injury and in respect of loss of or damage to baggage.</li>
+        <li>• In case a flight gets cancelled, we will not be liable to provide any alternate flights within the same cost, any additional cost incurred for the same shall be borne by the traveler.</li>
+        <li>• Due to the impact of COVID-19 worldwide, refunds will be processed in accordance with the latest airline policies. Please note that at the airline's discretion, refunds may be made in the form of airline vouchers. The final decision regarding the refund method will be made by the airline. Some airlines may charge processing fees for flight changes or cancellations made due to flight schedule changes. Actual fees charged will depend on the final decision by the airline.</li>
+        <li>• In case of IRCTC or flight cancellation by airline, full refund after deduction of service charge (Rs 250 per person) will be provided.</li>
+      </ul>
+    </div>
+
+    <!-- Action buttons - only visible when not printing -->
+    <div class="p-4 flex justify-center space-x-4 print:hidden">
+      <button mat-raised-button color="primary" (click)="openPrintDialog()">
+        <mat-icon>print</mat-icon>
+        Print Ticket
+      </button>
+      <button mat-raised-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Go Back
+      </button>
+    </div>
+  </div>
+</div>

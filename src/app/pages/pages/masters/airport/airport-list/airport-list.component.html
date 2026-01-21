@@ -1,0 +1,127 @@
+<vex-page-layout>
+  <vex-page-layout-header class="pb-16 flex flex-col items-start justify-center">
+    <div class="w-full flex flex-col sm:flex-row justify-between">
+      <div>
+        <h1 class="title mt-0 mb-1">Airports</h1>
+        <vex-breadcrumbs [crumbs]="['Masters', 'Airports']"></vex-breadcrumbs>
+      </div>
+      <div class="hidden sm:block">
+        <button class="mt-6" color="primary" mat-raised-button type="button" (click)="openAirportForm()">
+          <mat-icon svgIcon="mat:add"></mat-icon>
+          <span>ADD AIRPORT</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="bg-card rounded-full border px-4 mt-4 flex items-center w-full sm:w-auto">
+      <mat-icon class="text-secondary" svgIcon="mat:search"></mat-icon>
+      <input 
+        [formControl]="searchCtrl"
+        class="px-4 py-3 border-0 outline-none w-full bg-transparent"
+        placeholder="Search airports..." 
+        type="search">
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content class="-mt-6">
+    <div class="card overflow-auto -mt-16">
+      <div class="bg-app-bar px-6 h-16 border-b sticky left-0 flex items-center">
+        <h2 class="title my-0 ltr:pr-4 rtl:pl-4 ltr:mr-4 rtl:ml-4 ltr:border-r rtl:border-l hidden sm:block flex-none">
+          <span>Airports</span>
+        </h2>
+
+        <div class="bg-foreground rounded-full border px-4 max-w-[300px] flex-auto flex items-center border border-gray-300">
+          <mat-icon class="icon-sm text-secondary" svgIcon="mat:search"></mat-icon>
+          <input (keyup)="applyFilter($event)"
+                class="px-4 py-2 border-0 outline-none w-full bg-transparent"
+                placeholder="Search..." type="search">
+        </div>
+
+        <span class="flex-1"></span>
+
+        <!-- Add Airport -->
+        <button (click)="openAirportForm()" class="ml-4 flex-none" color="primary" mat-mini-fab matTooltip="Add Airport" type="button">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <!-- Table -->
+      <table [dataSource]="dataSource" matSort (matSortChange)="onSortChange()" class="w-full" mat-table>
+        
+        <!-- Code Column -->
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Code </th>
+          <td mat-cell *matCellDef="let airport"> {{airport.code}} </td>
+        </ng-container>
+
+        <!-- City Column -->
+        <ng-container matColumnDef="city">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> City </th>
+          <td mat-cell *matCellDef="let airport"> {{airport.city}} </td>
+        </ng-container>
+
+        <!-- Country Column -->
+        <ng-container matColumnDef="country">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Country </th>
+          <td mat-cell *matCellDef="let airport"> {{airport.country_name}} </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="is_active">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Status </th>
+          <td mat-cell *matCellDef="let airport"> 
+            <div class="flex items-center">
+              <mat-slide-toggle 
+                [checked]="airport.is_active === 1 || airport.is_active === true" 
+                (change)="toggleStatus(airport)"
+                color="primary">
+              </mat-slide-toggle>
+              <span class="ml-2">{{ airport.is_active === 1 || airport.is_active === true ? 'Active' : 'Inactive' }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="w-10"> Actions </th>
+          <td mat-cell *matCellDef="let airport">
+            <div class="flex items-center">
+              <button mat-icon-button color="primary" (click)="openAirportForm(airport)" matTooltip="Edit">
+                <mat-icon svgIcon="mat:edit"></mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteAirport(airport)" matTooltip="Delete">
+                <mat-icon svgIcon="mat:delete"></mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let airport; columns: displayedColumns;" class="hover:bg-hover cursor-pointer"></tr>
+
+        <!-- Row shown when there is no matching data. -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell py-4 text-center" [attr.colspan]="displayedColumns.length">
+            <div *ngIf="isLoading" class="flex justify-center items-center p-4">
+              <mat-spinner diameter="40"></mat-spinner>
+            </div>
+            <div *ngIf="!isLoading">
+              No airports found
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Paginator -->
+      <mat-paginator 
+        class="sticky left-0"
+        [length]="totalItems"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    </div>
+  </vex-page-layout-content>
+</vex-page-layout>

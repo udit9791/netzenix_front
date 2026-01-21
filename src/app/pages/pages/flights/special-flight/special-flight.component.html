@@ -1,0 +1,377 @@
+<div class="page-container">
+  <h2 class="page-title">Search for Series AIR Fares</h2>
+  <!-- Trip Type Row (top row) -->
+  <div class="trip-type-row" [formGroup]="form">
+    <mat-radio-group formControlName="tripType" aria-label="Trip Type">
+      <mat-radio-button value="oneway">One Way</mat-radio-button>
+      <mat-radio-button value="roundtrip" style="margin-left: 16px;">Round Trip</mat-radio-button>
+    </mat-radio-group>
+  </div>
+  <!-- search bar with outline appearance -->
+  <div class="search-wrap">
+    <form [formGroup]="form" class="search-form" (ngSubmit)="onSearch()">
+      <mat-form-field appearance="outline" class="field from-field from-field-large">
+        <mat-label>{{ formLabels.from }}</mat-label>
+        <input matInput formControlName="from" [matAutocomplete]="fromAuto" placeholder="Type to search airports..." />
+        <mat-autocomplete #fromAuto="matAutocomplete" [displayWith]="displayAirport">
+          <mat-option *ngFor="let airport of filteredFrom$ | async" [value]="airport">
+            <div class="airport-option">
+              <span class="airport-code">{{ airport.code }}</span>
+              <span class="airport-name">{{ airport.name }}</span>
+              <span class="airport-city">({{ airport.city }}, {{ airport.country_name || airport.country }})</span>
+            </div>
+          </mat-option>
+        </mat-autocomplete>
+        <button mat-icon-button matSuffix (click)="swap()" type="button">
+          <mat-icon>swap_horiz</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field to-field to-field-large">
+        <mat-label>{{ formLabels.to }}</mat-label>
+        <input matInput formControlName="to" [matAutocomplete]="toAuto" placeholder="Type to search airports..." />
+        <mat-autocomplete #toAuto="matAutocomplete" [displayWith]="displayAirport">
+          <mat-option *ngFor="let airport of filteredTo$ | async" [value]="airport">
+            <div class="airport-option">
+              <span class="airport-code">{{ airport.code }}</span>
+              <span class="airport-name">{{ airport.name }}</span>
+              <span class="airport-city">({{ airport.city }}, {{ airport.country_name || airport.country }})</span>
+            </div>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field date-field date-field-compact">
+        <mat-label>{{ formLabels.departDate }}</mat-label>
+        <input matInput [matDatepicker]="departPicker" formControlName="departDate" [matDatepickerFilter]="dateFilter" placeholder="Select after choosing from/to" />
+        <mat-datepicker-toggle matSuffix [for]="departPicker"></mat-datepicker-toggle>
+        <mat-datepicker #departPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field *ngIf="form.value.tripType === 'roundtrip'" appearance="outline" class="field date-field date-field-compact">
+        <mat-label>{{ formLabels.returnDate }}</mat-label>
+        <input matInput [matDatepicker]="returnPicker" formControlName="returnDate" [matDatepickerFilter]="returnDateFilter" placeholder="Select after choosing from/to" />
+        <mat-datepicker-toggle matSuffix [for]="returnPicker"></mat-datepicker-toggle>
+        <mat-datepicker #returnPicker></mat-datepicker>
+      </mat-form-field>
+
+      <div class="field travellers-field">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ formLabels.travellers }}</mat-label>
+          <input matInput [value]="getTravellersDisplay()" readonly (click)="openTravellersDropdown = !openTravellersDropdown" />
+          <button mat-icon-button matSuffix (click)="openTravellersDropdown = !openTravellersDropdown" type="button">
+            <mat-icon>{{ openTravellersDropdown ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</mat-icon>
+          </button>
+        </mat-form-field>
+      </div>
+      
+      <!-- Custom dropdown for travellers -->
+      <div class="travellers-popup" *ngIf="openTravellersDropdown">
+          <div class="traveller-type">
+            <div class="traveller-label">
+              <div class="traveller-title">Adults (12+)</div>
+            </div>
+            <div class="traveller-controls">
+              <button mat-icon-button type="button" [disabled]="adultsCount <= 1" (click)="updateTravellers('adults', -1)">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <span class="traveller-count">{{ adultsCount }}</span>
+              <button mat-icon-button type="button" [disabled]="adultsCount >= 9" (click)="updateTravellers('adults', 1)">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </div>
+          
+          <div class="traveller-type">
+            <div class="traveller-label">
+              <div class="traveller-title">Children (2 - 11)</div>
+            </div>
+            <div class="traveller-controls">
+              <button mat-icon-button type="button" [disabled]="childrenCount <= 0" (click)="updateTravellers('children', -1)">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <span class="traveller-count">{{ childrenCount }}</span>
+              <button mat-icon-button type="button" [disabled]="childrenCount >= 4" (click)="updateTravellers('children', 1)">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </div>
+          
+          <div class="traveller-type">
+            <div class="traveller-label">
+              <div class="traveller-title">Infants (<2)</div>
+            </div>
+            <div class="traveller-controls">
+              <button mat-icon-button type="button" [disabled]="infantsCount <= 0" (click)="updateTravellers('infants', -1)">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <span class="traveller-count">{{ infantsCount }}</span>
+              <button mat-icon-button type="button" [disabled]="infantsCount >= 2" (click)="updateTravellers('infants', 1)">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+          </div>
+          
+          <div class="traveller-actions">
+            <button mat-flat-button color="primary" type="button" (click)="openTravellersDropdown = false">Done</button>
+          </div>
+        </div>
+
+      <div class="field travellers-field">
+      
+        <button mat-flat-button color="primary" class="search-btn" type="submit">Search</button>
+      
+      </div>
+    </form>
+
+  <!-- day navigation + title -->
+  <div class="day-nav">
+    <a class="nav-link" (click)="prevDay()">« Prev Day</a>
+    <div class="day-center">{{ form.value.departDate | date: 'EEE, dd MMM yyyy' }}</div>
+    <a class="nav-link" (click)="nextDay()">Next Day »</a>
+  </div>
+
+  <div class="results-layout">
+    <aside class="filters-sidebar">
+      <div class="filter-section">
+        <div class="filter-title">Departure Times</div>
+        <div class="filter-options">
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isDepartureSlotSelected('05-12')" (click)="toggleDepartureSlot('05-12')">
+            <mat-icon>wb_sunny</mat-icon>
+            05–12
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isDepartureSlotSelected('12-18')" (click)="toggleDepartureSlot('12-18')">
+            <mat-icon>schedule</mat-icon>
+            12–18
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isDepartureSlotSelected('18-24')" (click)="toggleDepartureSlot('18-24')">
+            <mat-icon>nights_stay</mat-icon>
+            18–24
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isDepartureSlotSelected('24-05')" (click)="toggleDepartureSlot('24-05')">
+            <mat-icon>bedtime</mat-icon>
+            24–05
+          </button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-title">Arrival Times</div>
+        <div class="filter-options">
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isArrivalSlotSelected('05-12')" (click)="toggleArrivalSlot('05-12')">
+            <mat-icon>wb_sunny</mat-icon>
+            05–12
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isArrivalSlotSelected('12-18')" (click)="toggleArrivalSlot('12-18')">
+            <mat-icon>schedule</mat-icon>
+            12–18
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isArrivalSlotSelected('18-24')" (click)="toggleArrivalSlot('18-24')">
+            <mat-icon>nights_stay</mat-icon>
+            18–24
+          </button>
+          <button type="button" mat-stroked-button class="filter-chip" [class.active]="isArrivalSlotSelected('24-05')" (click)="toggleArrivalSlot('24-05')">
+            <mat-icon>bedtime</mat-icon>
+            24–05
+          </button>
+        </div>
+      </div>
+    </aside>
+    <div class="results-content">
+      <div class="results-header" *ngIf="!loading && !error && filteredFlightGroups.length > 0">
+        <div class="results-count">
+          {{ totalFlights }} flights found
+        </div>
+        <div class="sort-options">
+          <span class="sort-label">Sort by:</span>
+          <span class="sort-option active">Price <mat-icon>arrow_downward</mat-icon></span>
+          <span class="sort-option">Duration</span>
+          <span class="sort-option">Departure</span>
+        </div>
+      </div>
+
+      <div *ngIf="loading" class="loading-container">
+        <mat-icon class="loading-icon">sync</mat-icon>
+        <p>Loading flights...</p>
+      </div>
+
+      <div *ngIf="error" class="error-container">
+        <mat-icon class="error-icon">error</mat-icon>
+        <p>{{ error }}</p>
+      </div>
+
+      <div *ngIf="!loading && !error && filteredFlightGroups.length === 0" class="no-results-container">
+        <mat-icon>flight_off</mat-icon>
+        <p>No flights found for your search criteria. Please try different dates or destinations.</p>
+      </div>
+
+      <mat-card class="result-card" *ngFor="let group of filteredFlightGroups">
+    <!-- Route display -->
+    <div class="route-display">
+      <span class="route-text">{{ getFromCode() }} to {{ getToCode() }}</span>
+      </div>
+      
+      <!-- Airline header -->
+      <div class="airline-header">
+        <!-- <div class="airline-info">
+          <img class="airline-logo" [src]="group.airlineLogo || 'assets/img/plane.png'" alt="{{ group.airline }}" />
+          <div class="airline-details">
+            <div class="airline-name">{{ group.airline }}</div>
+            <div class="flight-number">{{ group.flightCode }} | {{ group.date | date: 'dd MMM' }}</div>
+          </div>
+        </div> -->
+
+      <!-- Flight time container -->
+      <div class="flight-time-container">
+        <div class="airline-block">
+          <div class="airline-title">
+            <img class="airline-logo" [src]="group.airlineLogo || 'assets/img/plane.png'" alt="{{ group.airline }}" />
+            <div class="airline-name">{{ group.airline }}</div>
+          </div>
+          <div class="flight-code">{{ group.firstFlightCode }}</div>
+        </div>
+
+        <div class="departure">
+          <div class="time-wrap">
+            <div class="time">{{ group.departureTime }}</div>
+            <div class="date">{{ group.departDateLabel }}</div>
+          </div>
+          <div class="location">{{ group.departureCity }}<span class="terminal" *ngIf="group.depTerminal">, Terminal {{ group.depTerminal }}</span></div>
+        </div>
+        
+        <div class="flight-duration">
+          <div class="duration-time">{{ group.duration }}</div>
+          <div class="flight-type">{{ group.stops || 'Non Stop' }}</div>
+          <div class="via" *ngIf="group.viaText">{{ group.viaText }}</div>
+        </div>
+        
+        <div class="arrival">
+          <div class="time-wrap">
+            <div class="time">{{ group.arrivalTime }}</div>
+            <div class="date">{{ group.arrivalDateLabel }}</div>
+          </div>
+          <div class="location">{{ group.arrivalCity }}<span class="terminal" *ngIf="group.arrTerminal">, Terminal {{ group.arrTerminal }}</span></div>
+        </div>
+      </div>
+      
+      <!-- Connecting Flight Segments -->
+      <div class="connection-info" *ngIf="group.showDetails && group.segments && group.segments.length > 0">
+        <div class="change-of-planes">
+          <span>Change of planes · {{ group.stops }}</span>
+        </div>
+
+        <!-- Onward Segments -->
+        <div class="segments-container" *ngIf="group.onwardSegments && group.onwardSegments.length">
+          <div class="segment-type-header">Onward • {{ group.onwardFlightNumbers }}</div>
+          <div class="segment" *ngFor="let segment of group.onwardSegments; let i = index">
+            <div class="segment-header">
+              <div class="segment-time-container">
+                <div class="segment-time">{{ segment.departureTime }} - {{ segment.arrivalTime }}</div>
+                <div class="segment-date">{{ segment.flightDateLabel }} → {{ segment.arrivalDateLabel }}</div>
+                <div class="segment-duration-info">{{ segment.duration }}</div>
+              </div>
+              <div class="segment-flight">{{ segment.flightCode }}</div>
+            </div>
+            <div class="segment-details">
+              <div class="segment-departure">
+                <div class="segment-airport">{{ segment.from }}</div>
+                <div class="segment-city">{{ segment.fromCity }}</div>
+              </div>
+              <div class="segment-arrow">
+                <mat-icon>arrow_forward</mat-icon>
+              </div>
+              <div class="segment-arrival">
+                <div class="segment-airport">{{ segment.to }}</div>
+                <div class="segment-city">{{ segment.toCity }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Return Segments -->
+        <div class="segments-container" *ngIf="group.returnSegments && group.returnSegments.length">
+          <div class="segment-type-header">Return • {{ group.returnFlightNumbers }}</div>
+          <div class="segment" *ngFor="let segment of group.returnSegments; let i = index">
+            <div class="segment-header">
+              <div class="segment-time-container">
+                <div class="segment-time">{{ segment.departureTime }} - {{ segment.arrivalTime }}</div>
+                <div class="segment-date">{{ segment.flightDateLabel }} → {{ segment.arrivalDateLabel }}</div>
+                <div class="segment-duration-info">{{ segment.duration }}</div>
+              </div>
+              <div class="segment-flight">{{ segment.flightCode }}</div>
+            </div>
+            <div class="segment-details">
+              <div class="segment-departure">
+                <div class="segment-airport">{{ segment.from }}</div>
+                <div class="segment-city">{{ segment.fromCity }}</div>
+              </div>
+              <div class="segment-arrow">
+                <mat-icon>arrow_forward</mat-icon>
+              </div>
+              <div class="segment-arrival">
+                <div class="segment-airport">{{ segment.to }}</div>
+                <div class="segment-city">{{ segment.toCity }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fare options -->
+    <div class="fare-options">
+      <div class="fare-option" *ngFor="let fare of group.fareOptions; let i = index">
+        <div class="fare-type">
+          <div class="fare-name">{{ (fare?.flight_inventory?.special_tag) || 'Special' }}</div>
+          <!-- <div class="fare-code">({{ fare.code }})</div> -->
+        </div>
+
+        <div class="fare-details">
+          <div class="baggage-info">
+            <div class="baggage-pill" [matTooltip]="fare.seats + ' Seats'" matTooltipPosition="above">
+              <mat-icon>airline_seat_recline_normal</mat-icon>
+              {{ fare.seats }}
+            </div>
+            <div class="baggage-pill r-badge"
+                 [ngClass]="(fare?.flight_inventory?.is_refundable || (fare?.rules?.includes('R'))) ? 'yes' : 'no'"
+                 [matTooltip]="(fare?.flight_inventory?.is_refundable || (fare?.rules?.includes('R'))) ? 'Refundable' : 'Non-Refundable'"
+                 matTooltipPosition="above">
+              {{ (fare?.flight_inventory?.is_refundable || (fare?.rules?.includes('R'))) ? 'R' : 'N' }}
+            </div>
+            <div class="baggage-pill">
+              <mat-icon>luggage</mat-icon>
+              {{ fare.baggage }}
+            </div>
+          </div>
+
+          <div class="booking-options">
+            <span class="flight-details" (click)="openDetails(group, fare)">Flight Details <mat-icon>expand_more</mat-icon></span>
+          </div>
+
+          <div class="price-container">
+            <span class="price">₹{{ (fare.price_with_tax || fare.price) | number }}</span>
+            <mat-icon class="price-info">info</mat-icon>
+          </div>
+        </div>
+
+        <div class="price-section">
+          <div class="booking-actions">
+            <button mat-flat-button class="hold-now" *ngIf="group?.type !== 'external'" (click)="bookNow(group, fare, fare.id)">Hold</button>
+            <button mat-flat-button class="book-now" (click)="bookNow(group, fare, fare.id)">Book Now</button>
+            <button mat-icon-button class="print-btn">
+              <mat-icon>print</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- More fares button -->
+    <div class="more-fares" *ngIf="group.fareOptions && group.fareOptions.length > 3">
+      <button mat-button class="more-fares-btn" (click)="toggleMoreFares(group)">
+        {{ group.showMoreFares ? 'Show less fares' : 'Show more fares' }}
+        <mat-icon>{{ group.showMoreFares ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+    </div>
+      </mat-card>
+    </div>
+  </div>

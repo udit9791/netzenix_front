@@ -1,0 +1,566 @@
+<vex-secondary-toolbar current="Add Hotel Inventory">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Hotel Inventory Management', 'Add']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card p-4">
+    <form [formGroup]="form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <mat-form-field appearance="outline">
+        <mat-label>Country</mat-label>
+        <mat-select formControlName="countryId" (selectionChange)="onCountryChange($event.value)">
+          <mat-option *ngFor="let c of countries" [value]="c.id">{{ c.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>State</mat-label>
+        <mat-select formControlName="stateId" (selectionChange)="onStateChange($event.value)">
+          <mat-option *ngFor="let s of states" [value]="s.id">{{ s.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>City</mat-label>
+        <mat-select formControlName="cityId" (selectionChange)="onCityChange($event.value)">
+          <mat-option *ngFor="let ci of cities" [value]="ci.id">{{ ci.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hotel</mat-label>
+        <mat-select formControlName="hotelId" (selectionChange)="onHotelSelect($event.value)" placeholder="Select hotel">
+          <mat-option *ngFor="let h of hotels" [value]="h.id">{{ h.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Check-In Time</mat-label>
+        <input matInput formControlName="checkinTime" placeholder="e.g., 14:00" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Check-Out Time</mat-label>
+        <input matInput formControlName="checkoutTime" placeholder="e.g., 11:00" />
+      </mat-form-field>
+
+      <!-- Removed simple extra bed price field; detailed section added below -->
+
+      <div class="md:col-span-2" *ngIf="hotelDetails">
+        <div class="border rounded p-3">
+          <div class="font-medium mb-2">Hotel Details</div>
+          <div class="text-sm">Address: {{ hotelDetails?.address || hotelDetails?.location?.address || '-' }}</div>
+          <div class="text-sm">City: {{ hotelDetails?.city_name || hotelDetails?.city || hotelDetails?.location?.city || '-' }}</div>
+          <div class="text-sm">State: {{ hotelDetails?.state_name || hotelDetails?.state || hotelDetails?.location?.state || '-' }}</div>
+          <div class="text-sm">Country: {{ hotelDetails?.country_name || hotelDetails?.country || hotelDetails?.location?.country || '-' }}</div>
+        </div>
+      </div>
+
+      
+    </form>
+  </div>
+
+  <!-- Normal Mode: Global Date Ranges and Weekend Days (Top, before room selection) -->
+  <div class="card p-4 mb-4" *ngIf="mode === 'normal'" [formGroup]="form">
+    <div class="border rounded p-3">
+      <div class="font-medium mb-3">Date Ranges (Normal Mode)</div>
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <mat-date-range-input [rangePicker]="normalPicker">
+          <input matStartDate matInput [readonly]="true" formControlName="normalRangeStart" (dateInput)="onNormalRangeSelected(normalPicker)" (dateChange)="onNormalRangeSelected(normalPicker)"
+            [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
+          <input matEndDate matInput [readonly]="true" formControlName="normalRangeEnd" (dateInput)="onNormalRangeSelected(normalPicker)" (dateChange)="onNormalRangeSelected(normalPicker)"
+            [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
+        </mat-date-range-input>
+        <mat-date-range-picker #normalPicker></mat-date-range-picker>
+        <button mat-stroked-button type="button" (click)="normalPicker.open()">Select Dates</button>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-2" *ngIf="normalDateRanges?.length">
+        <div class="px-2 py-1 border rounded" *ngFor="let rg of normalDateRanges?.controls; let i = index">
+          {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}
+          <button mat-icon-button color="warn" type="button" (click)="removeNormalDateRange(i)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-3 flex-wrap">
+        <span class="text-sm">Weekend Days:</span>
+        <mat-checkbox (change)="toggleNormalWeekendDay('mon', $event.checked)">Mon</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('tue', $event.checked)">Tue</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('wed', $event.checked)">Wed</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('thu', $event.checked)">Thu</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('fri', $event.checked)">Fri</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('sat', $event.checked)">Sat</mat-checkbox>
+        <mat-checkbox (change)="toggleNormalWeekendDay('sun', $event.checked)">Sun</mat-checkbox>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="roomsFlat?.length" class="mt-4">
+    <div class="card p-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <mat-form-field appearance="outline">
+          <mat-label>Room(s)</mat-label>
+          <mat-select multiple [value]="selectedRoomIds" (selectionChange)="onRoomSelect($event.value)">
+            <mat-option *ngFor="let r of roomsFlat" [value]="r.id">{{ r.room_name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <ng-container *ngFor="let rid of selectedRoomIds">
+        <div class="font-medium mb-2">{{ sectionForRoom(rid) }}</div>
+        <div class="border rounded p-3 mb-6">
+          <div class="font-medium">{{ roomById(rid)?.room_name }}</div>
+          <div class="text-sm">Available: {{ roomById(rid)?.available_rooms }}</div>
+          <div class="text-sm">Max Occupancy: {{ roomById(rid)?.max_occupancy || '-' }}</div>
+
+          <ng-container [formGroup]="getRoomGroup(rid)">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mt-3">
+              <mat-form-field appearance="outline">
+                <mat-label>Adult(s)</mat-label>
+                <input matInput type="number" formControlName="adults" placeholder="e.g., 2" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Child(s)</mat-label>
+                <input matInput type="number" formControlName="children" placeholder="e.g., 1" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Infant(s)</mat-label>
+                <input matInput type="number" formControlName="infants" placeholder="e.g., 0" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Max Person(s)</mat-label>
+                <input matInput type="number" formControlName="maxPersons" placeholder="e.g., 3" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" *ngIf="mode === 'normal'">
+                <mat-label>No. of Rooms</mat-label>
+                <input matInput type="number" formControlName="frontRoomsCount" placeholder="e.g., 10" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Free Child Without Bed Count</mat-label>
+                <input matInput type="number" formControlName="freeChildNoBedCount" placeholder="e.g., 1" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Free Child Age</mat-label>
+                <mat-select formControlName="freeChildNoBedAge">
+                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+            </div>
+
+            <div class="mt-3 flex items-center gap-2 flex-wrap" *ngIf="mode === 'confirm'">
+              <mat-date-range-input [rangePicker]="picker">
+                <input matStartDate matInput [readonly]="true" formControlName="rangeStart" (dateInput)="onRangeSelected(rid, picker)" (dateChange)="onRangeSelected(rid, picker)"
+                   [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
+                <input matEndDate matInput [readonly]="true" formControlName="rangeEnd" (dateInput)="onRangeSelected(rid, picker)" (dateChange)="onRangeSelected(rid, picker)"
+                   [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
+              </mat-date-range-input>
+              <mat-date-range-picker #picker></mat-date-range-picker>
+              <button mat-stroked-button type="button" (click)="picker.open()">Select Dates</button>
+            </div>
+
+            <div class="mt-2 flex flex-wrap gap-2" *ngIf="getDateRanges(rid).length">
+              <div class="px-2 py-1 border rounded" *ngFor="let rg of getDateRanges(rid).controls; let i = index">
+                {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}
+                <button mat-icon-button color="warn" type="button" (click)="removeDateRange(rid, i)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3" *ngIf="getDateRanges(rid).length">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByIndex">
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm">Rooms for {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}</span>
+                    <ng-container [formGroup]="asFormGroup(rg)" *ngIf="mode === 'confirm'">
+                      <mat-form-field appearance="outline" class="w-40">
+                        <mat-label>No. of Rooms</mat-label>
+                        <input matInput type="number" formControlName="roomsCount" placeholder="e.g., 10" />
+                      </mat-form-field>
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-3 flex-wrap" *ngIf="mode === 'confirm'">
+              <span class="text-sm">Weekend Days:</span>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'mon', $event.checked)">Mon</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'tue', $event.checked)">Tue</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'wed', $event.checked)">Wed</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'thu', $event.checked)">Thu</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'fri', $event.checked)">Fri</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'sat', $event.checked)">Sat</mat-checkbox>
+              <mat-checkbox (change)="toggleWeekendDay(rid, 'sun', $event.checked)">Sun</mat-checkbox>
+            </div>
+
+            <div class="mt-4 tables-grid" *ngIf="getDateRanges(rid).length">
+              <div class="table-block">
+                <div class="table-title weekday">Weekday</div>
+                <div class="apply-bar" *ngIf="isBasePricesComplete(rid, 'weekday')">
+                  <mat-checkbox (change)="onApplyBasePrices(rid, 'weekday', $event.checked)">
+                    Apply 1-person prices to all (Weekday)
+                  </mat-checkbox>
+                </div>
+                <div class="table-wrap">
+              <table class="border pricing-table weekday-table">
+                <thead>
+                  <tr>
+                    <th class="p-2 border category-col">Category</th>
+                    <ng-container *ngIf="mode === 'normal'; else weekdayConfirmHeadings">
+                      <th class="p-2 border bg-yellow-100 date-col">Price</th>
+                    </ng-container>
+                    <ng-template #weekdayConfirmHeadings>
+                      <ng-container *ngFor="let rg of getDateRanges(rid).controls">
+                        <th class="p-2 border bg-yellow-100 date-col">
+                          {{ formatDateStr(rg.value.from) }} to {{ formatDateStr(rg.value.to) }}
+                        </th>
+                      </ng-container>
+                    </ng-template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey">
+                    <ng-container *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                      <tr [class.occ-group-alt]="ix % 2 === 1">
+                        <td class="p-2 border category-col">{{ ix + 1 }} - {{ mk.label }}</td>
+                        <ng-container *ngIf="mode === 'normal'; else weekdayConfirmInputs">
+                          <td class="p-1 border date-cell">
+                            <ng-container [formGroup]="asFormGroup(getDateRanges(rid).controls[0])">
+                              <ng-container formGroupName="prices">
+                                <ng-container formGroupName="weekday">
+                                  <ng-container [formGroupName]="occKey">
+                                    <input
+                                      type="text"
+                                      inputmode="numeric"
+                                      autocomplete="off"
+                                      class="pricing-input"
+                                      [formControlName]="mk.key"
+                                      (keydown)="onNumericKeydown($event)"
+                                      (input)="onNormalPriceChanged(rid, 'weekday', occKey, mk.key, $event)"
+                                    />
+                                  </ng-container>
+                                </ng-container>
+                              </ng-container>
+                            </ng-container>
+                          </td>
+                        </ng-container>
+                        <ng-template #weekdayConfirmInputs>
+                          <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByIndex">
+                            <td class="p-1 border date-cell">
+                              <ng-container [formGroup]="asFormGroup(rg)">
+                                <ng-container formGroupName="prices">
+                                  <ng-container formGroupName="weekday">
+                                    <ng-container [formGroupName]="occKey">
+                                      <input type="text" inputmode="numeric" autocomplete="off" class="pricing-input" [formControlName]="mk.key" />
+                                    </ng-container>
+                                  </ng-container>
+                                </ng-container>
+                              </ng-container>
+                            </td>
+                          </ng-container>
+                        </ng-template>
+                      </tr>
+                    </ng-container>
+                  </ng-container>
+                </tbody>
+              </table>
+                </div>
+              </div>
+
+              <div class="table-block" *ngIf="hasWeekend(rid)">
+                <div class="table-title weekend">Week Off Days</div>
+                <div class="apply-bar" *ngIf="isBasePricesComplete(rid, 'weekend')">
+                  <mat-checkbox (change)="onApplyBasePrices(rid, 'weekend', $event.checked)">
+                    Apply 1-person prices to all (Week Off Days)
+                  </mat-checkbox>
+                </div>
+                <div class="table-wrap">
+              <table class="border pricing-table weekend-table">
+                <thead>
+                  <tr>
+                    <th class="p-2 border category-col">Category</th>
+                    <ng-container *ngIf="mode === 'normal'; else weekendConfirmHeadings">
+                      <th class="p-2 border bg-blue-100 date-col">Price</th>
+                    </ng-container>
+                    <ng-template #weekendConfirmHeadings>
+                      <ng-container *ngFor="let rg of getDateRanges(rid).controls">
+                        <th class="p-2 border bg-blue-100 date-col">
+                          {{ formatDateStr(rg.value.from) }} to {{ formatDateStr(rg.value.to) }}
+                        </th>
+                      </ng-container>
+                    </ng-template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey">
+                    <ng-container *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                      <tr [class.occ-group-alt]="ix % 2 === 1">
+                        <td class="p-2 border category-col">{{ ix + 1 }} - {{ mk.label }}</td>
+                        <ng-container *ngIf="mode === 'normal'; else weekendConfirmInputs">
+                          <td class="p-1 border date-cell">
+                            <ng-container [formGroup]="asFormGroup(getDateRanges(rid).controls[0])">
+                              <ng-container formGroupName="prices">
+                                <ng-container formGroupName="weekend">
+                                  <ng-container [formGroupName]="occKey">
+                                    <input
+                                      type="text"
+                                      inputmode="numeric"
+                                      autocomplete="off"
+                                      class="pricing-input"
+                                      [formControlName]="mk.key"
+                                      (keydown)="onNumericKeydown($event)"
+                                      (input)="onNormalPriceChanged(rid, 'weekend', occKey, mk.key, $event)"
+                                    />
+                                  </ng-container>
+                                </ng-container>
+                              </ng-container>
+                            </ng-container>
+                          </td>
+                        </ng-container>
+                        <ng-template #weekendConfirmInputs>
+                          <ng-container *ngFor="let rg of getDateRanges(rid).controls; trackBy: trackByIndex">
+                            <td class="p-1 border date-cell">
+                              <ng-container [formGroup]="asFormGroup(rg)">
+                                <ng-container formGroupName="prices">
+                                  <ng-container formGroupName="weekend">
+                                    <ng-container [formGroupName]="occKey">
+                                      <input type="text" inputmode="numeric" autocomplete="off" class="pricing-input" [formControlName]="mk.key" />
+                                    </ng-container>
+                                  </ng-container>
+                                </ng-container>
+                              </ng-container>
+                            </td>
+                          </ng-container>
+                        </ng-template>
+                      </tr>
+                    </ng-container>
+                  </ng-container>
+                </tbody>
+              </table>
+                </div>
+              </div>
+            </div>
+            
+          </ng-container>
+        </div>
+      </ng-container>
+    </div>
+    
+    <!-- Extra Bed Costs Section -->
+    <div class="md:col-span-2 mt-6" [formGroup]="form">
+      <div class="border rounded p-3">
+        <div class="font-medium mb-3">Extra Bed Costs</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="extraCosts">
+          <!-- Extra Child Without Bed -->
+          <div class="border rounded">
+            <div class="p-2 font-medium">Extra Child Without Bed</div>
+            <table class="w-full border">
+              <thead>
+                <tr>
+                  <th class="p-2 border">Meal</th>
+                  <th class="p-2 border">Price</th>
+                </tr>
+              </thead>
+              <tbody [formGroupName]="'child'">
+                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                  <td class="p-2 border">{{ mk.label }}</td>
+                  <td class="p-2 border">
+                    <input type="text" inputmode="numeric" class="pricing-input"
+                      [formControlName]="mk.key"
+                      (keydown)="onNumericKeydown($event)"
+                      (input)="onNumericInput($event, extraCostCtrl('child', mk.key))" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="p-2">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Age (1–17)</mat-label>
+                <mat-select formControlName="childAge">
+                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <!-- Extra Child with Bed -->
+          <div class="border rounded">
+            <div class="p-2 font-medium">Extra Child with Bed</div>
+            <table class="w-full border">
+              <thead>
+                <tr>
+                  <th class="p-2 border">Meal</th>
+                  <th class="p-2 border">Price</th>
+                </tr>
+              </thead>
+              <tbody [formGroupName]="'child_with_bed'">
+                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                  <td class="p-2 border">{{ mk.label }}</td>
+                  <td class="p-2 border">
+                    <input type="text" inputmode="numeric" class="pricing-input"
+                      [formControlName]="mk.key"
+                      (keydown)="onNumericKeydown($event)"
+                      (input)="onNumericInput($event, extraCostCtrl('child_with_bed', mk.key))" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="p-2">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Age (1–17)</mat-label>
+                <mat-select formControlName="childWithBedAge">
+                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </div>
+          
+          <!-- Extra Bed per Adult (moved to last) -->
+          <div class="border rounded">
+            <div class="p-2 font-medium">Extra Bed per Adult</div>
+            <table class="w-full border">
+              <thead>
+                <tr>
+                  <th class="p-2 border">Meal</th>
+                  <th class="p-2 border">Price</th>
+                </tr>
+              </thead>
+              <tbody [formGroupName]="'adult'">
+                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                  <td class="p-2 border">{{ mk.label }}</td>
+                  <td class="p-2 border">
+                    <input type="text" inputmode="numeric" class="pricing-input"
+                      [formControlName]="mk.key"
+                      (keydown)="onNumericKeydown($event)"
+                      (input)="onNumericInput($event, extraCostCtrl('adult', mk.key))" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="md:col-span-3 border rounded p-3 mt-4" [formGroup]="form">
+            <ng-container >
+              <h3 class="text-base font-semibold">Refund Policy</h3>
+              <div class="mb-4">
+                <mat-radio-group formControlName="isRefundable" class="flex gap-4">
+                  <mat-radio-button value="refundable">Refundable</mat-radio-button>
+                  <mat-radio-button value="non-refundable">Non-Refundable</mat-radio-button>
+                </mat-radio-group>
+              </div>
+              <div *ngIf="form.get('isRefundable')?.value === 'refundable'" class="mb-4">
+                <h4 class="text-base font-medium mb-2">Fare Rules</h4>
+                <div formArrayName="fareRules" class="border p-4 rounded-md bg-gray-50">
+                  <div *ngFor="let rule of fareRules.controls; let i = index" [formGroupName]="i" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pb-3 border-b last:border-b-0 last:mb-0 last:pb-0">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Days before check-in</mat-label>
+                      <input matInput type="number" formControlName="days" min="1" />
+                      <mat-error *ngIf="fareRules.at(i).get('days')?.hasError('required')">Days is required</mat-error>
+                      <mat-error *ngIf="fareRules.at(i).get('days')?.hasError('min')">Must be at least 1 day</mat-error>
+                    </mat-form-field>
+                    <div class="flex items-center gap-2">
+                      <mat-form-field appearance="outline" class="flex-1">
+                        <mat-label>Refundable Amount (₹)</mat-label>
+                        <input matInput type="number" formControlName="amount" min="0" [max]="form.get('pricePerNight')?.value" />
+                        <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('required')">Amount is required</mat-error>
+                        <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('min')">Amount cannot be negative</mat-error>
+                      </mat-form-field>
+                      <button mat-icon-button color="warn" type="button" (click)="removeFareRule(i)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                  <div *ngIf="fareRules.length === 0" class="text-gray-500 italic text-center py-2">
+                    No refund rules added yet. Add at least one rule.
+                  </div>
+                  <div class="mt-3">
+                    <button mat-stroked-button color="primary" type="button" (click)="addFareRule()">
+                      <mat-icon>add</mat-icon> Add Refund Rule
+                    </button>
+                  </div>
+                  </div>
+              </div>
+            </ng-container>
+          </div>
+          
+          <div class="md:col-span-3 border rounded p-3 mt-4" [formGroup]="form">
+            <h3 class="text-base font-semibold">Hold Booking</h3>
+            <div class="flex items-center">
+              <mat-checkbox formControlName="allowHoldBooking">Allow Hold Booking</mat-checkbox>
+            </div>
+        
+            <div *ngIf="form.get('allowHoldBooking')?.value" class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Amount Type</mat-label>
+                <mat-select formControlName="holdBookingType">
+                  <mat-option value="percentage">Percentage</mat-option>
+                  <mat-option value="flat">Flat</mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>{{ form.get('holdBookingType')?.value === 'percentage' ? 'Hold Booking Percentage' : 'Hold Booking Amount' }}</mat-label>
+                <input matInput type="number" formControlName="holdBookingAmount" min="0" />
+                <mat-error *ngIf="form.get('holdBookingAmount')?.hasError('required')">{{ form.get('holdBookingType')?.value === 'percentage' ? 'Percentage' : 'Amount' }} is required</mat-error>
+                <mat-error *ngIf="form.get('holdBookingAmount')?.hasError('min')">{{ form.get('holdBookingType')?.value === 'percentage' ? 'Percentage' : 'Amount' }} cannot be negative</mat-error>
+                <mat-error *ngIf="form.get('holdBookingAmount')?.hasError('max')">Percentage cannot exceed 100%</mat-error>
+                <mat-error *ngIf="form.get('holdBookingAmount')?.hasError('exceedsPrice')">Amount cannot exceed room price</mat-error>
+              </mat-form-field>
+        
+              <mat-form-field appearance="outline">
+                <mat-label>Hold Booking Cut-off (days)</mat-label>
+                <input matInput type="number" formControlName="holdBookingCutOffDays" min="1" />
+                <mat-error *ngIf="form.get('holdBookingCutOffDays')?.hasError('required')">Cut-off days is required</mat-error>
+                <mat-error *ngIf="form.get('holdBookingCutOffDays')?.hasError('min')">Must be at least 1 day</mat-error>
+                <mat-error *ngIf="form.get('holdBookingCutOffDays')?.hasError('maxDaysExceeded')">Cannot exceed 30 days</mat-error>
+              </mat-form-field>
+        
+              <mat-form-field appearance="outline">
+                <mat-label>Hold Booking Limit (hours)</mat-label>
+                <input matInput type="number" formControlName="holdBookingLimit" min="1" />
+                <mat-error *ngIf="form.get('holdBookingLimit')?.hasError('required')">Hold booking limit is required</mat-error>
+                <mat-error *ngIf="form.get('holdBookingLimit')?.hasError('min')">Must be at least 1</mat-error>
+                <mat-error *ngIf="form.get('holdBookingLimit')?.hasError('limitExceedsCutOff')">Cannot exceed hold booking cut-off hours</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+
+    <!-- Blackout Dates (Normal Mode Only) -->
+    <div class="md:col-span-2 mt-6" *ngIf="mode === 'normal'" [formGroup]="form">
+      <div class="border rounded p-3">
+        <div class="font-medium mb-3">Blackout Dates</div>
+        <div class="flex items-center gap-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Select Date</mat-label>
+            <input matInput [matDatepicker]="blackoutPicker" formControlName="blackoutDateInput" [min]="minDate"
+              (dateInput)="onBlackoutDateSelected($event.value)" (dateChange)="onBlackoutDateSelected($event.value)" />
+            <mat-datepicker-toggle matSuffix [for]="blackoutPicker"></mat-datepicker-toggle>
+            <mat-datepicker #blackoutPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2" *ngIf="blackoutDates?.length">
+          <div class="px-2 py-1 border rounded" *ngFor="let d of blackoutDates?.controls; let i = index">
+            {{ formatDateStr(d.value) }}
+            <button mat-icon-button color="warn" type="button" (click)="removeBlackoutDate(i)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div class="text-xs text-gray-600 mt-2">
+          On blackout dates, rooms are considered unavailable for normal inventory.
+        </div>
+      </div>
+    </div>
+    
+    <div class="md:col-span-2 mt-6 flex justify-end gap-2" [formGroup]="form">
+      <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-flat-button color="primary" type="button" [disabled]="saving" (click)="save()">Save Inventory</button>
+    </div>
+  </div>
+</div>

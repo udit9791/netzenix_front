@@ -1,0 +1,75 @@
+.dialog-container{max-width:980px}
+.dialog-header{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #eee}
+.title{font-weight:600;font-size:18px}
+.tabs ::ng-deep .mat-mdc-tab-header{border-bottom:1px solid #eee}
+.summary-bar{display:flex;align-items:center;gap:24px;padding:16px;border-bottom:1px solid #f0f0f0}
+.summary-bar .label{font-size:12px;color:#888}
+.summary-bar .date{font-weight:600}
+.summary-bar .route .codes{font-weight:600;font-size:16px}
+.summary-bar .route .meta{font-size:12px;color:#666}
+.itinerary{padding:16px}
+.leg{display:grid;grid-template-columns:160px 40px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid #eee}
+.left{display:flex;flex-direction:column;align-items:flex-start}
+.left .dep-time,.left .arr-time{font-size:16px;font-weight:600;color:#222}
+.left .dep-date,.left .arr-date{font-size:12px;color:#666}
+.left .spacer{flex:1}
+.left .name{font-weight:600}
+.left .code{font-size:12px;color:#777;margin-top:2px}
+.middle{position:relative}
+.middle .line{position:absolute;left:50%;top:14px;bottom:14px;width:2px;background:#ddd;transform:translateX(-50%)}
+.middle .line.dotted{background:repeating-linear-gradient(to bottom, #ddd, #ddd 4px, transparent 4px, transparent 8px)}
+.middle .node{width:10px;height:10px;border-radius:50%;background:#3f51b5;position:absolute;left:50%;transform:translateX(-50%)}
+.middle .node{background:#59b300}
+.middle .start{top:0}
+.middle .end{bottom:0}
+.right .place{font-weight:600;font-size:14px;color:#222}
+.right .place .code{margin-left:6px;font-weight:600;color:#111}
+.right .city{color:#777;margin-left:6px}
+.right .duration{font-size:12px;color:#444;margin:6px 0}
+.right .dates{font-size:12px;color:#777}
+.connecting .connecting-row{display:flex;align-items:center;gap:8px;color:#555;padding:6px 8px}
+
+.fare-summary,.inclusions{padding:12px 8px}
+/* override to add more spacing for baggage & inclusions tab */
+.inclusions{padding:16px 12px}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #eee}
+.rules{margin-top:10px}
+.rule{font-size:12px;color:#444}
+.refundable{margin-left:auto;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600}
+.refundable.yes{background:#e7f5e8;color:#1d8f35;border:1px solid #bfe3c6}
+.refundable.no{background:#fdeaea;color:#c62828;border:1px solid #f6c7c7}
+.badge{margin-top:8px;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;display:inline-block}
+.badge-green{background:#e7f5e8;color:#1d8f35;border:1px solid #bfe3c6}
+.badge-red{background:#fdeaea;color:#c62828;border:1px solid #f6c7c7}
+.right .sub{font-size:12px;color:#555;margin:4px 0}
+
+.fare-summary-rules{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:12px}
+.fare-details-card{background:#fafafa;border:1px solid #e6e6e6;border-radius:12px;padding:12px}
+.card-title{font-weight:600;margin-bottom:8px}
+.fd-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #e6e6e6}
+.fd-total{display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:16px}
+.fare-rules-card{background:#fff;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden}
+.rules-header{display:grid;grid-template-columns:1fr 120px;gap:8px;padding:10px 12px;border-bottom:1px solid #eee}
+.rules-header .route{font-weight:600}
+.rules-header .aud-label{text-align:right;font-weight:600}
+.rules-section{padding:8px 12px}
+.section-title{font-size:13px;font-weight:600;background:#f5f5f5;border:1px solid #e6e6e6;border-radius:8px;padding:6px 8px;margin-bottom:8px}
+.rule-row{display:grid;grid-template-columns:1fr 140px;padding:8px 6px;border-bottom:1px solid #f0f0f0}
+.rule-row .label{color:#444}
+.rule-row .value{text-align:right;color:#111}
+.rules-notes{padding:10px 12px}
+.rules-notes ul{list-style:none;margin:0;padding:10px;border:1px solid #e6e6e6;border-radius:12px;background:#fff}
+.rules-notes li{padding:6px 6px;color:#555;font-size:12px}
+@media (max-width:768px){.fare-summary-rules{grid-template-columns:1fr}}
+
+.fare-breakup{padding:4px}
+.fb-title{font-weight:600;margin-bottom:8px}
+.fb-row{display:flex;justify-content:space-between;padding:6px 0}
+.fb-row.total{font-weight:700}
+.fb-row .neg{color:#1e8e3e}
+
+.baggage-block{display:flex;gap:16px;align-items:flex-start;padding:20px;border-top:1px solid #eee}
+.bag-icon mat-icon{font-size:48px;height:48px;width:48px;color:#1a237e}
+.bag-info{display:flex;flex-direction:column;gap:6px}
+.bag-title{font-weight:600;color:#222}
+.bag-sub{font-size:12px;color:#666}

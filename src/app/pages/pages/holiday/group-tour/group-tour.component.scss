@@ -1,0 +1,124 @@
+:host {
+  display: block;
+  padding: 16px 20px;
+}
+
+.group-tour-page .container {
+  display: grid;
+  grid-template-columns: 300px 1fr; /* left filter narrow, right fluid */
+  gap: 24px;
+  align-items: start;
+}
+
+/* Make filters sticky on large screens */
+.filters {
+  position: relative;
+  .filter-card {
+    margin-bottom: 16px;
+    &.small { padding: 12px; }
+  }
+  /* sticky when tall content on right */
+  @media (min-width: 960px) {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+  }
+}
+
+/* Listings column */
+.listings {
+  .top-count {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .package-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .package-card {
+    padding: 0;
+    overflow: hidden;
+    .card-inner {
+      display: flex;
+      gap: 16px;
+      padding: 12px;
+    }
+
+    .thumb {
+      width: 220px;
+      min-width: 180px;
+      max-width: 260px;
+      position: relative;
+      img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 6px;
+      }
+      .days-chip {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: #0d6efd;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-weight: 600;
+        font-size: 12px;
+      }
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+
+      .title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+
+        .title {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .price-block {
+          text-align: right;
+          .price { font-weight: 800; font-size: 16px; color: #0d6efd; }
+          .old { text-decoration: line-through; font-size: 12px; color: #777; }
+        }
+      }
+
+      .short-desc { margin: 8px 0 12px; color: #333; font-size: 14px; }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+
+        .left-meta { font-size: 13px; color: #666; }
+        .right-actions { display: flex; align-items: center; gap: 8px; }
+      }
+
+      .tags-row { margin-top: 10px; mat-chip { margin-right: 6px; } }
+    }
+  }
+}
+
+/* Responsive: stack columns on narrow screens */
+@media (max-width: 900px) {
+  .group-tour-page .container {
+    grid-template-columns: 1fr;
+  }
+  .package-card .card-inner { flex-direction: column; }
+  .thumb { width: 100%; img { height: 200px; } }
+}

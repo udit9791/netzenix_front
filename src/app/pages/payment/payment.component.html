@@ -1,0 +1,85 @@
+<div class="payment-container">
+  <div class="header">
+    <button mat-button (click)="backToHome()" class="back-button">
+      <mat-icon>arrow_back</mat-icon> Back To Home
+    </button>
+  </div>
+
+  <div class="content">
+    <div class="greeting">
+      <h2>Hey, <span class="secure-text">👋 Our transaction methods are very safe and secure</span></h2>
+    </div>
+
+    <div class="session-info">
+      Session expires in <span class="time">{{timerDisplay}}</span> minutes
+    </div>
+
+    <div class="payment-section">
+      <h3>Select payment method</h3>
+
+      <div class="payment-methods">
+        <!-- Dynamic Payment Methods from Database -->
+        <div *ngFor="let method of paymentMethods" class="payment-method-container">
+          <div class="payment-option" 
+               [class.selected]="selectedPaymentMethod === method.name.toLowerCase().replace(' ', '_')" 
+               (click)="selectPaymentMethod(method.name.toLowerCase().replace(' ', '_'))">
+            <div class="payment-icon">
+              <mat-icon>{{getPaymentMethodIcon(method.name)}}</mat-icon>
+            </div>
+            <div class="payment-label">{{method.name}}</div>
+            <mat-icon *ngIf="selectedPaymentMethod === method.name.toLowerCase().replace(' ', '_')" class="check-icon">check_circle</mat-icon>
+          </div>
+          
+          <!-- Payment Details Section - appears directly below the selected payment option -->
+          <div *ngIf="selectedPaymentMethod === method.name.toLowerCase().replace(' ', '_')" class="payment-details">
+            <p class="instruction">Kindly enter {{method.name.toLowerCase()}} details</p>
+            
+            <!-- File Upload Section (if allow_file = 1) -->
+            <div *ngIf="allowsFileUpload(method)" class="upload-section">
+              <p>Upload Receipt <span class="required">*</span></p>
+              <div class="upload-area">
+                <div class="upload-placeholder">
+                  <mat-icon>file_upload</mat-icon>
+                  <p>Drag & drop receipt (or) <span class="choose-file" (click)="fileInput.click()">Choose file</span></p>
+                  <input #fileInput type="file" style="display:none" (change)="onFileSelected($event)" accept=".svg,.png,.jpg,.jpeg,.pdf">
+                </div>
+                <p class="file-info" *ngIf="selectedFile">Selected file: {{selectedFile.name}}</p>
+                <p class="file-limits">Supported files: Svg, Png, Jpg, Jpeg, Pdf | Max Limit: Upto 1 MB</p>
+              </div>
+            </div>
+            
+            <!-- Remarks Section (if allow_remark = 1) -->
+            <div *ngIf="allowsRemarks(method)" class="remarks-fields">
+              <mat-form-field appearance="outline" class="remarks-input">
+                <mat-label>Remarks (Optional)</mat-label>
+                <input matInput [(ngModel)]="remarks" placeholder="Enter remarks">
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="payment-note">
+        *Additional Convenience fee shall be applicable, subject to the mode of payment selected.
+      </div>
+    </div>
+
+    <div class="summary-section">
+      <h3>Top-up Summary</h3>
+      <div class="summary-row">
+        <span>Total topup amount</span>
+        <span class="amount">INR {{amount}}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Total:</span>
+        <span class="amount">INR {{amount}}</span>
+      </div>
+      <div class="summary-note">
+        *Convenience fee applied is non-refundable incase of cancellation
+      </div>
+      <button mat-flat-button color="primary" class="pay-button" [disabled]="!selectedPaymentMethod" (click)="payNow()">
+        Pay now
+      </button>
+    </div>
+  </div>
+</div>

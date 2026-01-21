@@ -1,0 +1,272 @@
+<vex-secondary-toolbar current="Manage Flight Series">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Manage Flight Series']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card flex-auto">
+    <!-- 🔹 Filter & Action Buttons -->
+    <div class="flex flex-wrap items-end gap-4 p-4">
+      <form [formGroup]="filterForm" class="flex flex-wrap items-end gap-4 flex-1">
+        <mat-form-field appearance="outline" class="w-50">
+  <mat-label>Sector</mat-label>
+  <mat-select formControlName="sector">
+    <mat-option *ngFor="let sector of sectors" [value]="sector">
+      {{ sector }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-50">
+          <mat-label>From</mat-label>
+          <input matInput [matDatepicker]="fromPicker" formControlName="fromDate" />
+          <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-50">
+          <mat-label>To</mat-label>
+          <input matInput [matDatepicker]="toPicker" formControlName="toDate" />
+          <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-32">
+          <mat-label>Airline Code</mat-label>
+          <input matInput formControlName="airlineCode" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-32">
+          <mat-label>Min Seats</mat-label>
+          <input matInput type="number" formControlName="minSeats" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-32">
+          <mat-label>PNR</mat-label>
+          <input matInput formControlName="pnr" />
+        </mat-form-field>
+      </form>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 ml-auto">
+        <button mat-flat-button color="primary" (click)="showInventory()">
+          Show Inventory
+        </button>
+        <button mat-flat-button color="primary" [routerLink]="['/sale/add-flight-inventory']">
+          + New Flight Deal
+        </button>
+        <button mat-flat-button color="accent" (click)="openUploadDialog()">
+          ⬆ Upload
+        </button>
+        <button mat-stroked-button color="primary" (click)="downloadExcel()">
+          ⬇ Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔹 Table -->
+  <div class="overflow-auto">
+    <table mat-table [dataSource]="dataSource" matSort class="w-full">
+
+      <!-- Checkbox -->
+      <ng-container matColumnDef="checkbox">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox
+            (change)="$event ? masterToggle() : null"
+            [checked]="selection.hasValue() && isAllSelected()"
+            [indeterminate]="selection.hasValue() && !isAllSelected()">
+          </mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox
+            (click)="$event.stopPropagation()"
+            (change)="$event ? selection.toggle(row) : null"
+            [checked]="selection.isSelected(row)">
+          </mat-checkbox>
+        </td>
+      </ng-container>
+
+      <!-- Cut-off Date -->
+      <ng-container matColumnDef="cutoffDate">
+        <th mat-header-cell *matHeaderCellDef>Cut-off Date</th>
+        <td mat-cell *matCellDef="let row">
+  <div>
+    <div>{{ row.cutoffDate | date: 'dd MMM yyyy' }}</div>
+    <div class="text-xs text-gray-500">ID: {{ row.id }}</div>
+    <div class="text-xs text-gray-500">Name: D-7</div>
+    <div class="flex flex-col mt-1 gap-1">
+        <span
+          class="px-2 py-0.5 rounded-full text-white text-xs"
+          [ngClass]="row.is_active === 1 ? 'bg-green-500' : 'bg-red-500'">
+          {{ row.is_active === 1 ? 'Enabled' : 'Disabled' }}
+        </span>
+      <!-- <span class="px-2 py-0.5 rounded-full text-white text-xs bg-green-500">On Time</span> -->
+    </div>
+    <a href="javascript:void(0)" class="text-xs text-blue-500 underline"
+         (click)="toggleStatus(row)">
+        {{ row.is_active === 1 ? 'disable' : 'enable' }}
+      </a>
+  </div>
+</td>
+
+      </ng-container>
+
+      <!-- Onward Date -->
+      <ng-container matColumnDef="flight_date">
+  <th mat-header-cell *matHeaderCellDef>Onward Date</th>
+  <td mat-cell *matCellDef="let row">
+    <div *ngIf="getOnwardDetail(row.details) as onward">
+      {{ row.flight_date | date: 'dd MMM yyyy' }}<br />
+      <span class="text-xs text-gray-600">
+        {{ onward.dep_time }} - {{ onward.arr_time }}
+      </span>
+    </div>
+  </td>
+</ng-container>
+
+      <!-- Return Date -->
+     <ng-container matColumnDef="returnDate">
+  <th mat-header-cell *matHeaderCellDef>Return Date</th>
+  <td mat-cell *matCellDef="let row">
+    <div *ngIf="getReturnDetail(row.details) as ret">
+      {{ ret.flight_date | date: 'dd MMM yyyy' }}<br />
+      <span class="text-xs text-gray-600">
+        {{ ret.dep_time }} - {{ ret.arr_time }}
+      </span>
+    </div>
+  </td>
+</ng-container>
+
+
+      <!-- Sector -->
+      <ng-container matColumnDef="sector">
+        <th mat-header-cell *matHeaderCellDef>Sector</th>
+        <td mat-cell *matCellDef="let row">{{ row.sector }}</td>
+      </ng-container>
+
+      <!-- Airline -->
+    <ng-container matColumnDef="airline">
+  <th mat-header-cell *matHeaderCellDef>Airline</th>
+  <td mat-cell *matCellDef="let row">
+    
+    <span class="text-xs text-gray-500">
+      {{ getAllFlightNumbers(row.details) || row.airline || 'N/A' }}
+    </span><br />
+    <span class="text-xs text-blue-500 underline cursor-pointer hover:text-blue-700 hover:font-semibold"
+          (click)="openFlightDetails(row)">
+      Flight Details
+    </span>
+  </td>
+</ng-container>
+
+
+
+      <!-- Seats Allocated -->
+      <ng-container matColumnDef="seat_allocated">
+        <th mat-header-cell *matHeaderCellDef>Seats Allocated</th>
+        <td mat-cell *matCellDef="let row">
+          <input matInput type="number"
+       [(ngModel)]="row.seat_allocated"
+       (ngModelChange)="markAsChanged(row, 'seat_allocated', $event)"
+       class="w-16 black-border-input" />
+          <div class="text-xs text-gray-600 mt-1" *ngIf="row.hold_booking && row.hold_booking > 0">
+            Hold Booking: <span class="font-semibold">{{ row.hold_booking }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Seats Booked -->
+      <ng-container matColumnDef="seat_booked">
+        <th mat-header-cell *matHeaderCellDef>Seats Booked</th>
+         <td mat-cell *matCellDef="let row">
+          <span class=" font-semibold">{{ row.seat_booked }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Seats Blocked -->
+      <ng-container matColumnDef="seatsBlocked">
+        <th mat-header-cell *matHeaderCellDef>Seats Blocked</th>
+        <td mat-cell *matCellDef="let row">
+          <input matInput type="number"
+       [(ngModel)]="row.seatsBlocked"
+       (ngModelChange)="markAsChanged(row, 'seatsBlocked', $event)"
+       class="w-16 black-border-input" />
+        </td>
+      </ng-container>
+
+      <!-- Markup -->
+      <ng-container matColumnDef="markup">
+        <th mat-header-cell *matHeaderCellDef>Markup</th>
+        <td mat-cell *matCellDef="let row">
+         <input matInput type="number"
+       [(ngModel)]="row.markup"
+       (ngModelChange)="markAsChanged(row, 'markup', $event)"
+       class="w-20 black-border-input" />
+          <!-- <div class="text-xs text-gray-500">18 hours ago</div> -->
+        </td>
+      </ng-container>
+
+      <!-- Price -->
+      <ng-container matColumnDef="amount">
+        <th mat-header-cell *matHeaderCellDef>Price</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="text-red-500 font-semibold">{{ row.amount }}</span> INR
+        </td>
+      </ng-container>
+
+      <!-- Sell Price -->
+      <ng-container matColumnDef="sell_price">
+        <th mat-header-cell *matHeaderCellDef>Sell Price</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="font-bold">{{ row.sell_price }}</span> INR
+        </td>
+      </ng-container>
+
+      <!-- Status -->
+      <!-- <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let row">
+          <span
+            class="px-2 py-1 rounded text-white text-xs"
+            [ngClass]="row.status === 'Active' ? 'bg-green-500' : 'bg-red-500'">
+            {{ row.status }}
+          </span>
+        </td>
+      </ng-container> -->
+
+      <!-- Actions -->
+      <!-- <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button color="primary" (click)="editFlight(row)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="deleteFlight(row)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container> -->
+
+      <!-- Rows -->
+      <tr mat-header-row *matHeaderRowDef="visibleColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: visibleColumns"></tr>
+    </table>
+  </div>
+
+  <!-- Paginator -->
+  <mat-paginator
+    [length]="totalFlights"
+    [pageSize]="pageSize"
+    [pageIndex]="pageIndex"
+    [pageSizeOptions]="pageSizeOptions"
+    showFirstLastButtons>
+  </mat-paginator>
+      <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-end shadow-lg"
+        *ngIf="hasUnsavedChanges">
+      <button mat-flat-button color="primary" (click)="saveChanges()">
+        Save Changes
+      </button>
+    </div>
+</div>
+
+

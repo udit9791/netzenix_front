@@ -1,0 +1,112 @@
+<vex-secondary-toolbar current="Edit User">
+  <vex-breadcrumbs [crumbs]="['Users', 'Edit']" class="flex-auto"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div [@stagger]="true" class="p-6 container">
+  <div class="card flex-auto" @fadeInUp>
+    <div class="px-6 py-4 border-b flex items-center">
+      <h2 class="title m-0">Edit User</h2>
+    </div>
+
+    <form
+      *ngIf="!loading"
+      class="px-6 py-4 flex flex-col gap-6"
+      [formGroup]="userForm"
+      (ngSubmit)="onSubmit()"
+    >
+      <!-- Two-column layout -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Name -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Full Name</mat-label>
+          <input
+            matInput
+            formControlName="name"
+            placeholder="Enter full name…"
+            required
+          />
+        </mat-form-field>
+
+        <!-- Email -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Email Address</mat-label>
+          <input
+            matInput
+            formControlName="email"
+            placeholder="Enter email…"
+            required
+          />
+        </mat-form-field>
+
+        <!-- Role -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role" required>
+            <mat-option *ngFor="let role of roles" [value]="role.name">
+              {{ role.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Country -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Country</mat-label>
+          <mat-select formControlName="country_id" required>
+            <mat-option [value]="''">Select a country</mat-option>
+            <mat-option *ngFor="let country of countries" [value]="country.id">
+              {{ country.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- State Dropdown (for India) -->
+        <mat-form-field appearance="outline" *ngIf="showStateDropdown" class="w-full">
+          <mat-label>State</mat-label>
+          <mat-select formControlName="state_id">
+            <mat-option *ngFor="let state of states" [value]="state.id">
+              {{ state.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- State Text Field (for other countries) -->
+        <mat-form-field appearance="outline" *ngIf="!showStateDropdown" class="w-full">
+          <mat-label>State</mat-label>
+          <input
+            matInput
+            formControlName="state_name"
+            placeholder="Enter state name…"
+          />
+        </mat-form-field>
+
+        <!-- PAN Number -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>PAN Number</mat-label>
+          <input
+            matInput
+            formControlName="pan_no"
+            placeholder="Enter PAN number…"
+          />
+        </mat-form-field>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-4 mt-4">
+        <button mat-button type="button" (click)="cancel()">Cancel</button>
+        <button
+          color="primary"
+          mat-flat-button
+          type="submit"
+          [disabled]="userForm.invalid"
+        >
+          Update User
+        </button>
+      </div>
+    </form>
+    
+    <!-- Loading indicator -->
+    <div *ngIf="loading" class="p-6 flex justify-center">
+      <p>Loading user data...</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,182 @@
+<div class="page-container">
+<mat-card class="transactions-card">
+  <mat-card-header>
+    <mat-card-title>Transactions</mat-card-title>
+    <mat-card-subtitle>All payment transactions</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="toolbar">
+      <!-- Status Dropdown -->
+      <mat-form-field appearance="outline">
+        <mat-label>Status</mat-label>
+        <mat-select [(ngModel)]="statusFilter">
+          <mat-option [value]="''">All</mat-option>
+          <mat-option *ngFor="let s of statuses" [value]="s.id">
+            {{ s.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- User Autocomplete Filter -->
+      <mat-form-field appearance="outline">
+        <mat-label>User</mat-label>
+        <input matInput 
+               [formControl]="userControl"
+               [matAutocomplete]="userAuto"
+               placeholder="Search users...">
+        <button matSuffix mat-icon-button 
+                *ngIf="selectedUserId" 
+                (click)="clearUserFilter()"
+                matTooltip="Clear user filter">
+          <mat-icon>clear</mat-icon>
+        </button>
+        <mat-autocomplete #userAuto="matAutocomplete" 
+                          [displayWith]="displayUser"
+                          (optionSelected)="onUserSelected($event.option.value)">
+          <mat-option *ngFor="let user of filteredUsers | async" [value]="user">
+            <span>{{ user.name }}</span>
+            <small class="text-gray-500 ml-2">({{ user.email }})</small>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <!-- Date Range Picker -->
+      <mat-form-field appearance="outline" class="date-range">
+        <mat-label>Date range</mat-label>
+        <mat-date-range-input [rangePicker]="picker">
+          <input matStartDate placeholder="From" [(ngModel)]="fromDate">
+          <input matEndDate placeholder="To" [(ngModel)]="toDate">
+        </mat-date-range-input>
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-date-range-picker #picker></mat-date-range-picker>
+      </mat-form-field>
+
+      <!-- Full Search -->
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search</mat-label>
+        <input matInput [(ngModel)]="search" placeholder="reference, remarks, method...">
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" (click)="applyFilter()">
+        <mat-icon>search</mat-icon>
+        Apply
+      </button>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!loading; else loadingTpl">
+      <table mat-table [dataSource]="data" class="mat-elevation-z1 full-width">
+        <!-- User Column -->
+        <ng-container matColumnDef="user">
+          <th mat-header-cell *matHeaderCellDef>User</th>
+          <td mat-cell *matCellDef="let row">{{ row.user?.name || row.user_name || '' }}</td>
+        </ng-container>
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+        </ng-container>
+
+        <!-- Type Column -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let row">
+            <span
+              [ngClass]="
+                (row.transection_type || row.transaction_type || row.type)?.toLowerCase() === 'credit' ? 'type-credit' :
+                (row.transection_type || row.transaction_type || row.type)?.toLowerCase() === 'debit' ? 'type-debit' : ''
+              "
+            >
+              {{ (row.transection_type || row.transaction_type || row.type) | titlecase }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Amount Column -->
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>Amount</th>
+          <td mat-cell *matCellDef="let row">₹ {{ row.amount }}</td>
+        </ng-container>
+
+        <!-- Payment Method Column -->
+        <ng-container matColumnDef="payment_method">
+          <th mat-header-cell *matHeaderCellDef>Payment Method</th>
+          <td mat-cell *matCellDef="let row">
+            {{ (row.method || row.payment_type || row.payment_method || '-') | uppercase }}
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">
+            {{
+              row.paymentStatus?.name ||
+              row.payment_status?.name ||
+              row.payment_status ||
+              row.status || ''
+            }}
+          </td>
+        </ng-container>
+
+        <!-- Balance After Column -->
+        <ng-container matColumnDef="balance_after">
+          <th mat-header-cell *matHeaderCellDef>Balance After</th>
+          <td mat-cell *matCellDef="let row">{{ row.balance_after }}</td>
+        </ng-container>
+
+        <!-- Attachment Column -->
+        <ng-container matColumnDef="attachment">
+          <th mat-header-cell *matHeaderCellDef>Attachment</th>
+          <td mat-cell *matCellDef="let row">
+            <ng-container *ngIf="row.attachment; else noAttachment">
+              <button mat-icon-button color="primary" 
+                      (click)="openAttachment(row.attachment, $event)"
+                      matTooltip="View Attachment">
+                <mat-icon>attachment</mat-icon>
+              </button>
+            </ng-container>
+            <ng-template #noAttachment>
+              <span class="text-gray-400">-</span>
+            </ng-template>
+          </td>
+        </ng-container>
+
+        <!-- Created At Column -->
+        <ng-container matColumnDef="created_at">
+          <th mat-header-cell *matHeaderCellDef>Created</th>
+          <td mat-cell *matCellDef="let row">{{ row.created_at | date:'short' }}</td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-stroked-button color="primary" class="mr-2" (click)="approve(row); $event.preventDefault(); $event.stopPropagation()" *ngIf="isPending(row)">
+              Approve
+            </button>
+            <button mat-stroked-button color="warn" (click)="reject(row); $event.preventDefault(); $event.stopPropagation()" *ngIf="isPending(row)">
+              Reject
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <mat-paginator
+        [length]="total"
+        [pageSize]="per_page"
+        [pageIndex]="current_page - 1"
+        [pageSizeOptions]="[5, 10, 25, 50]"
+        (page)="handlePage($event)">
+      </mat-paginator>
+    </div>
+
+    <ng-template #loadingTpl>
+      <div class="loading">Loading transactions...</div>
+    </ng-template>
+  </mat-card-content>
+</mat-card>
+</div>

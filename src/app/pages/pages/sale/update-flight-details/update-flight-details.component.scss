@@ -1,0 +1,14 @@
+// Styles for the update flight details component
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.mat-mdc-radio-button ~ .mat-mdc-radio-button {
+  margin-left: 16px;
+}

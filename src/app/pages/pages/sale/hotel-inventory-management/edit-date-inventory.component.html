@@ -1,0 +1,38 @@
+<vex-secondary-toolbar current="Edit Date-wise Inventory">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Hotel Inventory Management', 'Edit Dates']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card p-4">
+    <form [formGroup]="form">
+      <div *ngFor="let roomCtrl of roomsFormArray().controls; let i = index" class="mb-6">
+        <div class="font-medium mb-2">Room {{ asFormGroup(roomCtrl).get('room_name')?.value }}</div>
+        <table class="border w-full">
+          <thead>
+            <tr>
+              <th class="p-2 border w-1/2">Date</th>
+              <th class="p-2 border w-1/2">No. of Rooms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container [formGroup]="asFormGroup(roomCtrl)">
+              <ng-container formArrayName="dates">
+                <tr *ngFor="let dCtrl of datesControls(roomCtrl); let j = index">
+                  <td class="p-2 border">{{ asFormGroup(dCtrl).get('date')?.value | date:'dd-MM-yyyy' }}</td>
+                  <td class="p-2 border">
+                    <input type="text" inputmode="numeric" autocomplete="off" class="w-full input" [formControl]="noOfRoomControl(dCtrl)" />
+                  </td>
+                </tr>
+              </ng-container>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex gap-3 mt-4">
+        <button mat-stroked-button color="primary" type="button" (click)="save()" [disabled]="saving">Save</button>
+        <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,102 @@
+<vex-secondary-toolbar current="Hotels">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Hotels']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card flex-auto">
+    <div class="flex flex-wrap items-end gap-4 p-4">
+      <form [formGroup]="filterForm" class="flex flex-wrap items-end gap-4 flex-1">
+        <mat-form-field appearance="outline" class="w-64">
+          <mat-label>Search</mat-label>
+          <input matInput formControlName="search" (keyup.enter)="loadHotels()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-48">
+          <mat-label>City</mat-label>
+          <input matInput formControlName="city" (keyup.enter)="loadHotels()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-40">
+          <mat-label>Star Rating</mat-label>
+          <mat-select formControlName="rating">
+            <mat-option value="">All</mat-option>
+            <mat-option *ngFor="let r of [1,2,3,4,5]" [value]="r">{{ r }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-48">
+          <mat-label>Status</mat-label>
+          <mat-select formControlName="status">
+            <mat-option value="">All</mat-option>
+            <mat-option value="draft">Draft</mat-option>
+            <mat-option value="completed">Completed</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <div class="flex items-center gap-2 ml-auto">
+        <button mat-flat-button color="primary" (click)="loadHotels()">Show Hotels</button>
+        <button mat-flat-button color="primary" [routerLink]="['/sale/add-hotel']">+ Add New Hotel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-auto">
+    <table mat-table [dataSource]="dataSource" matSort class="w-full">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Hotel</th>
+        <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="rating">
+        <th mat-header-cell *matHeaderCellDef>Star Rating</th>
+        <td mat-cell *matCellDef="let row">{{ row.rating }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="city">
+        <th mat-header-cell *matHeaderCellDef>City</th>
+        <td mat-cell *matCellDef="let row">{{ row.city }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="rooms">
+        <th mat-header-cell *matHeaderCellDef>Rooms</th>
+        <td mat-cell *matCellDef="let row">{{ row.rooms }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="check_in_time">
+        <th mat-header-cell *matHeaderCellDef>Check In</th>
+        <td mat-cell *matCellDef="let row">{{ row.check_in_time }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="check_out_time">
+        <th mat-header-cell *matHeaderCellDef>Check Out</th>
+        <td mat-cell *matCellDef="let row">{{ row.check_out_time }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="px-2 py-1 rounded text-white text-xs" [ngClass]="row.status === 'completed' ? 'bg-green-500' : 'bg-gray-500'">{{ row.status }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let row" class="flex items-center gap-2">
+          <a mat-icon-button [routerLink]="['/sale/add-hotel']" [queryParams]="{ id: row.id }">
+            <mat-icon>edit</mat-icon>
+          </a>
+          <button mat-stroked-button color="primary" (click)="toggleStatus(row)">
+            {{ row.is_active ? 'Active' : 'Inactive' }}
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="visibleColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: visibleColumns"></tr>
+    </table>
+  </div>
+
+    <mat-paginator [length]="totalHotels" [pageSize]="pageSize" [pageIndex]="pageIndex" [pageSizeOptions]="pageSizeOptions" (page)="onPage($event)" showFirstLastButtons>
+    </mat-paginator>
+  </div>

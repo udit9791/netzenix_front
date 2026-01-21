@@ -1,0 +1,156 @@
+<div class="payment-container">
+  <div class="header">
+    <button mat-button (click)="backToHome()" class="back-button">
+      <mat-icon>arrow_back</mat-icon> Back To Home
+    </button>
+  </div>
+
+  <div class="content">
+    <div class="greeting">
+      <h2>Hey, <span class="secure-text">👋 Our transaction methods are very safe and secure</span></h2>
+    </div>
+
+    <div class="session-info">
+      Session expires in <span class="time">{{timerDisplay}}</span> minutes
+    </div>
+
+    <div class="payment-section">
+      <h3>Select payment method</h3>
+
+      <div class="payment-methods-list">
+        <!-- Pay Online -->
+        <div class="payment-method-item" [class.selected]="selectedPaymentMethod === 'pay_online'" (click)="selectPaymentMethod('pay_online')">
+          <div class="payment-method-icon">
+            <mat-icon>credit_card</mat-icon>
+          </div>
+          <div class="payment-method-name">Pay online</div>
+          <div class="payment-method-check" *ngIf="selectedPaymentMethod === 'pay_online'">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+        </div>
+
+
+       
+        <!-- Deposit Wallet -->
+        <div class="payment-method-item" [class.selected]="selectedPaymentMethod === 'deposit_wallet'" (click)="selectDepositWallet()">
+          <div class="payment-method-icon">
+            <mat-icon>account_balance_wallet</mat-icon>
+          </div>
+          <div class="payment-method-name">Deposit Wallet</div>
+          <div class="payment-method-check" *ngIf="selectedPaymentMethod === 'deposit_wallet'">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Details Section -->
+      <div class="payment-details-container" *ngIf="selectedPaymentMethod">
+        <!-- Pay Online Details -->
+        <div *ngIf="selectedPaymentMethod === 'pay_online'" class="payment-details">
+          <p class="instruction">Kindly enter payment details</p>
+          <!-- Online payment form would go here -->
+        </div>
+
+
+        <!-- Cheque Details -->
+        <div *ngIf="selectedPaymentMethod === 'cheque'" class="payment-details">
+          <p class="instruction">Kindly enter cheque details</p>
+          <!-- Cheque specific fields would go here -->
+        </div>
+
+        <!-- Cash Details -->
+        <div *ngIf="selectedPaymentMethod === 'cash'" class="payment-details">
+          <p class="instruction">Kindly enter cash payment details</p>
+          <!-- Cash specific fields would go here -->
+        </div>
+
+        <!-- Credit Request Details -->
+        <div *ngIf="selectedPaymentMethod === 'credit_request'" class="payment-details">
+          <p class="instruction">Kindly enter credit request details</p>
+          <!-- Credit request specific fields would go here -->
+        </div>
+
+        <!-- Deposit Wallet Details -->
+        <div *ngIf="selectedPaymentMethod === 'deposit_wallet'" class="wallet-details">
+          <div class="wallet-balance-row">
+            <span>Available Balance:</span>
+            <span class="wallet-amount">₹ {{walletBalance | number:'1.2-2'}}</span>
+          </div>
+          <div class="wallet-balance-row">
+            <span>Credit Limit:</span>
+            <span class="wallet-amount">₹ {{creditBalance}}</span>
+          </div>
+          <div class="wallet-balance-row total-balance">
+            <span>Total Available:</span>
+            <span class="wallet-amount">₹ {{totalAvailableBalance}}</span>
+          </div>
+          <div class="wallet-balance-row">
+            <span>Amount to be paid:</span>
+            <span class="wallet-amount">₹ {{totalAmount}}</span>
+          </div>
+          <div *ngIf="!hasEnoughBalance" class="insufficient-balance">
+            <mat-icon>warning</mat-icon>
+            <span>Insufficient balance in your wallet</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="payment-note">
+        *Additional Convenience fee shall be applicable, subject to the mode of payment selected.
+      </div>
+    </div>
+
+    <div class="summary-section">
+      <h3>Flight Payment Summary</h3>
+      <div class="summary-row">
+        <span>Total amount</span>
+        <span class="amount">INR {{amount | number:'1.2-2'}}</span>
+      </div>
+
+      <div class="summary-row total-convenience-fee">
+        <span>Total Convenience fee</span>
+        <span class="amount">INR {{convenienceFee | number:'1.2-2'}}</span>
+      </div>
+      <!-- Show Hold Amount when booking is on hold (status 8 or 9). This is display-only and does not affect totals. -->
+      <div class="summary-row" *ngIf="(bookingStatus === 8 || bookingStatus === 9) && holdAmount > 0">
+        <span>Hold Amount</span>
+        <span class="amount">-INR {{holdAmount | number:'1.2-2'}}</span>
+      </div>
+      <!-- Tax breakdown section -->
+      <div class="summary-row" *ngIf="serviceFeecgst > 0">
+        <span>CGST</span>
+        <span class="amount">INR {{serviceFeecgst | number:'1.2-2'}}</span>
+      </div>
+      <div class="summary-row" *ngIf="serviceFeesgst > 0">
+        <span>SGST</span>
+        <span class="amount">INR {{serviceFeesgst | number:'1.2-2'}}</span>
+      </div>
+      <div class="summary-row" *ngIf="serviceFeeigst > 0">
+        <span>IGST</span>
+        <span class="amount">INR {{serviceFeeigst | number:'1.2-2'}}</span>
+      </div>
+      <div class="summary-row" *ngIf="commission > 0">
+        <span>Commission</span>
+        <span class="amount">-INR {{commission | number:'1.2-2'}}</span>
+      </div>
+      <div class="summary-row" *ngIf="tdsonCommission > 0">
+        <span>TDS on Commission</span>
+        <span class="amount">INR {{tdsonCommission | number:'1.2-2'}}</span>
+      </div>
+      <div class="summary-row total">
+        <span>Total:</span>
+        <span class="amount">INR {{totalAmount | number:'1.2-2' || '0.00'}}</span>
+      </div>
+      
+      <!-- Pay Now Button -->
+      <button mat-flat-button color="primary" class="pay-now-button" 
+              [disabled]="selectedPaymentMethod === 'deposit_wallet' && !hasEnoughBalance" 
+              (click)="processPayment()">
+        Pay now
+      </button>
+      <div class="summary-note">
+        *Convenience fee applied is non-refundable incase of cancellation
+      </div>
+    </div>
+  </div>
+</div>

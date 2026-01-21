@@ -1,0 +1,44 @@
+.tables-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.table-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.table-title {
+  font-weight: 600;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.table-title.weekday { background: #fef3c7; }
+.table-title.weekend { background: #dbeafe; }
+
+.apply-bar {
+  padding: 4px 8px;
+  margin-bottom: 6px;
+}
+
+.pricing-table tbody tr.occ-group-alt td { background: #f3f4f6; }
+.pricing-table tbody tr.occ-group-alt .category-col { background: #f3f4f6; }
+
+.date-col { min-width: 220px; }
+.category-col { min-width: 180px; }
+.date-cell { min-width: 180px; }
+
+.pricing-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; }
+

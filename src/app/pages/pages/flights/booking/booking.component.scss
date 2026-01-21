@@ -1,0 +1,81 @@
+/* Booking page layout */
+.container-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  padding: 18px;
+}
+
+/* single column on small screens */
+@media (max-width: 920px) {
+  .container-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* panels */
+.panel {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+/* top titles */
+.section-title {
+  margin: 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* form rows */
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.form-row .small { width: 120px; }
+.form-row .flex-1 { flex: 1 1 auto; min-width: 160px; }
+
+/* Contact grid spacing */
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .contact-grid { grid-template-columns: 1fr; } }
+
+/* buttons */
+.pick-trav { height: 36px; }
+.coupon-row { display:flex; gap:12px; align-items:center; margin-top:8px; }
+.coupon-field { flex: 1 1 auto; }
+.proceed-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+.proceed-btn { background: #28a745; color: #fff; }
+
+/* price sidebar */
+.side-col { position: relative; top: 0; }
+.price-title { font-size: 16px; margin-bottom: 6px; }
+.price-value { font-size: 20px; font-weight: 700; text-align: right; margin-bottom: 8px; }
+
+/* flight summary in right panel */
+.flight-row { display:flex; gap:12px; align-items:flex-start; margin-top:10px; }
+.side-logo { width:48px; height:48px; object-fit:cover; border-radius:4px; }
+.flight-meta { font-size:13px; color:#444; }
+.flight-title { font-size:13px; margin-bottom:6px; }
+
+/* fare breakup */
+.fare-breakup { margin-top: 12px; }
+.fb-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom: 1px dashed #eee; }
+.fb-row.total { font-weight:700; border-bottom: none; }
+
+/* notes & terms */
+.notes .panel-body { background: #fffbe6; border: 1px solid #f0e6b8; }
+.terms .panel-body { padding: 14px; }
+.terms-list { font-size: 13px; line-height: 1.45; }
+
+/* small screens: make the pay button full width and stick to bottom of sidebar */
+@media (max-width: 920px) {
+  .pay-btn { width: 100%; margin-top: 12px; }
+  .price-value { text-align: left; }
+}

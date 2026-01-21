@@ -1,0 +1,81 @@
+<div class="proposal-container">
+  <mat-card class="proposal-card">
+    <mat-card-content>
+      <h2>Create Customized Proposal</h2>
+
+      <!-- DESTINATIONS -->
+      <section class="section">
+        <h4>DESTINATIONS</h4>
+        <p class="hint">Enter the cities below in the order in which they will be visited for the itinerary:</p>
+
+        <div class="destination-row">
+          <mat-form-field appearance="outline" class="city-field">
+            <mat-label>City Name</mat-label>
+            <input matInput placeholder="Enter city" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="night-field">
+            <mat-label>Nights</mat-label>
+            <mat-select>
+              <mat-option *ngFor="let n of nights" [value]="n">{{ n }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-stroked-button color="warn" class="suggest-btn">
+            + Suggest Itinerary
+          </button>
+        </div>
+
+        <a href="javascript:void(0)" class="add-city">+ Add Another City</a>
+      </section>
+
+      <!-- TRIP DETAILS -->
+      <section class="section">
+        <h4>TRIP DETAILS</h4>
+        <div class="grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Leaving From</mat-label>
+            <input matInput formControlName="leavingFrom" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nationality</mat-label>
+            <mat-select formControlName="nationality">
+              <mat-option *ngFor="let n of nationalities" [value]="n">{{ n }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Leaving on</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="leavingOn" />
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Number of Travelers</mat-label>
+            <mat-select formControlName="travelers">
+              <mat-option *ngFor="let t of travelers" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Star rating</mat-label>
+            <mat-select formControlName="rating">
+              <mat-option *ngFor="let r of ratings" [value]="r">{{ r }} Star</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="options">
+          <mat-checkbox formControlName="addTransfers">Add Transfers</mat-checkbox>
+          <mat-checkbox formControlName="landOnly">Land Only (no stay required)</mat-checkbox>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button mat-raised-button color="primary" (click)="onSubmit()">Create Proposal</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

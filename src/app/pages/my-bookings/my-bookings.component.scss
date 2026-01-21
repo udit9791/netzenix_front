@@ -1,0 +1,80 @@
+:host {
+  display: block;
+  padding: 16px 24px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.my-bookings-card {
+  margin-bottom: 16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0 20px;
+}
+
+.toolbar mat-form-field {
+  width: 280px;
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+table {
+  border-radius: 8px;
+}
+
+.loading-container {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+mat-paginator {
+  margin-top: 12px;
+}
+
+/* Tidy up Material table spacing */
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  padding: 12px 16px;
+}
+
+/* Status badge styling */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.confirmed {
+  background-color: #e6f7e6;
+  color: #2e7d32;
+}
+
+.pending {
+  background-color: #fff8e1;
+  color: #f57c00;
+}
+
+.cancelled {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.hold {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}

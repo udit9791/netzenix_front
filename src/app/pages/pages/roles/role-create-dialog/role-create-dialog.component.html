@@ -1,0 +1,22 @@
+<h2 class="px-6 py-4 border-b m-0">New Role</h2>
+
+<form class="px-6 py-4 flex flex-col gap-4" [formGroup]="roleForm">
+  <!-- Role Name -->
+  <mat-form-field>
+    <mat-label>Role Name</mat-label>
+    <input matInput formControlName="name" placeholder="Enter role name…" />
+  </mat-form-field>
+
+  <!-- Description -->
+  <mat-form-field>
+    <mat-label>Description</mat-label>
+    <textarea matInput formControlName="description" placeholder="Enter description…"></textarea>
+  </mat-form-field>
+</form>
+
+<div class="flex justify-end gap-2 px-6 py-4 border-t">
+  <button mat-button type="button" (click)="close()">Cancel</button>
+  <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="roleForm.invalid">
+    Create Role
+  </button>
+</div>

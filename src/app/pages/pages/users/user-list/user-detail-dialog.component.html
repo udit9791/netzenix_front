@@ -1,0 +1,68 @@
+<div class="p-4 min-w-[600px] max-h-[80vh] flex flex-col">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="title m-0">User Details</h3>
+    <button mat-icon-button (click)="close()"><mat-icon svgIcon="mat:close"></mat-icon></button>
+  </div>
+
+  <div *ngIf="loading" class="py-8 text-center">Loading…</div>
+
+  <div *ngIf="!loading && user && detail" class="flex-1 overflow-y-auto pr-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-3 rounded border">
+        <h4 class="subtitle m-0 mb-2 font-bold border-b pb-1">Signatory</h4>
+        <div><span class="font-semibold">Name:</span> {{ detail.first_name }} {{ detail.last_name }}</div>
+        <div><span class="font-semibold">Mobile:</span> {{ detail.mobile }}</div>
+        <div><span class="font-semibold">Email:</span> {{ detail.email }}</div>
+        <div><span class="font-semibold">WhatsApp:</span> {{ detail.whatsapp }}</div>
+        <div><span class="font-semibold">Alternate:</span> {{ detail.alternate }}</div>
+      </div>
+      <div class="p-3 rounded border">
+        <h4 class="subtitle m-0 mb-2 font-bold border-b pb-1">Business</h4>
+        <div><span class="font-semibold">Agency:</span> {{ detail.agency_name }}</div>
+        <div><span class="font-semibold">Type:</span> {{ detail.business_type }}</div>
+        <div><span class="font-semibold">Nature:</span> {{ detail.nature_of_business }}</div>
+        <div><span class="font-semibold">TDS Exemption:</span> {{ detail.tds_exemption }}</div>
+        <div><span class="font-semibold">TDS Percent:</span> {{ detail.tds_percent }}</div>
+        <div><span class="font-semibold">IATA:</span> {{ detail.iata_code }}</div>
+        <div><span class="font-semibold">PAN:</span> {{ detail.pan_number }}</div>
+        <div><span class="font-semibold">GST:</span> {{ detail.gst_number }}</div>
+      </div>
+      <div class="p-3 rounded border">
+        <h4 class="subtitle m-0 mb-2 font-bold border-b pb-1">Address</h4>
+        <div><span class="font-semibold">Line 1:</span> {{ detail.address_line1 }}</div>
+        <div><span class="font-semibold">Line 2:</span> {{ detail.address_line2 }}</div>
+        <div><span class="font-semibold">City:</span> {{ detail.city }}</div>
+        <div><span class="font-semibold">State:</span> {{ detail.state }}</div>
+        <div><span class="font-semibold">Country:</span> {{ detail.country }}</div>
+        <div><span class="font-semibold">Postal Code:</span> {{ detail.postal_code }}</div>
+      </div>
+      <div class="p-3 rounded border">
+        <h4 class="subtitle m-0 mb-2 font-bold border-b pb-1">Referral</h4>
+        <div><span class="font-semibold">Referred By:</span> {{ detail.referred_by }}</div>
+        <div><span class="font-semibold">Name/ID:</span> {{ detail.referral_name_or_id }}</div>
+      </div>
+      <div class="md:col-span-2 p-3 rounded border">
+        <h4 class="subtitle m-0 mb-2 font-bold border-b pb-1">Files</h4>
+        <div class="flex flex-col gap-2">
+          <div><span class="font-semibold">TDS Certificate:</span> <a *ngIf="detail.tds_certificate_path" [href]="buildFileUrl(detail.tds_certificate_path)" target="_blank">View</a></div>
+          <div><span class="font-semibold">PAN Upload:</span> <a *ngIf="detail.upload_pan_path" [href]="buildFileUrl(detail.upload_pan_path)" target="_blank">View</a></div>
+          <div><span class="font-semibold">GST Certificate:</span> <a *ngIf="detail.upload_gst_certificate_path" [href]="buildFileUrl(detail.upload_gst_certificate_path)" target="_blank">View</a></div>
+          <div><span class="font-semibold">Address Proof:</span> <a *ngIf="detail.address_proof_documents_path" [href]="buildFileUrl(detail.address_proof_documents_path)" target="_blank">View</a></div>
+          <div><span class="font-semibold">Second Address Proof:</span> <a *ngIf="detail.second_address_proof_documents_path" [href]="buildFileUrl(detail.second_address_proof_documents_path)" target="_blank">View</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 flex items-center gap-4" *ngIf="!loading && user">
+    <mat-form-field appearance="outline" class="min-w-[220px]">
+      <mat-label>Role</mat-label>
+      <mat-select [(ngModel)]="selectedRole">
+        <mat-option *ngFor="let r of roles" [value]="r.name">{{ r.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <span class="flex-1"></span>
+    <button mat-stroked-button color="warn" (click)="reject()">Reject</button>
+    <button mat-raised-button color="primary" (click)="approve()" [disabled]="!selectedRole">Approve</button>
+  </div>
+</div>

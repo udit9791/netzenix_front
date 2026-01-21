@@ -1,0 +1,36 @@
+<div class="vex-user-menu">
+  <!-- My Profile -->
+  <a
+    *ngIf="hasPermission('manage_profile')"
+    (click)="closePopover()"
+    [routerLink]="['/profile']"
+    class="vex-user-menu-item"
+    matRipple
+    matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+    <mat-icon class="vex-user-menu-item__icon icon-sm" svgIcon="mat:person"></mat-icon>
+    <div class="vex-user-menu-item__label">My Profile</div>
+  </a>
+
+  <!-- Change Password -->
+  <a
+    *ngIf="hasPermission('change_password')" 
+    (click)="closePopover()"
+    [routerLink]="['/change-password']"
+    class="vex-user-menu-item"
+    matRipple
+    matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+    <mat-icon class="vex-user-menu-item__icon icon-sm" svgIcon="mat:lock"></mat-icon>
+    <div class="vex-user-menu-item__label">Change Password</div>
+  </a>
+
+  <!-- Always visible: Sign Out -->
+  <a
+    (click)="logout()"
+    [routerLink]="['/login']"
+    class="vex-user-menu-item"
+    matRipple
+    matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+    <mat-icon class="vex-user-menu-item__icon icon-sm" svgIcon="mat:logout"></mat-icon>
+    <div class="vex-user-menu-item__label">Sign Out</div>
+  </a>
+</div>

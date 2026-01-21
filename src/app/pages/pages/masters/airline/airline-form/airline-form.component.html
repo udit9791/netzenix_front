@@ -1,0 +1,68 @@
+<h2 mat-dialog-title>{{dialogTitle}}</h2>
+
+<form [formGroup]="airlineForm" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <div class="flex flex-col gap-4">
+      <mat-form-field appearance="outline">
+        <mat-label>Airline Code</mat-label>
+        <input matInput formControlName="code" placeholder="e.g. AI" maxlength="5">
+        <mat-error *ngIf="airlineForm.get('code')?.hasError('required')">
+          Airline code is required
+        </mat-error>
+        <mat-error *ngIf="airlineForm.get('code')?.hasError('maxlength')">
+          Airline code cannot exceed 5 characters
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Airline Name</mat-label>
+        <input matInput formControlName="name" placeholder="e.g. Air India">
+        <mat-error *ngIf="airlineForm.get('name')?.hasError('required')">
+          Airline name is required
+        </mat-error>
+        <mat-error *ngIf="airlineForm.get('name')?.hasError('maxlength')">
+          Airline name cannot exceed 255 characters
+        </mat-error>
+      </mat-form-field>
+
+      <div class="mb-4">
+        <label class="text-sm font-medium mb-2 block">Airline Logo</label>
+        <div class="flex items-center gap-4">
+          <div *ngIf="logoPreview" class="w-16 h-16 border rounded flex items-center justify-center overflow-hidden">
+            <img [src]="logoPreview" alt="Logo preview" class="max-w-full max-h-full object-contain">
+          </div>
+          <div *ngIf="!logoPreview && data.airline?.logo" class="w-16 h-16 border rounded flex items-center justify-center overflow-hidden">
+            <img [src]="environment.imgUrl + '/' + data.airline.logo" alt="Current logo" class="max-w-full max-h-full object-contain">
+          </div>
+          <div *ngIf="!logoPreview && !data.airline?.logo" class="w-16 h-16 border rounded flex items-center justify-center bg-gray-100">
+            <mat-icon>image</mat-icon>
+          </div>
+          <button type="button" mat-stroked-button (click)="logoFileInput.click()">
+            <mat-icon>upload</mat-icon>
+            Upload Logo
+          </button>
+          <button *ngIf="logoPreview || data.airline?.logo" type="button" mat-icon-button color="warn" (click)="removeLogo()">
+            <mat-icon>delete</mat-icon>
+          </button>
+          <input hidden type="file" #logoFileInput (change)="onLogoSelected($event)" accept="image/*">
+        </div>
+        <div *ngIf="logoError" class="text-red-500 text-sm mt-1">
+          {{ logoError }}
+        </div>
+      </div>
+
+      <div class="flex items-center">
+        <mat-slide-toggle formControlName="is_active" color="primary">
+          Active
+        </mat-slide-toggle>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [disabled]="isSubmitting" (click)="onCancel()">Cancel</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="airlineForm.invalid || isSubmitting">
+      {{data.mode === 'add' ? 'Add' : 'Update'}}
+    </button>
+  </mat-dialog-actions>
+</form>

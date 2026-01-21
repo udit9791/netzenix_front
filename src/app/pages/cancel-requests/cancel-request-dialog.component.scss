@@ -1,0 +1,82 @@
+.dialog-wrapper {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.dialog-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.dialog-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dialog-header h2 {
+  font-weight: 700;
+  margin: 0;
+}
+
+.dialog-header .sub {
+  color: #666;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title {
+  font-weight: 600;
+}
+
+.charges {
+  display: grid;
+  gap: 8px;
+}
+
+.charges .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.charges .total strong {
+  font-size: 1.1rem;
+}
+
+.amount-field {
+  width: 200px;
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 160px;
+}
+
+.empty {
+  color: #666;
+}

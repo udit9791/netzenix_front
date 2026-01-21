@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>Select Credit Limit Timeline</h2>
+
+<mat-dialog-content>
+  <div class="transaction-info">
+    <p><strong>Transaction Amount:</strong> ₹{{ data.amount | number:'1.2-2' }}</p>
+  </div>
+
+  <div class="timeline-selection" *ngIf="!loading; else loadingTemplate">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Credit Limit Timeline</mat-label>
+      <mat-select [(value)]="selectedTimelineId" required>
+        <mat-option *ngFor="let option of creditLimitOptions" [value]="option.id">
+          {{ option.name }} ({{ option.days }} days)
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <ng-template #loadingTemplate>
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading timeline options...</p>
+    </div>
+  </ng-template>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    (click)="onApprove()" 
+    [disabled]="!selectedTimelineId || approving">
+    <mat-spinner *ngIf="approving" diameter="20" class="inline-spinner"></mat-spinner>
+    {{ approving ? 'Approving...' : 'Approve' }}
+  </button>
+</mat-dialog-actions>

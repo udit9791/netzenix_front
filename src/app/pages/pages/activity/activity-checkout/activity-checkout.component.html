@@ -1,0 +1,179 @@
+<vex-secondary-toolbar current="Activity details">
+  <vex-breadcrumbs [crumbs]="['Activities', 'Details']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<vex-page-layout>
+  <vex-page-layout-content>
+    <div class="p-6 container" *ngIf="items.length; else emptyState">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+          <mat-card class="p-4 space-y-4">
+            <div class="text-base font-semibold">Enter info</div>
+            <mat-divider></mat-divider>
+
+            <div class="text-sm font-semibold">Contact info</div>
+            <div class="text-xs text-gray-600 mb-2">
+              We will contact you if there are any updates to your booking.
+            </div>
+
+            <form [formGroup]="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <mat-form-field appearance="outline">
+                <mat-label>First name</mat-label>
+                <input matInput formControlName="firstName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Last name</mat-label>
+                <input matInput formControlName="lastName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Phone number</mat-label>
+                <input matInput formControlName="phone" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Email address</mat-label>
+                <input matInput formControlName="email" />
+              </mat-form-field>
+            </form>
+
+            <mat-divider></mat-divider>
+
+            <div class="text-sm font-semibold mt-2">Traveler details</div>
+            <div class="text-xs text-gray-600 mb-2">
+              Add adult and child names for this activity booking.
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-[2fr_auto] gap-4 items-end mb-2">
+              <mat-form-field appearance="outline">
+                <mat-label>Fetch by mobile number</mat-label>
+                <input matInput [formControl]="mobileNumberControl" />
+              </mat-form-field>
+              <button
+                mat-stroked-button
+                color="primary"
+                type="button"
+                (click)="fetchTravelersByMobile()">
+                Fetch details
+              </button>
+            </div>
+
+            <div *ngIf="travelerError" class="text-xs text-red-600">
+              {{ travelerError }}
+            </div>
+            <div *ngIf="travelerSuccess" class="text-xs text-green-600">
+              {{ travelerSuccess }}
+            </div>
+
+            <form [formGroup]="travelersForm" class="space-y-4 mt-4">
+              <div
+                *ngFor="let travelerCtrl of travelersArray.controls; let i = index"
+                [formGroupName]="i"
+                class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Type</mat-label>
+                  <mat-select formControlName="type" [disabled]="true">
+                    <mat-option value="Adult">Adult</mat-option>
+                    <mat-option value="Child">Child</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Title</mat-label>
+                  <mat-select formControlName="title">
+                    <mat-option value="Mr">Mr</mat-option>
+                    <mat-option value="Mrs">Mrs</mat-option>
+                    <mat-option value="Ms">Ms</mat-option>
+                    <mat-option value="Master">Master</mat-option>
+                    <mat-option value="Miss">Miss</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>First name</mat-label>
+                  <input matInput formControlName="firstName" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Last name</mat-label>
+                  <input matInput formControlName="lastName" />
+                </mat-form-field>
+              </div>
+            </form>
+          </mat-card>
+        </div>
+
+        <div class="lg:col-span-1 space-y-4">
+          <mat-card class="p-4 space-y-3">
+            <div class="text-sm font-semibold">
+              Booking summary
+            </div>
+
+            <div
+              *ngFor="let item of items"
+              class="border rounded p-3 text-xs text-gray-700 space-y-1">
+              <div class="font-semibold text-sm">
+                {{ item.title }}
+              </div>
+              <div>
+                {{ item.date }}
+                <span *ngIf="item.startTime">
+                  • {{ item.startTime }}
+                  <span *ngIf="item.endTime">- {{ item.endTime }}</span>
+                </span>
+              </div>
+              <div>
+                Adult x {{ item.adults }}
+                <span *ngIf="item.children > 0">
+                  • Child x {{ item.children }}
+                </span>
+              </div>
+              <div class="flex justify-between text-sm font-semibold mt-1">
+                <span>Total</span>
+                <span>₹ {{ item.totalPrice || 0 | number: '1.0-0' }}</span>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="flex items-center justify-between text-sm font-semibold">
+              <div>Subtotal</div>
+              <div>₹ {{ subtotal | number: '1.0-0' }}</div>
+            </div>
+
+            <button
+              mat-flat-button
+              color="primary"
+              class="w-full"
+              type="button"
+              (click)="proceedToPayment()">
+              Go to payment
+            </button>
+            <button
+              mat-stroked-button
+              class="w-full"
+              type="button"
+              (click)="backToCart()">
+              Back to cart
+            </button>
+          </mat-card>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="p-6 container">
+        <div class="flex flex-col items-center gap-3 py-12">
+          <div class="text-lg font-semibold">No activities in cart</div>
+          <div class="text-sm text-gray-600">
+            Add an activity from the detail page to review it here.
+          </div>
+          <button mat-flat-button color="primary" [routerLink]="['/activities/search']">
+            Browse activities
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </vex-page-layout-content>
+</vex-page-layout>

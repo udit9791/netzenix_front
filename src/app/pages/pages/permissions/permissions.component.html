@@ -1,0 +1,41 @@
+<div class="p-6 container">
+  <div class="card flex-auto">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h2 class="title m-0">Role & Permissions</h2>
+    </div>
+
+    <div class="px-6 py-4 flex flex-col gap-6" [formGroup]="roleForm">
+      <!-- Role Dropdown -->
+      <mat-form-field>
+        <mat-label>Select Role</mat-label>
+        <mat-select formControlName="role" (selectionChange)="onRoleChange($event.value)">
+          <mat-option *ngFor="let role of roles" [value]="role.id">
+            {{ role.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Add New Role -->
+      <div class="flex gap-2 items-center">
+       
+        <button mat-flat-button color="primary" (click)="addNewRole()">Add Role</button>
+      </div>
+
+      <!-- Permissions List -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <mat-checkbox
+        *ngFor="let perm of permissions"
+        [checked]="selectedPermissions.has(perm.name || perm)"
+        (change)="togglePermission(perm.name || perm, $event.checked)">
+        {{ perm.name || perm }}
+      </mat-checkbox>
+
+      </div>
+
+      <!-- Save Button -->
+      <div class="flex justify-end">
+        <button mat-flat-button color="primary" (click)="savePermissions()">Save Permissions</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,53 @@
+<div class="dropdown">
+  <div class="dropdown-header flex items-center justify-between">
+    <div class="flex items-center">
+      <div class="dropdown-heading-icon flex items-center justify-center">
+        <mat-icon svgIcon="mat:person"></mat-icon>
+      </div>
+      <div class="dropdown-heading">
+       {{ user?.name || 'User' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="dropdown-content">
+    <!-- My Profile -->
+    <a
+      *ngIf="hasPermission('manage_profile')"
+      [routerLink]="['/profile']"
+      class="notification flex items-center"
+      matRipple>
+      <mat-icon class="notification-icon flex-none" svgIcon="mat:person"></mat-icon>
+      <div class="flex-auto">
+        <div class="notification-label">My Profile</div>
+      </div>
+      <mat-icon class="notification-chevron flex-none" svgIcon="mat:chevron_right"></mat-icon>
+    </a>
+
+    <!-- Change Password -->
+    <a
+      *ngIf="hasPermission('change_password')"
+      [routerLink]="['/change-password']"
+      class="notification flex items-center"
+      matRipple>
+      <mat-icon class="notification-icon flex-none" svgIcon="mat:lock"></mat-icon>
+      <div class="flex-auto">
+        <div class="notification-label">Change Password</div>
+      </div>
+      <mat-icon class="notification-chevron flex-none" svgIcon="mat:chevron_right"></mat-icon>
+    </a>
+
+    <!-- Always visible: Sign Out -->
+    <a
+      (click)="logout()"
+      [routerLink]="['/login']"
+      class="notification flex items-center"
+      matRipple>
+      <mat-icon class="notification-icon flex-none" svgIcon="mat:logout"></mat-icon>
+      <div class="flex-auto">
+        <div class="notification-label">Logout</div>
+      </div>
+      <mat-icon class="notification-chevron flex-none" svgIcon="mat:chevron_right"></mat-icon>
+    </a>
+  </div>
+</div>

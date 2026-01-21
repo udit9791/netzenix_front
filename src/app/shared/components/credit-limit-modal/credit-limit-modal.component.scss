@@ -1,0 +1,43 @@
+.transaction-info {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  
+  p {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.timeline-selection {
+  margin-bottom: 20px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  
+  p {
+    margin-top: 16px;
+    color: #666;
+  }
+}
+
+.inline-spinner {
+  margin-right: 8px;
+}
+
+mat-dialog-content {
+  min-height: 200px;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+}

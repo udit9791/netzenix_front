@@ -1,0 +1,393 @@
+<div class="container">
+  <div class="header">
+    <img src="assets/img/logo/nexus-dmc-logo.png" alt="Nexus DMC" class="logo">
+    <div class="nav-links">
+      <a href="#" class="active">Home</a>
+      <a href="#">Flights</a>
+      <a href="#">Holidays</a>
+      <a href="#">Marketing</a>
+      <a href="#">My Leads</a>
+      <a href="#">Settings</a>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <div class="traveler-details-container">
+      <h2>Traveler Details</h2>
+      <p class="instruction">Please enter names as per valid id proof and contact information for guests traveling on this trip.</p>
+      
+      <!-- Mobile number field (appears once for the entire booking) -->
+      <div class="contact-info-container" *ngIf="booking.flightInventoryData?.allow_tba_user !== 1">
+        <mat-form-field appearance="outline" class="mobile-field">
+          <mat-label>MOBILE NUMBER</mat-label>
+          <input matInput [formControl]="mobileNumberControl" placeholder="Enter mobile number">
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="fetchDetailsByMobile()" [disabled]="!mobileNumberControl.value" style="margin-left: 8px; height: 56px;">
+          Fetch Details
+        </button>
+      </div>
+      
+      <!-- TBA booking message -->
+      <div *ngIf="booking.flightInventoryData?.allow_tba_user === 1" class="tba-notice">
+        <p class="alert alert-info">TBA booking - name fields are locked</p>
+      </div>
+
+      <!-- Dynamic Traveler Forms -->
+      <div *ngFor="let traveler of travelers; let i = index" class="traveler-form">
+        <h3>Traveler {{ traveler.index }}: {{ traveler.type }}</h3>
+        <form [formGroup]="travelerForms[i]">
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="title-field">
+              <mat-label>TITLE</mat-label>
+              <mat-select formControlName="title" [disabled]="booking.flightInventoryData?.allow_tba_user === 1">
+                <mat-option value="Mr" *ngIf="traveler.type === 'Adult'">Mr</mat-option>
+                <mat-option value="Mrs" *ngIf="traveler.type === 'Adult'">Mrs</mat-option>
+                <mat-option value="Ms" *ngIf="traveler.type === 'Adult'">Ms</mat-option>
+                <mat-option value="Master" *ngIf="traveler.type === 'Child'">Master</mat-option>
+                <mat-option value="Miss" *ngIf="traveler.type === 'Child'">Miss</mat-option>
+                <mat-option value="Infant" *ngIf="traveler.type === 'Infant'">Infant</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="name-field">
+              <mat-label>FIRST NAME / GIVEN NAME</mat-label>
+              <input matInput formControlName="firstName" placeholder="Enter first name" [disabled]="booking.flightInventoryData?.allow_tba_user === 1">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="name-field">
+              <mat-label>LAST NAME / SURNAME</mat-label>
+              <input matInput formControlName="lastName" placeholder="Enter last name" [disabled]="booking.flightInventoryData?.allow_tba_user === 1">
+            </mat-form-field>
+          </div>
+          
+          
+          <div class="form-row" *ngIf="traveler.type !== 'Adult'">
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>DATE OF BIRTH</mat-label>
+              <input matInput formControlName="dateOfBirth" type="date">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row" *ngIf="isInternational">
+            <mat-form-field appearance="outline" class="name-field">
+              <mat-label>Passport Number</mat-label>
+              <input matInput formControlName="passport" placeholder="Enter passport number">
+              <mat-error *ngIf="travelerForms[i].get('passport')?.hasError('required')">
+                Passport number is required for international travel
+              </mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>Passport Issue Date</mat-label>
+              <input matInput formControlName="passportIssueDate" type="date">
+              <mat-error *ngIf="travelerForms[i].get('passportIssueDate')?.hasError('required')">
+                Passport issue date is required for international travel
+              </mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="date-field small-date-field">
+              <mat-label>Passport Expiry Date</mat-label>
+              <input matInput formControlName="passportExpiry" type="date">
+              <mat-error *ngIf="travelerForms[i].get('passportExpiry')?.hasError('required')">
+                Passport expiry date is required for international travel
+              </mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="title-field">
+              <mat-label>Nationality</mat-label>
+              <mat-select formControlName="nationality">
+                <mat-option *ngFor="let c of countries" [value]="c.id">
+                  {{ c.name }} ({{ c.code }})
+                </mat-option>
+              </mat-select>
+              <mat-error *ngIf="travelerForms[i].get('nationality')?.hasError('required')">
+                Nationality is required for international travel
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </form>
+      </div>
+
+      <!-- Contact Details -->
+      <div class="contact-details">
+        <h3>Contact Details</h3>
+        <form [formGroup]="contactForm">
+          <div class="two-column-grid">
+            <div class="column">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email Address</mat-label>
+                <input matInput formControlName="email" type="email" placeholder="Enter email address">
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>City of Residence</mat-label>
+                <input matInput formControlName="city" placeholder="Enter city">
+              </mat-form-field>
+            </div>
+            
+            <div class="column">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Contact Phone</mat-label>
+                <input matInput formControlName="phone" type="tel" placeholder="Enter phone number">
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Agent Reference</mat-label>
+              <input matInput formControlName="agentRef" placeholder="Any internal reference you want to use in the booking (optional)">
+              <mat-hint>Any internal reference you want to use in the booking (optional)</mat-hint>
+            </mat-form-field>
+          </div>
+        </form>
+      </div>Discount
+
+      <div class="important-notes">
+        <mat-icon color="warn">info</mat-icon>
+        <div>
+          <h3>Important Notes</h3>
+          <ul>
+            <li>You have got an exclusive deal on this flight! These special fares are subject to specific terms and conditions whereby the names on the PNR reflect only within 24-72 hours before departure.</li>
+          </ul>
+        </div>
+      </div>
+
+
+
+      <div class="coupon-section">
+        <h3>Coupon</h3>
+        <div class="coupon-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Promo Code</mat-label>
+            <input matInput [formControl]="couponCode">
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="applyDiscount()">Apply Discount</button>
+        </div>
+      </div>
+
+      <div class="terms-section">
+        <p>By proceeding to make payment, you agree to the <a href="#">terms and conditions</a>.</p>
+        <div class="button-container" style="display: flex; gap: 10px; margin-top: 15px;">
+          <button mat-raised-button color="primary" class="payment-button" [disabled]="!isBookingAllowed()" (click)="openVerificationModal()">Proceed to payment</button>
+          <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external'" mat-raised-button color="accent" class="hold-button" (click)="holdBooking()">Hold Booking</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Verification Modal -->
+    <div class="verification-modal" [class.show-modal]="showVerificationModal">
+      <div class="modal-content" style="position: relative;">
+        <div class="modal-header">
+          <h2>Verify Booking Details</h2>
+          <button class="close-button" (click)="closeVerificationModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="modal-body" style="position: relative;">
+          <!-- Loading overlay within the modal -->
+          <div *ngIf="isLoading" style="position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 10;">
+            <mat-spinner diameter="40"></mat-spinner>
+          </div>
+          <p class="verification-message">Verify the passenger names and titles as per valid id proof before continuing to book</p>
+          <div *ngIf="travelerForms.length > 0">
+            <p class="passenger-name" *ngFor="let form of travelerForms">
+              {{ form.get('title')?.value }} {{ form.get('firstName')?.value }} {{ form.get('lastName')?.value }}
+            </p>
+          </div>
+          
+          <div class="contact-details">
+            <h3>CONTACT DETAILS</h3>
+            <div class="contact-row">
+              <div class="contact-label">Email</div>
+              <div class="contact-value">{{ contactForm.get('email')?.value }}</div>
+            </div>
+            <div class="contact-row">
+              <div class="contact-label">Phone</div>
+              <div class="contact-value">{{ contactForm.get('phone')?.value }}</div>
+            </div>
+          </div>
+          
+          <div class="modal-actions" style="display: flex; gap: 10px; justify-content: center;">
+            <button mat-raised-button color="primary" class="proceed-button" [disabled]="isLoading || !isBookingAllowed()" (click)="proceedToPayment()">PROCEED TO PAYMENT</button>
+            <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external'" mat-raised-button color="accent" class="hold-button" [disabled]="isLoading" (click)="holdBooking()">HOLD BOOKING</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="price-summary-container">
+      <div class="price-summary">
+        <h3 class="price-title">Price Summary</h3>
+        <div class="price-value">₹ {{ calculateTotalPrice() | number }}</div>
+        <p class="price-note">(Incl all taxes)</p>
+
+        <mat-divider></mat-divider>
+
+        <div class="travel-info">
+          <div class="info-row">
+            <mat-icon>calendar_today</mat-icon>
+            <span>Travel Date: {{ booking.travelDate | date: 'dd MMM yyyy' }}</span>
+          </div>
+          <div class="info-row">
+            <mat-icon>person</mat-icon>
+            <span>
+              {{ booking.adults }} adult(s)
+              <span *ngIf="booking.children > 0">, {{ booking.children }} children</span>
+              <span *ngIf="booking.infants > 0">, {{ booking.infants }} infant(s)</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <mat-icon>luggage</mat-icon>
+            <span>Check-in: {{ booking.checkin }}</span>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="flights">
+          <div class="flight-info" *ngIf="booking.flights && booking.flights.length > 0">
+            <!-- Loop through multiple flights -->
+            <div *ngFor="let flight of booking.flights; let i = index" class="flight-segment">
+              <div class="flight-type-header" *ngIf="booking.flights.length > 1">
+                <h4>{{ flight.type }} Flight</h4>
+              </div>
+              
+              <div class="airline">
+                <img [src]="flight.logo || 'assets/img/plane.png'" alt="{{ flight.airline }}" class="airline-logo">
+                <div class="airline-details">
+                  <div class="airline-name">{{ flight.airline }}</div>
+                  <div class="flight-number">{{ flight.flightNo }}</div>
+                </div>
+              </div>
+              
+              <div class="route">
+                <div class="origin">
+                  <div class="city-code">{{ flight.from }}</div>
+                  <div class="city-name">{{ flight.fromCity }}</div>
+                  <div class="time">{{ flight.departTime | slice:0:5 }}</div>
+                </div>
+                <div class="flight-duration">
+                  <div class="duration-line"></div>
+                  <div class="duration-time">{{ flight.duration }}</div>
+                </div>
+                <div class="destination">
+                  <div class="city-code">{{ flight.to }}</div>
+                  <div class="city-name">{{ flight.toCity }}</div>
+                  <div class="time">{{ flight.arriveTime | slice:0:5 }}</div>
+                </div>
+              </div>
+              
+              <div class="flight-details">
+                <div class="detail-item" *ngIf="flight.terminal">
+                  <mat-icon>location_on</mat-icon>
+                  <span>Terminal: {{ flight.terminal }}</span>
+                </div>
+                <div class="detail-item" *ngIf="flight.baggageWeight">
+                  <mat-icon>luggage</mat-icon>
+                  <span>Baggage: {{ flight.baggageWeight }}kg</span>
+                </div>
+                <div class="detail-item" *ngIf="flight.cabinBaggage">
+                  <mat-icon>work</mat-icon>
+                  <span>Cabin: {{ flight.cabinBaggage }}kg</span>
+                </div>
+              </div>
+              
+              <div class="refund-status">
+                <mat-icon *ngIf="flight.isRefundable">check_circle</mat-icon>
+                <mat-icon *ngIf="!flight.isRefundable">cancel</mat-icon>
+                <span *ngIf="flight.isRefundable" class="refundable">Refundable</span>
+                <span *ngIf="!flight.isRefundable" class="non-refundable">Non-Refundable</span>
+              </div>
+              
+              <!-- Add separator between flights if there are multiple -->
+              <mat-divider *ngIf="i < booking.flights.length - 1" class="flight-separator"></mat-divider>
+            </div>
+          </div>
+          
+          
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="fare-breakdown">
+          <h4>Fare Breakup 
+            <span *ngIf="booking.flights && booking.flights.length > 0">
+              for {{ booking.flights[0].from }}-{{ booking.flights[booking.flights.length - 1].to }}
+            </span>
+          </h4>
+          
+          <!-- Adult fare -->
+          <div class="fare-row" *ngIf="booking.adults > 0">
+            <span>Base Fare Adult</span>
+            <span>₹ {{ booking.flightInventoryData?.sell_price || baseFareAdult | number }} x {{ booking.adults }}</span>
+          </div>
+          
+          <!-- Children fare -->
+          <div class="fare-row" *ngIf="booking.children > 0">
+            <span>Base Fare Child</span>
+            <span>₹ {{ baseFareChild | number }} x {{ booking.children }}</span>
+          </div>
+          
+          <!-- Infant fare -->
+          <div class="fare-row" *ngIf="booking.infants > 0">
+            <span>Base Fare Infant</span>
+            <span>₹ {{ booking.flightInventoryData?.infant_price || baseFareInfant | number }} x {{ booking.infants }}</span>
+          </div>
+          
+          <!-- Service Fees and Commission Breakdown -->
+          <div class="fare-row">
+            <span>Service Fee</span>
+            <span>₹ {{ serviceFee | number }}</span>
+          </div>
+          <!-- Show IGST for out-of-state users -->
+          <div class="fare-row" *ngIf="isSameState === false">
+            <span>Service Fee IGST</span>
+            <span>₹ {{ serviceFeecgst | number }}</span>
+          </div>
+          <!-- Show CGST/SGST for same-state users -->
+          <ng-container *ngIf="isSameState === true">
+            <div class="fare-row">
+              <span>Service Fee SGST</span>
+              <span>₹ {{ serviceFeesgst | number }}</span>
+            </div>
+            <div class="fare-row">
+              <span>Service Fee CGST</span>
+              <span>₹ {{ serviceFeecgst | number }}</span>
+            </div>
+          </ng-container>
+          <div class="fare-row">
+            <span>Commission</span>
+            <span style="color: green;">-₹ {{ commission | number }}</span>
+          </div>
+          <div class="fare-row">
+            <span>TDS on Commission</span>
+            <span>₹ {{ tdsonCommission | number }}</span>
+          </div>
+          <!-- Total -->
+          <div class="fare-row total">
+            <span>Total Amount</span>
+            <span>₹ {{ calculateTotalPrice() | number }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="terms-container">
+    <h3>Terms and Conditions</h3>
+    <ul>
+      <li>We kindly request you to inform us of any required name updates for your return flight at least 48 hours before the departure of your onward flight.</li>
+      <li>This ticket is Non-Refundable & Non-Changeable.</li>
+      <li>All guests, including children and infants, must present valid identification at check-in.</li>
+      <li>Check-in begins 2 hours prior to the flight for seat assignment and closes 45 minutes prior to the scheduled departure.</li>
+      <li>Please contact airline for baggage allowance.</li>
+      <li>Changed fare is totally agreed between "BUYER & SELLER" any issues related to fare thereafter will not be entertained.</li>
+      <li>Please check the baggage allowance as they may change time to time without any notice to the passenger.</li>
+      <li>We are not responsible for any flight delay/cancellation from the airline's end. Kindly contact the airline at least 24 hrs before to reconfirm your flight details giving reference of airline PNR number.</li>
+      <li>Name changes are not permitted for any flight.</li>
+      <li>For infants valid birth certificate, Web Check-in is mandatory for all passengers before the scheduled departure of their domestic flight. Changes may apply.</li>
+      <li>All disputes and claims connected to the carrier are subjected to conditions of carriage which are hereby incorporated by reference. These conditions may be obtained from the issuing carrier.</li>
+      <li>If the passenger journey involves an ultimate destination or stop in a country other than the country of departure, the Warsaw Convention may be applicable and the Convention governs and in most case limits the liability of carriers for death or personal injury and in respect of loss of or damage to baggage.</li>
+      <li>Carriage and other services provided by the carrier are subject to conditions of carriage, which are hereby incorporated by reference. These conditions may be obtained from the issuing carrier.</li>
+      <li>In case of cancellation by airline, full refund after deduction of service charge (Rs.250 per pax) will be provided.</li>
+    </ul>
+  </div>
+</div>

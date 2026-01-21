@@ -1,0 +1,164 @@
+<vex-secondary-toolbar current="Activity Search">
+  <vex-breadcrumbs [crumbs]="['Activities', 'Search']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card p-4 w-full">
+    <form [formGroup]="form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+    
+
+      <mat-form-field appearance="outline">
+        <mat-label>Country</mat-label>
+        <mat-select [formControl]="countryCtrl">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let c of countries" [value]="c.id">
+            {{ c.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>State</mat-label>
+        <mat-select [formControl]="stateCtrl">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let s of states" [value]="s.id">
+            {{ s.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>City</mat-label>
+        <mat-select [formControl]="cityCtrl">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let c of cities" [value]="c.id">
+            {{ c.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+        <mat-form-field appearance="outline" class="md:col-span-2">
+        <mat-label>Search location or activity</mat-label>
+        <input
+          matInput
+          type="text"
+          formControlName="search"
+          [matAutocomplete]="auto"
+          (keyup)="onSearchKeyup($event)" />
+        <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayOption.bind(this)">
+          <mat-option *ngFor="let opt of filteredOptions$ | async" [value]="opt">
+            {{ displayOption(opt) }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <div class="md:col-span-1 flex justify-end">
+        <button mat-flat-button color="primary" type="button" (click)="search()">
+          <mat-icon class="mr-2">search</mat-icon>
+          SEARCH
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="p-6 container" *ngIf="loading">
+  <div class="flex items-center gap-2 text-gray-600">
+    <mat-icon>sync</mat-icon>
+    <span>Searching activities...</span>
+  </div>
+</div>
+
+<div class="p-6 container" *ngIf="!loading && errorMsg">
+  <div class="flex items-center gap-2 text-red-600">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMsg }}</span>
+  </div>
+</div>
+
+<div class="p-6 container" *ngIf="!loading && !errorMsg">
+  <div class="text-sm text-gray-600 mb-4" *ngIf="results.length > 0">
+    {{ results.length }} activities found
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <mat-card
+      class="cursor-pointer overflow-hidden"
+      *ngFor="let a of results"
+      (click)="openActivity(a)">
+      <div class="relative">
+        <img
+          mat-card-image
+          class="h-48 w-full object-cover"
+          [src]="fullImgUrl(a.cover_image || null)"
+          [alt]="a.title" />
+        <div
+          class="absolute top-2 left-2 bg-white/90 text-xs font-medium px-2 py-1 rounded">
+          <span *ngIf="a.city; else genericType">
+            Day trips · {{ a.city }}
+          </span>
+          <ng-template #genericType>Activity</ng-template>
+        </div>
+        <button
+          mat-icon-button
+          class="absolute top-2 right-2 bg-white/90 rounded-full">
+          <mat-icon>favorite_border</mat-icon>
+        </button>
+      </div>
+
+      <mat-card-content class="p-4 space-y-2">
+        <div class="font-semibold text-sm text-gray-600 truncate">
+          <span *ngIf="a.city && a.country; else fromLocation">
+            From {{ a.city }}, {{ a.country }}
+          </span>
+          <ng-template #fromLocation>
+            {{ a.city || a.country || 'Activity' }}
+          </ng-template>
+        </div>
+
+        <div class="font-semibold text-base leading-snug line-clamp-2">
+          {{ a.title }}
+        </div>
+
+        <div class="text-xs text-gray-500">
+          <!-- <span *ngIf="a.has_time_slot; else flexibleBooking">
+            Book now for tomorrow
+          </span> -->
+          <ng-template #flexibleBooking>Free cancellation</ng-template>
+        </div>
+
+        <div class="flex items-center justify-between mt-2 text-sm">
+          <div class="flex items-center gap-1 text-amber-600">
+            <!-- <mat-icon class="text-base">star</mat-icon>
+            <span>4.5</span>
+            <span class="text-gray-500 text-xs">(12)</span> -->
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-gray-500">
+              From
+            </div>
+            <div class="font-semibold text-lg text-gray-800">
+              ₹
+              {{
+                (a.min_price || a.min_adult_price || a.min_child_price) | number:'1.0-0'
+              }}
+            </div>
+          </div>
+        </div>
+
+        <!-- <div class="mt-3">
+          <span
+            *ngIf="a.min_price"
+            class="inline-flex items-center px-2 py-1 rounded bg-red-50 text-red-600 text-xs font-semibold">
+            <mat-icon class="text-sm mr-1">confirmation_number</mat-icon>
+            25% off
+          </span>
+        </div> -->
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="text-center text-gray-600 mt-6" *ngIf="results.length === 0">
+    No activities found for your criteria.
+  </div>
+</div>

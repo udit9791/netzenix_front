@@ -1,0 +1,88 @@
+<mat-card class="group-card">
+  <mat-card-title class="title">Get Best Group Airfares</mat-card-title>
+  <mat-card-content>
+    <p class="subtitle">Please submit your group request below. Response time will be within 24 hours at max.</p>
+
+    <mat-tab-group [(selectedIndex)]="selectedTab" class="travel-tabs">
+      <mat-tab label="One-way"></mat-tab>
+      <mat-tab label="Return"></mat-tab>
+      <mat-tab label="Open Jaw"></mat-tab>
+    </mat-tab-group>
+
+    <form [formGroup]="groupForm" class="group-form">
+      <div class="form-grid">
+        <!-- LEFT COLUMN (main inputs + remarks) -->
+        <div class="left">
+          <div class="row">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>From</mat-label>
+              <input matInput formControlName="from">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>To</mat-label>
+              <input matInput formControlName="to">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="half">
+              <mat-label>Depart on</mat-label>
+              <input matInput [matDatepicker]="d1" formControlName="departOn">
+              <mat-datepicker-toggle matSuffix [for]="d1"></mat-datepicker-toggle>
+              <mat-datepicker #d1></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="half">
+              <mat-label>Return on</mat-label>
+              <input matInput [matDatepicker]="d2" formControlName="returnOn">
+              <mat-datepicker-toggle matSuffix [for]="d2"></mat-datepicker-toggle>
+              <mat-datepicker #d2></mat-datepicker>
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="remarks">
+            <mat-label>Remarks</mat-label>
+            <textarea matInput formControlName="remarks" rows="5" placeholder="Direct Flight, Emirates from Bangalore"></textarea>
+          </mat-form-field>
+        </div>
+
+        <!-- RIGHT COLUMN (side inputs + actions) -->
+        <div class="right">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>No. of Passengers</mat-label>
+            <input matInput type="number" formControlName="passengers">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Expected fare (INR)</mat-label>
+            <input matInput formControlName="expectedFare" placeholder="per person">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Preferred Airlines</mat-label>
+            <input matInput formControlName="preferredAirlines">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Contact Number</mat-label>
+            <input matInput formControlName="contactNumber">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" placeholder="Email">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Preferred Flight Number</mat-label>
+            <input matInput formControlName="preferredFlightNo" placeholder="Preferred Flight No">
+          </mat-form-field>
+
+          <div class="actions">
+            <button mat-raised-button color="primary" (click)="submitRequest()">Submit Group Request</button>
+            <button mat-stroked-button class="view-requests">View All Requests</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,29 @@
+.container {
+  margin-left: auto;
+  margin-right: auto;
+ max-width: 1500px; // uncomment if you want to cap width
+  width: 100%;
+}
+
+.card form {
+  flex: 1;
+}
+
+button.mat-flat-button, button.mat-stroked-button {
+  min-width: 140px;
+}
+
+::ng-deep .mat-mdc-cell {
+  font-size: 12px; /* smaller */
+}
+
+::ng-deep .mat-mdc-header-cell {
+  font-size: 13px; /* slightly bigger than body */
+  font-weight: 600;
+}
+
+.black-border-input {
+  border: 1px solid black !important;
+  border-radius: 4px;   // optional for rounded corners
+  padding: 2px 6px;     // optional for spacing
+}

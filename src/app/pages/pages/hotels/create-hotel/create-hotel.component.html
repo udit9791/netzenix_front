@@ -1,0 +1,29 @@
+<vex-secondary-toolbar current="Create Hotel">
+  <vex-breadcrumbs [crumbs]="['Hotels', 'Create Hotel']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container">
+  <div class="card p-4 w-full max-w-xl">
+    <form [formGroup]="form" class="flex flex-col gap-4">
+      <mat-form-field appearance="outline">
+        <mat-label>Hotel Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Star Rating</mat-label>
+        <input matInput type="number" min="1" max="5" formControlName="star_rating" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Built Year</mat-label>
+        <input matInput type="number" min="1800" [max]="currentYear" formControlName="built_year" />
+      </mat-form-field>
+
+      <div class="flex items-center gap-2">
+        <button mat-flat-button color="primary" type="button" (click)="submit()" [disabled]="form.invalid || submitting">Create</button>
+        <a mat-stroked-button [routerLink]="['/sale/hotels']">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  font-family: 'Inter', sans-serif;
+
+  h2 {
+    color: #1f2937; // Tailwind gray-800
+  }
+
+  button {
+    min-width: 160px;
+    font-weight: 500;
+  }
+}

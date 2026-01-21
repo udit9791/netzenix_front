@@ -1,0 +1,278 @@
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header bg-white p-4 flex items-center justify-between">
+      <h2 class="title m-0">Wallet</h2>
+      <div class="flex items-center">
+        <div class="mr-4">
+          <strong>Available Balance:</strong> ₹{{ walletAmount | number:'1.2-2' }}
+        </div>
+        <div>
+          <strong>Credit Balance:</strong> ₹{{ creditBalance | number:'1.2-2' }}
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-content p-4">
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <mat-form-field class="w-full md:w-1/5">
+          <mat-label>Payment Mode</mat-label>
+          <mat-select [(ngModel)]="selectedPaymentMode">
+            <mat-option *ngFor="let mode of paymentModes" [value]="mode.value">
+              {{ mode.viewValue }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <mat-form-field class="w-full md:w-1/5">
+          <mat-label>Payment Status</mat-label>
+          <mat-select [(ngModel)]="selectedPaymentStatus">
+            <mat-option *ngFor="let status of paymentStatuses" [value]="status.value">
+              {{ status.viewValue }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <mat-form-field class="w-full md:w-2/5">
+          <mat-label>Start / End Date</mat-label>
+          <mat-date-range-input [formGroup]="dateRange" [rangePicker]="picker">
+            <input matStartDate formControlName="start" placeholder="Start Date">
+            <input matEndDate formControlName="end" placeholder="End Date">
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+        
+        <div *ngIf="showMore" class="w-full md:w-2/5">
+          <mat-form-field class="w-full">
+            <mat-label>Reference number</mat-label>
+            <input matInput placeholder="Enter refernce number" [(ngModel)]="referenceNumber">
+          </mat-form-field>
+        </div>
+        
+        <button mat-raised-button color="primary" class="h-[56px]" (click)="applyFilters()">
+          <mat-icon>search</mat-icon>
+        </button>
+        
+        <div class="flex items-center gap-2">
+          <button mat-button color="primary" class="h-[56px]" (click)="resetFilters()">
+            Reset All
+          </button>
+          <button mat-button color="primary" class="h-[56px]" (click)="toggleShowMore()">
+            <span>Show {{ showMore ? 'less' : 'More' }}</span>
+            <mat-icon>{{ showMore ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+      
+      <div class="mb-4 flex flex-wrap gap-4">
+        <div class="bg-gray-100 px-4 py-2 rounded-md">
+          <span class="font-medium">Topup: </span>
+          <span class="text-primary">{{ transactions.topup }}</span>
+        </div>
+        <div class="bg-gray-100 px-4 py-2 rounded-md">
+          <span class="font-medium">Air: </span>
+          <span class="text-primary">{{ transactions.air }}</span>
+        </div>
+        <div class="bg-gray-100 px-4 py-2 rounded-md">
+          <span class="font-medium">Hotel: </span>
+          <span class="text-primary">{{ transactions.hotel }}</span>
+        </div>
+        <div class="bg-gray-100 px-4 py-2 rounded-md">
+          <span class="font-medium">Commission: </span>
+          <span class="text-primary">{{ transactions.commission }}</span>
+        </div>
+        <div class="bg-gray-100 px-4 py-2 rounded-md">
+          <span class="font-medium">Coupon Discount: </span>
+          <span class="text-primary">{{ transactions.couponDiscount }}</span>
+        </div>
+        <div class="ml-auto">
+          <button mat-stroked-button color="primary" class="mr-2" (click)="exportToXLS()">
+            <mat-icon class="mr-1">grid_on</mat-icon> XLS
+          </button>
+          <button mat-stroked-button color="primary" (click)="exportToCSV()">
+            <mat-icon class="mr-1">table_chart</mat-icon> CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-auto">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b">
+              <th class="p-4 text-left">
+                <div class="flex items-center">
+                  <mat-icon class="text-gray-400 mr-1">open_with</mat-icon>
+                  Created date
+                </div>
+              </th>
+              <th class="p-4 text-left">Type</th>
+              <th class="p-4 text-left">PNR</th>
+              <th class="p-4 text-left">Reference id</th>
+              <th class="p-4 text-left">Payment Status</th>
+              <th class="p-4 text-left">Amount</th>
+              <th class="p-4 text-left">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let transaction of transactionList">
+              <tr class="border-b hover:bg-gray-50 cursor-pointer" (click)="toggleTransactionDetails(transaction)">
+                <td class="p-4">
+                  <div class="flex items-center">
+                    <mat-icon [ngClass]="{'text-red-500': transaction.amount < 0, 'text-green-500': transaction.amount > 0}">
+                      {{ transaction.amount < 0 ? 'arrow_downward' : 'arrow_upward' }}
+                    </mat-icon>
+                    {{ transaction.date }}
+                  </div>
+                </td>
+                <td class="p-4">{{ transaction.type }}</td>
+                <td class="p-4">{{ transaction.pnr }}</td>
+                <td class="p-4">{{ transaction.referenceId }}</td>
+                <td class="p-4">
+                  <span class="px-2 py-1 rounded-full text-xs font-medium"
+                        [ngClass]="{
+                          'bg-green-100 text-green-800': transaction.payment_status === 'completed' || transaction.payment_status === 'success',
+                          'bg-yellow-100 text-yellow-800': transaction.payment_status === 'pending',
+                          'bg-red-100 text-red-800': transaction.payment_status === 'failed' || transaction.payment_status === 'cancelled',
+                          'bg-blue-100 text-blue-800': transaction.payment_status === 'processing',
+                          'bg-gray-100 text-gray-800': !transaction.payment_status
+                        }">
+                    {{ (transaction.payment_status || 'N/A') | titlecase }}
+                  </span>
+                </td>
+                <td class="p-4">
+                  <div class="flex items-center" [ngClass]="{'text-red-500': transaction.type === 'debit', 'text-green-500': transaction.type === 'credit'}">
+                    <mat-icon class="mr-1 text-sm">
+                      {{ transaction.type === 'debit' ? 'arrow_downward' : 'arrow_upward' }}
+                    </mat-icon>
+                    {{ transaction.amount | number:'1.2-2' }}
+                  </div>
+                </td>
+                <td class="p-4">
+                  <span class="text-sm">INR</span> {{ transaction.balance | number:'1.2-2' }}
+                </td>
+              </tr>
+              <tr *ngIf="transaction.expanded" class="bg-gray-50">
+                <td colspan="7" class="p-4">
+                  <div class="grid grid-cols-6 gap-4">
+                    <div>
+                      <div class="text-gray-500 text-sm">Reference number</div>
+                      <div>{{ transaction.details?.referenceNumber || 'N/A' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-gray-500 text-sm">Payment Type</div>
+                      <div>{{ transaction.details?.paymentType || 'N/A' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-gray-500 text-sm">Invoice number</div>
+                      <div class="text-orange-500">{{ transaction.details?.invoiceNumber || 'N/A' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-gray-500 text-sm">Convenience fee</div>
+                      <div>{{ transaction.details?.convenienceFee || 'N/A' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-gray-500 text-sm">Convenience fee GST</div>
+                      <div>{{ transaction.details?.convenienceFeeGST || 'N/A' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-gray-500 text-sm">TDS</div>
+                      <div>{{ transaction.details?.tds || 'N/A' }}</div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-between items-center mt-4">
+        <div class="flex items-center">
+          <span class="mr-2">Displaying</span>
+          <mat-form-field appearance="outline" class="w-16">
+            <mat-select [(ngModel)]="pageSize" (selectionChange)="onPageChange({pageIndex: currentPage, pageSize: $event.value})">
+            <mat-option *ngFor="let size of pageSizeOptions" [value]="size">
+              {{ size }}
+            </mat-option>
+          </mat-select>
+          </mat-form-field>
+           <span class="ml-2">Out of {{ totalTransactions }}</span>
+        </div>
+
+        <div class="flex">
+          <button mat-icon-button [disabled]="currentPage === 0" (click)="goToPreviousPage()">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          
+          <!-- Dynamic page buttons -->
+          <ng-container *ngFor="let page of getVisiblePages()">
+            <ng-container *ngIf="page !== '...'">
+              <button 
+                *ngIf="page === currentPage + 1"
+                mat-mini-fab
+                color="primary"
+                class="mx-1"
+                (click)="goToPageNumber(+page - 1)">
+                {{ page }}
+              </button>
+              <button 
+                *ngIf="page !== currentPage + 1"
+                mat-icon-button
+                class="mx-1"
+                (click)="goToPageNumber(+page - 1)">
+                {{ page }}
+              </button>
+            </ng-container>
+            <span *ngIf="page === '...'" class="mx-1 flex items-center">...</span>
+          </ng-container>
+          
+          <button mat-icon-button [disabled]="currentPage >= totalPages - 1" (click)="goToNextPage()">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+
+        <div class="flex items-center">
+          <span class="mr-2">Go to Page</span>
+          <mat-form-field appearance="outline" class="w-20">
+            <input matInput type="number" [(ngModel)]="goToPage" min="1" [max]="totalPages">
+          </mat-form-field>
+          <button mat-raised-button color="primary" class="ml-2" (click)="goToSpecificPage()">Go</button>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <h3 class="mb-4 font-medium">Summary</h3>
+        <div class="grid grid-cols-7 gap-4">
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total Sales</div>
+            <div class="text-center mt-2">{{ summary.totalSales | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total Commission earned</div>
+            <div class="text-center mt-2">{{ summary.totalCommission | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total Markup</div>
+            <div class="text-center mt-2">{{ summary.totalMarkup | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total TDS deducted</div>
+            <div class="text-center mt-2">{{ summary.totalTDS | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total Refund</div>
+            <div class="text-center mt-2">{{ summary.totalRefund | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Total Reconciliation</div>
+            <div class="text-center mt-2">{{ summary.totalReconciliation | number:'1.2-2' }}</div>
+          </div>
+          <div class="bg-orange-500 text-white p-4 rounded">
+            <div class="text-center font-medium">Credit Outstanding</div>
+            <div class="text-center mt-2">{{ summary.creditOutstanding | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

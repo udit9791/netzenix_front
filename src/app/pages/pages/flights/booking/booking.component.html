@@ -1,0 +1,146 @@
+<div class="booking-page container-grid">
+  <!-- Left column: main forms -->
+  <div class="main-col">
+    <h2 class="section-title">Traveler Details</h2>
+    <mat-card class="panel">
+      <div class="panel-body">
+        <div class="panel-row header">
+          <div>Traveler 1: Adult</div>
+          <button mat-stroked-button color="primary" class="pick-trav">Pick Traveler</button>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="small">
+            <mat-label>TITLE*</mat-label>
+            <mat-select formControlName="title" [formControl]="travelerForm.controls['title']">
+              <mat-option value="Mr">Mr</mat-option>
+              <mat-option value="Mrs">Mrs</mat-option>
+              <mat-option value="Ms">Ms</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>FIRST NAME / GIVEN NAME*</mat-label>
+            <input matInput [formControl]="travelerForm.controls['firstName']" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>LAST NAME / SURNAME*</mat-label>
+            <input matInput [formControl]="travelerForm.controls['lastName']" />
+          </mat-form-field>
+        </div>
+      </div>
+    </mat-card>
+
+    <h3 class="section-title small">Contact Details</h3>
+    <mat-card class="panel">
+      <div class="panel-body contact-grid">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Email Address*</mat-label>
+          <input matInput [formControl]="contactForm.controls['email']" placeholder="you@example.com" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="medium">
+          <mat-label>Contact Phone*</mat-label>
+          <input matInput [formControl]="contactForm.controls['phone']" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="medium">
+          <mat-label>City of Residence*</mat-label>
+          <input matInput [formControl]="contactForm.controls['city']" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Agent Reference</mat-label>
+          <input matInput [formControl]="contactForm.controls['agentRef']" placeholder="Optional internal note" />
+        </mat-form-field>
+      </div>
+    </mat-card>
+
+    <mat-card class="panel notes">
+      <div class="panel-body">
+        <h4>Important Notes</h4>
+        <ul>
+          <li>You have got an exclusive deal on the flight! Names on PNR reflect only within 24-72 hours before departure.</li>
+          <li>Ticket may be Non Refundable & Non Changeable — check airline rules.</li>
+          <li>All guests must present valid identification at check-in.</li>
+        </ul>
+      </div>
+    </mat-card>
+
+    <mat-card class="panel coupon-panel">
+      <div class="panel-body coupon-body">
+        <h4>Coupon</h4>
+        <p>Have a coupon? Redeem here</p>
+        <div class="coupon-row">
+          <mat-form-field appearance="outline" class="coupon-field">
+            <mat-label>Promo Code</mat-label>
+            <input matInput [formControl]="couponCode" />
+          </mat-form-field>
+          <button mat-stroked-button color="primary" (click)="applyCoupon()">Apply Discount</button>
+        </div>
+
+        <div class="proceed-row">
+          <small>By proceeding to make payment, you agree to the <a href="#">terms and conditions</a>.</small>
+          <button mat-flat-button color="primary" class="proceed-btn" (click)="proceedToPayment()">Proceed to payment</button>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card class="panel terms">
+      <div class="panel-body">
+        <h4>Terms and Conditions</h4>
+        <ul class="terms-list">
+          <li>Please inform us of name updates at least 48 hours before departure.</li>
+          <li>This ticket is Non Refundable & Non Changeable.</li>
+          <li>Check-in starts 2 hours prior & closes 45 minutes prior to scheduled departure.</li>
+          <li>Carrier terms and policies apply.</li>
+          <li>For cancellations and refunds, follow airline policy.</li>
+        </ul>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- Right column: price summary -->
+  <aside class="side-col">
+    <mat-card class="panel price">
+      <div class="panel-body">
+        <h3 class="price-title">Price Summary</h3>
+        <div class="price-value">₹ {{ booking.totalPrice | number }}</div>
+
+        <mat-divider></mat-divider>
+
+        <div class="small-info">
+          <div><strong>Travel Date:</strong> {{ booking.travelDate | date: 'dd MMM yyyy' }}</div>
+          <div><strong>{{ booking.adults }} adult(s) and {{ booking.children }} children</strong></div>
+          <div><strong>Class:</strong> {{ booking.cabin }}</div>
+          <div><strong>Check-in:</strong> {{ booking.checkin }}</div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="flight-summary">
+          <div class="flight-row">
+            <img class="side-logo" [src]="booking.flight.logo" alt="{{ booking.flight.airline }}" />
+            <div class="flight-meta">
+              <div class="flight-title"><strong>{{ booking.flight.airline }}</strong> | {{ booking.flight.flightNo }}</div>
+              <div class="flight-times">
+                <div>{{ booking.flight.from }} — {{ booking.flight.to }}</div>
+                <div>{{ booking.flight.date | date: 'dd MMM yyyy' }} • {{ booking.flight.departTime }} - {{ booking.flight.arriveTime }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="fare-breakup">
+          <div class="fb-row"><span>Base Fare Adult</span><span>₹ {{ booking.totalPrice | number }} x {{ booking.adults }}</span></div>
+          <div class="fb-row total"><span>Total Amount</span><span>₹ {{ booking.totalPrice | number }}</span></div>
+        </div>
+
+        <button mat-flat-button color="accent" class="pay-btn" (click)="proceedToPayment()">Proceed to payment</button>
+      </div>
+    </mat-card>
+  </aside>
+</div>

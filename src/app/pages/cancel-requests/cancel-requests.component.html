@@ -1,0 +1,90 @@
+<div class="page-container">
+<mat-card class="cancel-requests-card">
+  <div class="header">
+    <h2>Cancel Requests</h2>
+  </div>
+
+  <div class="filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Order ID</mat-label>
+      <input matInput type="number" [(ngModel)]="orderId" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>From date</mat-label>
+      <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
+      <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+      <mat-datepicker #fromPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>To date</mat-label>
+      <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
+      <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+      <mat-datepicker #toPicker></mat-datepicker>
+    </mat-form-field>
+
+    <button mat-flat-button color="primary" class="apply-btn" (click)="applyFilter()">
+      Apply
+    </button>
+  </div>
+
+  <div class="table-wrapper" *ngIf="!loading; else loadingTpl">
+    <table mat-table [dataSource]="data" class="mat-elevation-z2">
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>ID</th>
+        <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="order_id">
+        <th mat-header-cell *matHeaderCellDef>Order ID</th>
+        <td mat-cell *matCellDef="let row"><a class="order-link" [routerLink]="['/payment-confirmation', row.order_id]">{{ row.order_id }}</a></td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let row">{{ row.status_name || row.status }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="type_id">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let row">{{ row.type_id }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="final_amount">
+        <th mat-header-cell *matHeaderCellDef>Refund Amount</th>
+        <td mat-cell *matCellDef="let row">{{ row.final_amount }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="created_at">
+        <th mat-header-cell *matHeaderCellDef>Created</th>
+        <td mat-cell *matCellDef="let row">{{ row.created_at | date:'medium' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-stroked-button color="primary" *ngIf="+row?.status !== 6" (click)="proceed(row)">Proceed</button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </div>
+
+  <mat-paginator
+    [length]="total"
+    [pageIndex]="current_page - 1"
+    [pageSize]="per_page"
+    [pageSizeOptions]="[5, 10, 20, 50]"
+    (page)="handlePage($event)"
+  ></mat-paginator>
+
+  <ng-template #loadingTpl>
+    <div class="loading">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+    </div>
+  </ng-template>
+</mat-card>
+</div>

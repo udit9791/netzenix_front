@@ -1,0 +1,171 @@
+<vex-secondary-toolbar current="Hotel Search">
+  <vex-breadcrumbs [crumbs]="['Hotels', 'Search']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<vex-hotel-search-bar
+  [form]="form"
+  [locationCtrl]="locationCtrl"
+  [filteredOptions$]="filteredOptions$"
+  [minCheckIn]="minCheckIn"
+  [minCheckOut]="minCheckOut"
+  [roomsGuestsLabel]="roomsGuestsLabel"
+  (selectLocation)="onSelectLocation($event)"
+  (checkInChange)="onCheckInChange($event)"
+  (openRoomsGuests)="openRoomsGuestsDialog()"
+  (searchClicked)="search()"
+></vex-hotel-search-bar>
+
+<div class="p-6 container">
+  <div class="card p-4 w-full">
+    <div class="text-sm text-gray-700 mb-2">
+      {{ searchType === 'confirm' ? 'Confirm Availability' : 'Availability' }}
+    </div>
+    <div *ngIf="confirmAvailabilityLoading" class="flex items-center gap-2 text-gray-600">
+      <mat-icon>sync</mat-icon>
+      <span>Loading availability...</span>
+    </div>
+    <div *ngIf="!confirmAvailabilityLoading && confirmAvailabilityError" class="text-red-600">
+      {{ confirmAvailabilityError }}
+    </div>
+    <div *ngIf="!confirmAvailabilityLoading && !confirmAvailabilityError">
+      <div class="flex flex-wrap gap-2" *ngIf="confirmAvailableDates.length > 0">
+        <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded" *ngFor="let d of confirmAvailableDates">
+          {{ d.date }} <span class="text-xs text-blue-600 ml-1">(Rooms: {{ d.total }})</span>
+        </span>
+      </div>
+      <div class="text-gray-600" *ngIf="confirmAvailableDates.length === 0">
+        {{ searchType === 'confirm'
+          ? 'Select a hotel to view confirm dates.'
+          : 'Select a hotel to view availability.' }}
+      </div>
+    </div>
+  </div>
+  </div>
+
+<ng-template #roomsGuestsTpl>
+  <div class="p-2 w-full">
+    <div class="flex items-center justify-between mb-2">
+      <div class="text-sm text-gray-700">Rooms</div>
+      <div class="flex items-center gap-2">
+        <button mat-icon-button (click)="decrementRooms()"><mat-icon>remove</mat-icon></button>
+        <div class="min-w-[2rem] text-center">{{ roomsConfig.length }}</div>
+        <button mat-icon-button (click)="incrementRooms()"><mat-icon>add</mat-icon></button>
+      </div>
+    </div>
+    <div>
+      <div *ngFor="let room of roomsConfig; let i = index" class="border rounded p-2 mb-2">
+        <div class="font-medium mb-2">Room {{ i + 1 }}</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">Adults</div>
+            <div class="flex items-center gap-2">
+              <button mat-icon-button (click)="decrementAdults(i)"><mat-icon>remove</mat-icon></button>
+              <div class="min-w-[2rem] text-center">{{ room.adults }}</div>
+              <button mat-icon-button (click)="incrementAdults(i)"><mat-icon>add</mat-icon></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">Children</div>
+            <div class="flex items-center gap-2">
+              <button mat-icon-button (click)="decrementChildren(i)"><mat-icon>remove</mat-icon></button>
+              <div class="min-w-[2rem] text-center">{{ room.children }}</div>
+              <button mat-icon-button (click)="incrementChildren(i)"><mat-icon>add</mat-icon></button>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="room.children > 0" class="mt-2">
+          <div class="text-sm text-gray-700 mb-1">Child Age</div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <mat-form-field appearance="outline" *ngFor="let age of room.childAges; let j = index">
+              <mat-select [value]="age" (selectionChange)="setChildAge(i, j, $event.value)">
+                <mat-option *ngFor="let a of childAgeOptions" [value]="a">{{ a }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-2">
+      <mat-checkbox [formControl]="petFriendlyCtrl">Pet Friendly</mat-checkbox>
+    </div>
+    <div class="mt-3 flex justify-end gap-2">
+      <button mat-button (click)="onCancelRoomsGuests()">Cancel</button>
+      <button mat-flat-button color="primary" (click)="applyRoomsGuests()">Apply</button>
+    </div>
+  </div>
+  </ng-template>
+
+<div class="p-6 container" *ngIf="loading">
+  <div class="flex items-center gap-2 text-gray-600">
+    <mat-icon>sync</mat-icon>
+    <span>Searching hotels...</span>
+  </div>
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+</div>
+
+<div class="p-6 container" *ngIf="!loading && errorMsg">
+  <div class="flex items-center gap-2 text-red-600">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMsg }}</span>
+  </div>
+</div>
+
+<div class="p-6 container" *ngIf="!loading && !errorMsg">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <mat-card class="hotel-card cursor-pointer" *ngFor="let h of results" (click)="openHotelDetail(h)">
+      <div class="card-top">
+        <img [src]="fullImgUrl(h.photo_url)" alt="Hotel image" class="top-image" />
+        <div class="top-badges">
+          <!-- <span class="badge badge-yellow">SUPER SAVER</span>
+          <span class="badge badge-dark">GST ASSURED</span> -->
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-row">
+          <div class="rating-wrap" *ngIf="h.star_rating">
+            <span class="rating-chip">
+              {{ h.star_rating }}★
+            </span>
+            <span class="rating-text">
+              {{ h.star_rating >= 4 ? 'Excellent' : (h.star_rating >= 3 ? 'Good' : 'Average') }}
+            </span>
+          </div>
+          <button mat-stroked-button class="share-btn">
+            <mat-icon>share</mat-icon>
+            Share
+          </button>
+        </div>
+        <div class="hotel-title">{{ h.name }}</div>
+        <div class="stars">
+          <mat-icon *ngFor="let i of [0,1,2,3,4]" class="star" [class.muted]="i >= h.star_rating">grade</mat-icon>
+        </div>
+        <a class="hotel-location" *ngIf="h.city">{{ h.city }}</a>
+        <div class="chips">
+          <span class="chip">Swimming Pool</span>
+          <span class="chip">Restaurant</span>
+        </div>
+        <ul class="feature-list">
+          <li><mat-icon>check_circle</mat-icon><span>Free Cancellation</span></li>
+          <li><mat-icon>check_circle</mat-icon><span>Free stay for the kid</span></li>
+          <!-- <li><mat-icon>check_circle</mat-icon><span>Enjoy Happy Hours with 1+1 offer</span></li> -->
+        </ul>
+      </div>
+      <div class="bottom-bar">
+        <div class="left">
+          For {{ h.nights }} Nights & {{ h.rooms }} Room
+          <span class="muted">with tax.</span>
+        </div>
+        <div class="right" *ngIf="h.price_total !== null">
+          ₹ {{ h.price_total | number:'1.0-0' }}
+        </div>
+      </div>
+      <div class="action-row">
+        <!-- <button mat-stroked-button color="primary">Book Now &#64; ₹0</button> -->
+        <!-- <button mat-flat-button class="package-btn">Super Package</button> -->
+      </div>
+    </mat-card>
+  </div>
+  <div class="text-center text-gray-600 mt-4" *ngIf="results.length === 0">
+    No hotels found for your criteria.
+  </div>
+</div>

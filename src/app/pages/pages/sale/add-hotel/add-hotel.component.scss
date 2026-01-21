@@ -1,0 +1,27 @@
+:host {
+  display: block;
+}
+
+mat-tab-group {
+  width: 100%;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+gmpx-place-autocomplete {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: inherit;
+}
+
+.mat-mdc-form-field .mdc-text-field__input,
+.mat-mdc-form-field .mdc-floating-label {
+  font-family: inherit;
+  font-feature-settings: normal;
+  font-variant: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}

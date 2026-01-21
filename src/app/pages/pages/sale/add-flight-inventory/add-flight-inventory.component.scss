@@ -1,0 +1,63 @@
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+mat-form-field {
+  font-size: 13px;
+  .mat-mdc-form-field-infix {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+}
+
+button[mat-icon-button] {
+  align-self: center;
+}
+
+// Select2-like styles
+.select2-like {
+  width: 100%;
+}
+
+.airport-option {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.airport-code {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.airport-name {
+  font-size: 13px;
+}
+
+.airport-city {
+  font-size: 12px;
+  color: #666;
+}
+
+::ng-deep .mat-mdc-option {
+  min-height: 60px !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+::ng-deep .mat-mdc-option .mdc-list-item__primary-text {
+  height: auto !important;
+  white-space: normal !important;
+}

@@ -1,0 +1,432 @@
+<vex-secondary-toolbar current="Hotel Detail">
+  <vex-breadcrumbs [crumbs]="['Hotels', 'Details']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<vex-hotel-search-bar
+  [form]="form"
+  [locationCtrl]="locationCtrl"
+  [filteredOptions$]="filteredOptions$"
+  [minCheckIn]="minCheckIn"
+  [minCheckOut]="minCheckOut"
+  [roomsGuestsLabel]="roomsGuestsLabel"
+  [locationReadonly]="true"
+  (selectLocation)="onSelectLocation($event)"
+  (checkInChange)="onCheckInChange($event)"
+  (openRoomsGuests)="openRoomsGuestsDialog()"
+  (searchClicked)="search()"
+></vex-hotel-search-bar>
+
+<div class="p-6 container">
+  <div class="card p-4 w-full mb-4">
+    <div class="text-sm text-gray-700 mb-2">
+      {{ searchType === 'confirm' ? 'Confirm Availability' : 'Availability' }}
+    </div>
+    <div
+      *ngIf="confirmAvailabilityLoading"
+      class="flex items-center gap-2 text-gray-600"
+    >
+      <mat-icon>sync</mat-icon>
+      <span>Loading availability...</span>
+    </div>
+    <div
+      *ngIf="!confirmAvailabilityLoading && confirmAvailabilityError"
+      class="text-red-600"
+    >
+      {{ confirmAvailabilityError }}
+    </div>
+    <div
+      *ngIf="!confirmAvailabilityLoading && !confirmAvailabilityError"
+    >
+      <div
+        class="flex flex-wrap gap-2"
+        *ngIf="confirmAvailableDates.length > 0"
+      >
+        <span
+          class="px-2 py-1 bg-blue-50 text-blue-700 rounded"
+          *ngFor="let d of confirmAvailableDates"
+        >
+          {{ d.date }}
+          <span class="text-xs text-blue-600 ml-1"
+            >(Rooms: {{ d.total }})</span
+          >
+        </span>
+      </div>
+      <div
+        class="text-gray-600"
+        *ngIf="confirmAvailableDates.length === 0"
+      >
+        Select a hotel to view confirm dates.
+      </div>
+    </div>
+  </div>
+
+  <div class="container p-0">
+  <div *ngIf="loading" class="p-4">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+  <div *ngIf="error" class="text-red-600 p-2">{{ error }}</div>
+
+  <div *ngIf="!loading && !error">
+    <mat-card class="hero">
+      <div class="hero-grid">
+        <div class="hero-image-wrap cursor-pointer" (click)="openHotelPhotos()">
+          <img
+            [src]="fullImgUrl(primaryHotelPhotoUrl || quote?.photo_url || photoUrl || '/storage/hotel/default.jpg')"
+            class="hero-image"
+          />
+          <div class="hero-photo-badge" *ngIf="hotelPhotoCount > 0">
+            <span class="count">{{ hotelPhotoCount }} PHOTOS</span>
+            <mat-icon class="arrow">arrow_forward</mat-icon>
+          </div>
+        </div>
+        <div class="hero-info">
+          <div class="title">{{ quote?.name || inventory?.hotel_name }}</div>
+          <div class="rating" *ngIf="quote?.star_rating || inventory?.star_rating">
+            <mat-icon *ngFor="let i of [0,1,2,3,4]" [class.muted]="i >= (quote?.star_rating || inventory?.star_rating)">grade</mat-icon>
+            <span class="ml-2 text-gray-600">
+              {{ (quote?.star_rating || inventory?.star_rating) >= 4 ? 'Excellent' : ((quote?.star_rating || inventory?.star_rating) >= 3 ? 'Good' : 'Average') }}
+            </span>
+          </div>
+          <div class="location" *ngIf="quote?.city">{{ quote?.city }}</div>
+          <div class="meta">
+            Check-in: {{ inventory?.check_in_time }} • Check-out: {{ inventory?.check_out_time }}
+          </div>
+        </div>
+        <div class="hero-price" *ngIf="quote?.price_total !== null">
+          <div class="label">For {{ params?.rooms }} Room • {{ params?.from }} → {{ params?.to }}</div>
+          <div class="price">₹ {{ quote?.price_total | number:'1.0-0' }}</div>
+          <div class="muted">Inclusive of taxes</div>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card class="section" *ngIf="hotelAmenities?.length">
+      <div class="section-title">Amenities</div>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <span
+          class="inline-block text-xs px-3 py-1 rounded bg-gray-100 text-gray-700"
+          *ngFor="let a of hotelAmenities"
+          >{{ a }}</span
+        >
+      </div>
+    </mat-card>
+
+    <mat-card class="section">
+      <div class="section-title">Available Rooms</div>
+      <div class="rooms-list" *ngIf="pricing?.rooms?.length">
+        <div class="room-card" *ngFor="let r of pricing.rooms">
+          <div class="room-left cursor-pointer" (click)="openRoomPhotos(r)">
+            <img
+              [src]="fullImgUrl(r.room_photo_url || quote?.photo_url || photoUrl || '/storage/hotel/default.jpg')"
+              class="room-image"
+            />
+            <div
+              class="room-photo-badge"
+              *ngIf="(r.room_photos?.length || (r.room_photo_url ? 1 : 0)) > 0"
+            >
+              <span class="count">
+                {{ r.room_photos?.length || (r.room_photo_url ? 1 : 0) }} PHOTOS
+              </span>
+              <mat-icon class="arrow">arrow_forward</mat-icon>
+            </div>
+          </div>
+          <div class="room-middle">
+            <div class="room-title">{{ r.room_name }}</div>
+            <div class="room-meta" *ngIf="r.room_description">
+              {{ r.room_description }}
+            </div>
+            <div class="room-meta room-attributes" *ngIf="r.room_size_value || r.room_view || r.bed_type || r.room_type">
+              <span *ngIf="r.room_size_value">
+                <mat-icon>straighten</mat-icon>
+                {{ r.room_size_value }} {{ r.room_size_unit }}
+              </span>
+              <span *ngIf="r.room_view?.name">
+                <mat-icon>landscape</mat-icon>
+                {{ r.room_view.name }} View
+              </span>
+              <span *ngIf="r.bed_type?.name">
+                <mat-icon>king_bed</mat-icon>
+                {{ r.bed_type.name }}
+              </span>
+              <span *ngIf="r.room_type?.name">
+                <mat-icon>meeting_room</mat-icon>
+                {{ r.room_type.name }}
+              </span>
+              <span *ngIf="r.smoking_allowed === false">
+                <mat-icon>smoke_free</mat-icon>
+                Non-smoking
+              </span>
+              <span *ngIf="r.smoking_allowed === true">
+                <mat-icon>smoking_rooms</mat-icon>
+                Smoking allowed
+              </span>
+            </div>
+            <div class="room-meta">
+              Adults: {{ r.detail?.adults }} • Max: {{ r.detail?.max_person }} • Weekend: {{ (r.detail?.weekend_days || []).join(', ') }}
+            </div>
+            <div class="room-features">
+              <span>Cancellation</span> • <span>Breakfast Options</span>
+              <button
+                mat-button
+                class="text-xs ml-2 p-0 leading-none"
+                (click)="openRoomPhotos(r)"
+              >
+                More details
+              </button>
+            </div>
+          </div>
+          <div class="room-right">
+          </div>
+          <div class="room-options-full w-full mt-3" *ngIf="r.options?.length">
+            <div class="flex flex-col gap-3">
+              <div class="border rounded p-4 flex items-start justify-between" *ngFor="let opt of r.options">
+                <div class="pr-4">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <div class="font-semibold text-base">
+                      Room {{ isRefundable === 1 ? 'With Free Cancellation' : 'Without Cancellation' }}
+                    </div>
+                    <div class="text-gray-500" *ngIf="opt.meal_type_name || opt.meal_type">|</div>
+                    <div class="font-medium" *ngIf="opt.meal_type_name || opt.meal_type">{{ opt.meal_type_name ?? 'Room only'  }}</div>
+                    <span *ngIf="(opt.meal_type_name || '').toLowerCase().includes('super')" class="ml-2 text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700">Super Package</span>
+                  </div>
+                  <ul class="mt-2 text-sm text-gray-700 space-y-1">
+                    <li *ngIf="hasFreeChild(opt)">Free stay for the kid</li>
+                    <!-- <li *ngIf="isBreakfast(opt)">Breakfast included</li> -->
+                    <li *ngIf="opt.rooms_used">
+                      Included for {{ opt.rooms_used }} room{{ opt.rooms_used > 1 ? 's' : '' }}
+                      <span *ngIf="opt.extra_beds_used" class="ml-1">
+                        • {{ opt.extra_beds_used }} extra bed{{ opt.extra_beds_used > 1 ? 's' : '' }} at
+                        ₹ {{ opt.extra_bed_price | number:'1.0-0' }} each
+                      </span>
+                    </li>
+                    <li>
+                      {{ isRefundable === 1 ? 'Free Cancellation available' : 'Non-refundable' }}
+                    </li>
+                  </ul>
+                  <div class="mt-2">
+                    <span class="inline-block text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded">
+                      {{ formatIncluded(opt) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="min-w-[220px] flex flex-col items-end gap-2">
+                  <div class="text-2xl font-semibold" *ngIf="opt.available; else optUnavailable">₹ {{ opt.total_price | number:'1.2-2' }}</div>
+                  <button mat-flat-button color="primary" (click)="onBookOption(r, opt)">BOOK NOW</button>
+                </div>
+              </div>
+              <ng-template #optUnavailable>
+                <div class="text-xs text-red-600">Unavailable</div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="!pricing?.rooms?.length" class="text-gray-600">No rooms data available.</div>
+    </mat-card>
+
+    <mat-card class="section" *ngIf="hotelLatitude !== null && hotelLongitude !== null">
+      <div class="section-title">Location</div>
+      <div class="mt-2">
+        <div class="w-full h-64 relative rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+          <a
+            class="px-4 py-2 bg-white border border-blue-500 text-blue-700 rounded shadow text-sm"
+            [href]="'https://www.google.com/maps?q=' + hotelLatitude + ',' + hotelLongitude"
+            target="_blank"
+            rel="noopener"
+          >
+            Click to View Map
+          </a>
+        </div>
+      </div>
+    </mat-card>
+  </div>
+</div>
+
+<ng-template #hotelPhotosTpl>
+  <div class="p-4 w-full max-w-5xl">
+    <div class="flex items-center justify-between mb-3">
+      <div class="font-medium text-base">Property Photos</div>
+      <button mat-icon-button (click)="closeHotelPhotos()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <mat-tab-group
+      *ngIf="hotelPhotos?.length"
+      [(selectedIndex)]="activeHotelCategoryIndex"
+      (selectedIndexChange)="onHotelCategoryChange($event)"
+      class="hotel-photos-tabs"
+    >
+      <mat-tab
+        *ngFor="let cat of hotelPhotos; let i = index"
+        [label]="cat.category_name || ('Category ' + (i + 1))"
+      >
+        <div class="mt-4 flex flex-col items-center gap-3" *ngIf="cat.photos?.length">
+          <img
+            [src]="fullImgUrl(cat.photos[activeHotelPhotoIndex]?.url)"
+            class="w-full max-h-[420px] object-cover rounded"
+          />
+          <div class="flex items-center justify-between w-full" *ngIf="cat.photos.length > 1">
+            <button mat-icon-button (click)="prevHotelPhoto()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <div class="text-xs text-gray-600">
+              {{ activeHotelPhotoIndex + 1 }} / {{ cat.photos.length }}
+            </div>
+            <button mat-icon-button (click)="nextHotelPhoto()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+          <div
+            class="flex gap-2 mt-2 w-full overflow-x-auto"
+            *ngIf="cat.photos.length > 1"
+          >
+            <img
+              *ngFor="let p of cat.photos; let j = index"
+              [src]="fullImgUrl(p.url)"
+              (click)="setHotelPhotoIndex(j)"
+              class="h-16 w-24 object-cover rounded border cursor-pointer"
+              [class.border-blue-500]="j === activeHotelPhotoIndex"
+            />
+          </div>
+        </div>
+        <div *ngIf="!cat.photos?.length" class="text-sm text-gray-600 mt-4">
+          No photos in this category.
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+    <div *ngIf="!hotelPhotos?.length" class="text-sm text-gray-600">
+      No photos available.
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #roomPhotosTpl>
+  <div class="p-4 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-3">
+      <div class="font-medium text-base">Room Details</div>
+      <button mat-icon-button (click)="closeRoomPhotos()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="w-full mb-3" *ngIf="activeRoomMeta">
+      <div class="font-semibold text-lg mb-1">
+        {{ activeRoomMeta.room_name }}
+      </div>
+      <div class="text-sm text-gray-700 mb-1" *ngIf="activeRoomMeta.room_description">
+        {{ activeRoomMeta.room_description }}
+      </div>
+      <div class="text-xs text-gray-700 mb-1" *ngIf="activeRoomMeta.room_size_value || activeRoomMeta.room_view || activeRoomMeta.bed_type || activeRoomMeta.room_type">
+        <span *ngIf="activeRoomMeta.room_size_value">
+          {{ activeRoomMeta.room_size_value }} {{ activeRoomMeta.room_size_unit }}
+        </span>
+        <span *ngIf="activeRoomMeta.room_view?.name">
+          • {{ activeRoomMeta.room_view.name }} View
+        </span>
+        <span *ngIf="activeRoomMeta.bed_type?.name">
+          • {{ activeRoomMeta.bed_type.name }}
+        </span>
+        <span *ngIf="activeRoomMeta.room_type?.name">
+          • {{ activeRoomMeta.room_type.name }}
+        </span>
+        <span *ngIf="activeRoomMeta.smoking_allowed === false">
+          • Non-smoking
+        </span>
+        <span *ngIf="activeRoomMeta.smoking_allowed === true">
+          • Smoking allowed
+        </span>
+      </div>
+      <div class="text-xs text-gray-700" *ngIf="activeRoomMeta.amenities?.length">
+        <div class="font-semibold mb-1">Amenities</div>
+        <div class="room-amenities-list">
+          <span
+            *ngFor="let a of activeRoomMeta.amenities"
+            class="room-amenity-chip"
+          >
+            {{ a }}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="flex flex-col items-center gap-3">
+      <img
+        *ngIf="activeRoomPhotos.length"
+        [src]="fullImgUrl(activeRoomPhotos[activeRoomPhotoIndex])"
+        class="w-full max-h-[420px] object-cover rounded"
+      />
+      <div class="flex items-center justify-between w-full" *ngIf="activeRoomPhotos.length > 1">
+        <button mat-icon-button (click)="prevRoomPhoto()">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <div class="text-xs text-gray-600">
+          {{ activeRoomPhotoIndex + 1 }} / {{ activeRoomPhotos.length }}
+        </div>
+        <button mat-icon-button (click)="nextRoomPhoto()">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+      <div
+        class="flex gap-2 mt-2 w-full overflow-x-auto"
+        *ngIf="activeRoomPhotos.length > 1"
+      >
+        <img
+          *ngFor="let p of activeRoomPhotos; let i = index"
+          [src]="fullImgUrl(p)"
+          (click)="setRoomPhotoIndex(i)"
+          class="h-16 w-24 object-cover rounded border cursor-pointer"
+          [class.border-blue-500]="i === activeRoomPhotoIndex"
+        />
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #roomsGuestsTpl>
+  <div class="p-2 w-full">
+    <div class="flex items-center justify-between mb-2">
+      <div class="text-sm text-gray-700">Rooms</div>
+      <div class="flex items-center gap-2">
+        <button mat-icon-button (click)="decrementRooms()"><mat-icon>remove</mat-icon></button>
+        <div class="min-w-[2rem] text-center">{{ roomsConfig.length }}</div>
+        <button mat-icon-button (click)="incrementRooms()"><mat-icon>add</mat-icon></button>
+      </div>
+    </div>
+    <div>
+      <div *ngFor="let room of roomsConfig; let i = index" class="border rounded p-2 mb-2">
+        <div class="font-medium mb-2">Room {{ i + 1 }}</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">Adults</div>
+            <div class="flex items-center gap-2">
+              <button mat-icon-button (click)="decrementAdults(i)"><mat-icon>remove</mat-icon></button>
+              <div class="min-w-[2rem] text-center">{{ room.adults }}</div>
+              <button mat-icon-button (click)="incrementAdults(i)"><mat-icon>add</mat-icon></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700">Children</div>
+            <div class="flex items-center gap-2">
+              <button mat-icon-button (click)="decrementChildren(i)"><mat-icon>remove</mat-icon></button>
+              <div class="min-w-[2rem] text-center">{{ room.children }}</div>
+              <button mat-icon-button (click)="incrementChildren(i)"><mat-icon>add</mat-icon></button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2" *ngIf="room.children > 0">
+          <div class="text-sm text-gray-700 mb-1">Child Ages</div>
+          <div class="flex flex-wrap gap-2">
+            <mat-form-field appearance="outline" class="w-32" *ngFor="let age of room.childAges; let j = index">
+              <mat-label>Child {{ j + 1 }}</mat-label>
+              <mat-select [value]="age" (selectionChange)="setChildAge(i, j, $event.value)">
+                <mat-option *ngFor="let a of childAgeOptions" [value]="a">{{ a }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button mat-stroked-button (click)="onCancelRoomsGuests()">Cancel</button>
+      <button mat-flat-button color="primary" (click)="applyRoomsGuests()">Apply</button>
+    </div>
+  </div>
+  </ng-template>

@@ -1,0 +1,27 @@
+.rejection-modal {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.rejection-modal h2 {
+  margin-bottom: 0;
+}
+
+.rejection-modal mat-dialog-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rejection-modal textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.rejection-modal mat-dialog-actions {
+  margin-bottom: 0;
+  padding-top: 16px;
+}
+
+.rejection-modal button[mat-raised-button] {
+  min-width: 140px;
+}

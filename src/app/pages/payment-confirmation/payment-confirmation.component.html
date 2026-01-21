@@ -1,0 +1,494 @@
+<div class="container mx-auto p-6 max-w-5xl">
+  <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+    <!-- Header with confirmation message -->
+    <div class="bg-green-500 p-4 text-white">
+      <h1 class="text-xl font -bold">Your Trip Details</h1>
+      <p class="text-sm bg-green-600 inline-block px-2 py-1 rounded">{{ bookingStatusName || 'N/A' }}</p>
+      <p *ngIf="orderDetails?.status === 8 && holdRemainingText" class="text-xs bg-yellow-600 inline-block px-2 py-1 rounded ml-2">
+        Hold: {{ holdRemainingText }}
+      </p>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="loading" class="p-8 text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+      <p class="mt-4 text-gray-600">Loading your trip details...</p>
+    </div>
+
+    <!-- Error state -->
+    <div *ngIf="error && !loading" class="p-8 text-center">
+      <mat-icon class="text-5xl text-red-500 mb-2">error</mat-icon>
+      <p class="text-lg text-red-500">{{ error }}</p>
+      <button mat-raised-button color="primary" class="mt-4" (click)="goToHome()">
+        Go to Home
+      </button>
+    </div>
+
+    <!-- Trip details -->
+    <div *ngIf="orderDetails && !loading">
+      <!-- Trip Reference Section -->
+      <div class="p-4 border-b">
+        <h2 class="text-lg font-semibold mb-3">Trip Reference - {{ tripReference || 'ORD' + orderDetails.id }}</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p class="text-xs text-gray-500">TRIP REFERENCE</p>
+            <p class="font-semibold">{{ tripReference || 'ORD' + orderDetails.id }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">BOOKING STATUS</p>
+            <p class="bg-green-100 text-green-800 inline-block px-2 py-1 text-xs font-semibold rounded">{{ bookingStatusName || 'N/A' }}</p>
+            <p *ngIf="orderDetails?.status === 8 && holdRemainingText" class="mt-1 text-xs text-yellow-700">Hold: {{ holdRemainingText }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">BOOKING DATE</p>
+            <p class="font-semibold">{{ orderDetails.created_at | date:'dd MMM yyyy' }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <p class="text-xs text-gray-500">CONTACT EMAIL</p>
+            <p class="font-semibold">{{ orderDetails.contact_email }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">CONTACT PHONE</p>
+            <p class="font-semibold">{{ orderDetails.contact_phone }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500">TOTAL AMOUNT</p>
+            <p class="font-semibold">₹ {{ orderDetails.final_total }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Details Section -->
+      <div class="p-4 border-b">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Payment Details</h2>
+        </div>
+
+        <div class="bg-gray-50 rounded p-4">
+          <div class="flex justify-between py-1 border-b border-gray-200">
+            <span class="text-gray-700">Base Amount</span>
+            <span class="font-semibold">₹ {{ orderDetails.total_amount || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200">
+            <span class="text-gray-700">Service Fee</span>
+            <span class="font-semibold">₹ {{ orderDetails.service_fee || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="orderDetails.igst && orderDetails.igst > 0">
+            <span class="text-gray-700">IGST</span>
+            <span class="font-semibold">₹ {{ orderDetails.igst }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.sgst">
+            <span class="text-gray-700">SGST</span>
+            <span class="font-semibold">₹ {{ orderDetails.sgst }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.cgst">
+            <span class="text-gray-700">CGST</span>
+            <span class="font-semibold">₹ {{ orderDetails.cgst }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200">
+            <span class="text-gray-700">Commission</span>
+            <span class="font-semibold text-green-700">-₹ {{ orderDetails.commission || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 border-b border-gray-200">
+            <span class="text-gray-700">TDS on Commission</span>
+            <span class="font-semibold">₹ {{ orderDetails.tds_on_commission || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-2 mt-1 border-t border-gray-300">
+            <span class="text-gray-900 font-semibold">TOTAL PAYMENT FOR TRIP</span>
+            <span class="font-semibold text-gray-900">₹ {{ orderDetails.final_total || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-1 text-xs text-gray-500">
+            <span>Last updated: {{ orderDetails.updated_at | date:'dd MMM yyyy, h:mm a' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attached Trips Section -->
+      <div class="p-4 border-b">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Attached Trips</h2>
+
+        </div>
+      </div>
+
+      <!-- Hotel Details Section -->
+      <div class="p-4 border-b" *ngIf="orderDetails?.type === 'hotel'">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Hotel Details</h2>
+        </div>
+        <div class="bg-gray-50 p-4 rounded mb-4" *ngIf="hotelDetails?.inventory">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+            <div>
+              <p class="text-xs text-gray-500">HOTEL</p>
+              <p class="font-semibold">{{ hotelDetails?.inventory?.hotel_name || 'N/A' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">CHECK-IN</p>
+              <p class="font-semibold">{{ hotelDetails?.inventory?.check_in_time || 'N/A' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">CHECK-OUT</p>
+              <p class="font-semibold">{{ hotelDetails?.inventory?.check_out_time || 'N/A' }}</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p class="text-xs text-gray-500">STAY FROM</p>
+              <p class="font-semibold">
+                {{ primaryHotelRoom?.check_in || additionalData?.from || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">STAY TO</p>
+              <p class="font-semibold">
+                {{ primaryHotelRoom?.check_out || additionalData?.to || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">NIGHTS • ROOMS</p>
+              <p class="font-semibold">
+                {{
+                  primaryHotelRoom?.nights
+                    || additionalData?.nights
+                    || '—'
+                }}
+                •
+                {{
+                  primaryHotelRoom?.rooms
+                    || additionalData?.rooms
+                    || '—'
+                }}
+              </p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <p class="text-xs text-gray-500">EXTRA BED PRICE</p>
+              <p class="font-semibold">₹ {{ hotelDetails?.inventory?.extra_bed_price || 0 }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">ROOM ID</p>
+              <p class="font-semibold">
+                {{
+                  primaryHotelRoom?.room_id
+                    || additionalData?.selected_room_id
+                    || 'N/A'
+                }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">MEAL TYPE</p>
+              <p class="font-semibold">
+                {{
+                  primaryHotelRoom?.meal_type_name
+                    || additionalData?.selected_meal_type
+                    || primaryHotelRoom?.meal_type
+                    || 'N/A'
+                }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded mb-4" *ngIf="orderDetails?.primary_hotel_photo">
+          <div class="flex flex-col md:flex-row gap-4 items-start">
+            <div class="w-full md:w-1/3">
+              <img
+                [src]="fullImgUrl(orderDetails.primary_hotel_photo?.url)"
+                alt="Hotel photo"
+                class="w-full h-40 object-cover rounded"
+              />
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-gray-500 mb-1">HOTEL</p>
+              <p class="font-semibold mb-2">
+                {{ hotelDetails?.inventory?.hotel_name || additionalData?.hotel_name || 'N/A' }}
+              </p>
+              <p class="text-xs text-gray-500">STAY DATES</p>
+              <p class="font-semibold">
+                {{ additionalData?.from || 'N/A' }} - {{ additionalData?.to || 'N/A' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded" *ngIf="orderDetails?.hotel_rooms?.length">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-md font-semibold">Booked Room(s)</h3>
+          </div>
+
+          <div
+            *ngFor="let room of orderDetails.hotel_rooms"
+            class="mb-4 border border-gray-200 rounded p-3 last:mb-0"
+          >
+            <div class="flex flex-col md:flex-row gap-3">
+              <div class="w-full md:w-1/3">
+                <img
+                  [src]="fullImgUrl(room.room_photo_url)"
+                  alt="Room photo"
+                  class="w-full h-32 object-cover rounded"
+                />
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-semibold mb-1">
+                  {{ room.room_name || 'Room' }}
+                </p>
+                <p class="text-xs text-gray-500 mb-1">
+                  Rooms: <span class="font-semibold">{{ room.rooms }}</span>
+                  • Adults: <span class="font-semibold">{{ room.adults }}</span>
+                  • Children:
+                  <span class="font-semibold">{{ room.children }}</span>
+                </p>
+                <p class="text-xs text-gray-500">
+                  Check-in:
+                  <span class="font-semibold">{{ room.check_in }}</span>
+                  • Check-out:
+                  <span class="font-semibold">{{ room.check_out }}</span>
+                </p>
+                <p class="text-xs text-gray-500">
+                  Nights:
+                  <span class="font-semibold">{{ room.nights }}</span>
+                  • Price/night:
+                  <span class="font-semibold">₹ {{ room.price_per_night }}</span>
+                </p>
+                <p class="text-xs text-gray-500">
+                  Total price:
+                  <span class="font-semibold">₹ {{ room.total_price }}</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-2" *ngIf="room.room_photos?.length">
+              <div class="flex gap-2 overflow-x-auto">
+                <img
+                  *ngFor="let p of room.room_photos"
+                  [src]="fullImgUrl(p.url)"
+                  alt="Room photo"
+                  class="w-16 h-16 object-cover rounded border border-gray-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flight Details Section -->
+      <div class="p-4 border-b" *ngIf="orderDetails?.type === 'flight' || orderDetails?.type === 'external_flight'">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Flight Details</h2>
+        </div>
+        
+        <div *ngIf="!flightDetails && !loading" class="text-center py-4">
+          <p>Loading flight details...</p>
+        </div>
+        
+        <div *ngIf="flightDetails">
+          <div class="bg-gray-50 p-4 rounded mb-4">
+            <div class="flex justify-between items-center mb-3">
+              <div>
+                <p class="text-xs text-gray-500">AIRLINE</p>
+                <p class="font-semibold">{{ flightDetails?.details?.[0]?.airline || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">FLIGHT NUMBER</p>
+                <p class="font-semibold">{{ flightDetails?.details?.[0]?.flight_number || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">FLIGHT DATE</p>
+                <p class="font-semibold">{{ flightDetails?.inventory?.flight_date | date:'dd MMM yyyy' || 'N/A' }}</p>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div *ngFor="let detail of flightDetails?.details">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <p class="text-xs text-gray-500">FROM</p>
+                    <p class="font-semibold">{{ detail?.from || 'N/A' }}</p>
+                    <p class="text-xs">{{ detail?.dep_time || 'N/A' }}</p>
+                  </div>
+                  <div class="text-center">
+                    <mat-icon>flight</mat-icon>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs text-gray-500">TO</p>
+                    <p class="font-semibold">{{ detail?.to || 'N/A' }}</p>
+                    <p class="text-xs">{{ detail?.arr_time || 'N/A' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+
+
+        <!-- Important Notes -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <h3 class="text-sm font-semibold text-yellow-800 mb-2">Important Notes</h3>
+          <ul class="text-xs text-yellow-800">
+            <li class="mb-2">• The timings and information shown on the Trip Sheet have been subject to specific terms and conditions including the service as the PNR reflects only within 24-72 hours before departure.</li>
+            <li class="mb-2" *ngIf="flightDetails?.inventory?.pnr">• Airline PNR: <span class="font-semibold">{{ flightDetails?.inventory?.pnr }}</span></li>
+          </ul>
+        </div>
+
+        <div class="flex justify-end space-x-2">
+          <button mat-stroked-button color="primary" class="text-xs">PRINT TRIP SHEET</button>
+          <button mat-stroked-button color="primary" class="text-xs">E-MAIL TRIP SHEET</button>
+          <button mat-flat-button color="primary" class="text-xs" (click)="printAllTickets()">PRINT ALL TICKETS</button>
+          <button mat-flat-button color="warn" class="text-xs">CANCEL TRIP</button>
+        </div>
+      </div>
+
+      <!-- Traveler Details Section -->
+      <div class="p-4 border-b">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Traveler Details</h2>
+          <button *ngIf="orderDetails?.update_passengers_detail === 0 || isNamingWindowOpen()" mat-raised-button color="primary" class="text-xs" (click)="openPassengerUpdateModal()">Update Passenger Details</button>
+        </div>
+
+        <!-- Multiple Barcodes Display for each flight in flight_inventory_details -->
+        <div *ngIf="flightDetails?.details?.length > 0" class="mb-4 p-4 bg-gray-50 rounded">
+          <div *ngFor="let detail of flightDetails?.details; let i = index" class="mb-4 pb-4" [ngClass]="{'border-b border-gray-200': i < flightDetails.details.length - 1}">
+            <p class="text-sm font-semibold mb-2">Barcode(s) for your journey {{ detail?.from }}-{{ detail?.to }} on {{ detail?.airline }}</p>
+            <div class="flex flex-col items-start mb-2">
+              <div *ngFor="let traveler of orderDetails.details; let j = index" class="mb-2">
+                <p class="text-sm mb-1">{{ traveler.title }} {{ traveler.first_name }} {{ traveler.last_name }}</p>
+              </div>
+            </div>
+            <div class="flex justify-center">
+              <img *ngIf="detail?.barcode" [src]="detail.barcode" alt="Boarding Pass Barcode" class="max-w-xs h-auto" style="max-height: 80px;" />
+              <img *ngIf="!detail?.barcode && i === 0 && flightDetails?.inventory?.barcode" [src]="flightDetails.inventory.barcode" alt="Boarding Pass Barcode" class="max-w-xs h-auto" style="max-height: 80px;" />
+              <p *ngIf="!detail?.barcode && (i !== 0 || !flightDetails?.inventory?.barcode)" class="text-gray-500">No barcode available</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Fallback for legacy barcode display -->
+        <div *ngIf="flightDetails?.inventory?.barcode && !flightDetails?.details?.length" class="mb-4 p-4 bg-gray-50 rounded">
+          <p class="text-sm font-semibold mb-2">Boarding Pass Barcode</p>
+          <div class="flex justify-center">
+            <img [src]="flightDetails.inventory.barcode" alt="Boarding Pass Barcode" class="max-w-full h-auto" />
+          </div>
+        </div>
+
+        <div *ngFor="let traveler of orderDetails.details; let i = index" class="mb-4">
+          <p class="text-sm font-semibold mb-2">Adult {{ i + 1 }}</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+            <div>
+              <p class="text-xs text-gray-500">TITLE</p>
+              <p class="border p-2 rounded text-sm">{{ traveler.title }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">FIRST NAME</p>
+              <p class="border p-2 rounded text-sm">{{ traveler.first_name }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">LAST NAME</p>
+              <p class="border p-2 rounded text-sm">{{ traveler.last_name }}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2" *ngIf="traveler.date_of_birth && traveler.passanger_type !== 'adult'">
+            <div>
+              <p class="text-xs text-gray-500">DATE OF BIRTH</p>
+              <p class="border p-2 rounded text-sm">{{ traveler.date_of_birth }}</p>
+            </div>
+          </div>
+           <span class="text-xs inline-block px-2 py-1 rounded bg-gray-100 text-gray-800" *ngIf="traveler?.status_name">{{ traveler.status_name }}</span>
+           <button mat-flat-button color="warn" class="text-xs" *ngIf="!traveler?.status_name && isRefundable() && traveler?.status == null" [disabled]="!canCancelTraveler()" (click)="cancelTraveler(traveler, i)">Cancel Booking</button>
+        </div>
+      </div>
+
+      <!-- Update Passenger Details Modal -->
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" *ngIf="showUpdateModal">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+          <h3 class="text-lg font-semibold mb-4">Update Passenger Details</h3>
+          <button class="absolute top-2 right-2" mat-icon-button (click)="closePassengerUpdateModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <div *ngFor="let group of passengersForm.controls; let i = index" class="mb-4 border-b pb-4" [formGroup]="group">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="text-xs text-gray-500">TITLE</label>
+                  <input class="border p-2 rounded w-full" formControlName="title" placeholder="Mr/Mrs/Ms" />
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500">FIRST NAME</label>
+                  <input class="border p-2 rounded w-full" formControlName="firstName" placeholder="First name" />
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500">LAST NAME</label>
+                  <input class="border p-2 rounded w-full" formControlName="lastName" placeholder="Last name" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2" *ngIf="orderDetails?.details?.[i]?.passanger_type !== 'adult'">
+                <div>
+                  <label class="text-xs text-gray-500">DATE OF BIRTH</label>
+                  <input type="date" class="border p-2 rounded w-full" formControlName="date_of_birth" />
+                </div>
+              </div>
+          </div>
+
+          <div class="flex justify-end space-x-2 mt-4">
+            <button mat-button (click)="closePassengerUpdateModal()">Cancel</button>
+            <button mat-raised-button color="primary" [disabled]="updatingPassengers" (click)="submitPassengerUpdates()">Update</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Important Rules and Terms -->
+      <div class="p-4">
+        <h2 class="text-lg font-semibold mb-3">Important Rules and Terms</h2>
+        <h3 class="text-sm font-semibold mb-2">Terms and Conditions</h3>
+        <ul class="text-xs text-gray-700 space-y-1">
+          <li>• The fare is valid for a total duration of 24 hours from the time of booking. Your ticket will be cancelled if the payment is not received within 24 hours.</li>
+          <li>• The fare is valid for the specific date(s) shown on the ticket.</li>
+          <li>• Rebooking, refunds and all other changes and cancellations are subject to conditions as stated.</li>
+          <li>• Name correction is free for the first time if done within 24 hours of booking.</li>
+          <li>• Please contact us for any further queries.</li>
+        </ul>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex justify-center mt-6 space-x-4 p-4">
+        <button mat-raised-button color="primary" (click)="printAllTickets()" *ngIf="orderDetails?.status !== 8">
+          <mat-icon>print</mat-icon>
+          Print All Ticket
+        </button>
+        <button mat-raised-button color="accent" *ngIf="orderDetails?.status === 8 && holdRemainingText && holdRemainingText !== 'Hold expired'" (click)="goToPayment()">
+          <mat-icon>check_circle</mat-icon>
+          Confirm Booking
+        </button>
+        <button mat-raised-button (click)="goToHome()">
+          <mat-icon>home</mat-icon>
+          Go to Home
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+      <!-- Cancel Booking Modal -->
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" *ngIf="showCancelModal">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+          <h3 class="text-lg font-semibold mb-6">Confirm Cancellation</h3>
+          <div class="flex justify-end gap-2">
+            <button mat-stroked-button (click)="showCancelModal=false">Close</button>
+            <button mat-flat-button color="warn" (click)="confirmCancelPassenger()">Confirm Cancel</button>
+          </div>
+        </div>
+      </div>

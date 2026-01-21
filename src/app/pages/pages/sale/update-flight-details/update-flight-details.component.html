@@ -1,0 +1,325 @@
+<div class="card p-4 text-sm">
+  <h2 class="title mb-2">Edit Flight Inventory</h2>
+  
+
+
+  <form [formGroup]="flightForm" (ngSubmit)="submit()" class="flex flex-col gap-4">
+
+    <!-- Onward Flights -->
+    <h3 class="text-base font-semibold">Onward Flight Details</h3>
+    <div formArrayName="onwardFlights">
+      <div *ngFor="let flight of onwardFlights.controls; let i=index"
+           [formGroupName]="i"
+           class="mb-3 border p-2 rounded">
+           
+        <!-- First row: Airline, Flight No, PNR, Baggage, Cabin Baggage -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Airline</mat-label>
+            <input matInput formControlName="airlineCode" placeholder="Search airline" [matAutocomplete]="autoOnward" />
+            <mat-autocomplete #autoOnward="matAutocomplete" [displayWith]="displayAirline">
+              <mat-option *ngFor="let airline of filteredAirlines[i] | async" [value]="airline" (onSelectionChange)="updateFlightNumber($event, i, 'onward')">
+                {{ airline.code }} - {{ airline.name }}
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Flight No.</mat-label>
+            <input matInput formControlName="flightNumber" placeholder="6E-56" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>PNR Number</mat-label>
+            <input matInput formControlName="pnrNumber" placeholder="Enter PNR" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Baggage</mat-label>
+            <input matInput formControlName="baggage" placeholder="e.g. 20 KG" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cabin Baggage (kg)</mat-label>
+            <input matInput formControlName="cabinBaggage" placeholder="e.g. 7" />
+          </mat-form-field>
+        </div>
+        
+        <!-- Second row: From, Departure Terminal, To, Arrival Terminal -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+          <mat-form-field appearance="outline">
+            <mat-label>From</mat-label>
+            <input matInput formControlName="fromAirport" placeholder="DEL" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Departure Terminal</mat-label>
+            <input matInput formControlName="depTerminal" placeholder="e.g. T3" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>To</mat-label>
+            <input matInput formControlName="toAirport" placeholder="BOM" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Arrival Terminal</mat-label>
+            <input matInput formControlName="arrTerminal" placeholder="e.g. T2" />
+          </mat-form-field>
+        </div>
+        
+        <!-- Third row: Departure Date, Departure Time, Arrival Date, Arrival Time -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Departure Date</mat-label>
+            <input matInput [matDatepicker]="onwardDatePicker" formControlName="departureDate" />
+            <mat-datepicker-toggle matSuffix [for]="onwardDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #onwardDatePicker></mat-datepicker>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Dep Time</mat-label>
+            <mat-select formControlName="departureTime">
+              <mat-option *ngFor="let t of timeSlots" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Arrival Date</mat-label>
+            <input matInput [matDatepicker]="onwardArrivalDatePicker" formControlName="arrivalDate" />
+            <mat-datepicker-toggle matSuffix [for]="onwardArrivalDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #onwardArrivalDatePicker></mat-datepicker>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Arr Time</mat-label>
+            <mat-select formControlName="arrivalTime">
+              <mat-option *ngFor="let t of timeSlots" [value]="t" [disabled]="timeSlots.indexOf(t) < timeSlots.indexOf(onwardFlights.at(i).get('departureTime')?.value)">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div *ngIf="i > 0" class="flex justify-end items-center">
+          <button mat-icon-button color="warn" type="button" (click)="removeOnwardFlight(i)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- <div class="flex justify-end mb-4">
+        <button mat-stroked-button color="primary" type="button" (click)="addOnwardFlight()">
+          Add Connecting Flight
+        </button>
+      </div> -->
+    </div>
+
+    <!-- Return Flight Option -->
+    <div class="flex items-center mb-2" *ngIf="hasReturnFlightAvailable">
+      <mat-checkbox formControlName="hasReturn" (change)="toggleReturnFlight()">Has Return Flight</mat-checkbox>
+    </div>
+
+    <!-- Return Flights -->
+    <div *ngIf="flightForm.get('hasReturn')?.value" class="mt-4">
+      <h3 class="text-base font-semibold">Return Flight Details</h3>
+      <div formArrayName="returnFlights">
+        <div *ngFor="let flight of returnFlights.controls; let i=index"
+             [formGroupName]="i"
+             class="mb-3 border p-2 rounded">
+
+          <!-- Row 1: Airline, Flight No, PNR, Baggage, Cabin Baggage -->
+          <div class="grid grid-cols-5 gap-2 mb-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Airline</mat-label>
+              <input matInput formControlName="airlineCode" placeholder="Search airline" [matAutocomplete]="autoReturn" />
+              <mat-autocomplete #autoReturn="matAutocomplete" [displayWith]="displayAirline">
+                <mat-option *ngFor="let airline of filteredAirlines[i + onwardFlights.length] | async" [value]="airline" (onSelectionChange)="updateFlightNumber($event, i, 'return')">
+                  {{ airline.code }} - {{ airline.name }}
+                </mat-option>
+              </mat-autocomplete>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Flight No.</mat-label>
+              <input matInput formControlName="flightNumber" placeholder="6E-56" />
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline">
+              <mat-label>PNR Number</mat-label>
+              <input matInput formControlName="pnrNumber" placeholder="Enter PNR" />
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline">
+              <mat-label>Baggage</mat-label>
+              <input matInput formControlName="baggage" placeholder="e.g. 20 KG" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cabin Baggage (KG)</mat-label>
+              <input matInput formControlName="cabinBaggage" placeholder="e.g. 7" />
+            </mat-form-field>
+          </div>
+
+          <!-- Row 2: From, Departure Terminal, To, Arrival Terminal -->
+          <div class="grid grid-cols-4 gap-2 mb-2">
+            <mat-form-field appearance="outline">
+              <mat-label>From</mat-label>
+              <input matInput formControlName="fromAirport" placeholder="BOM" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Departure Terminal</mat-label>
+              <input matInput formControlName="depTerminal" placeholder="e.g. T3" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>To</mat-label>
+              <input matInput formControlName="toAirport" placeholder="DEL" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Arrival Terminal</mat-label>
+              <input matInput formControlName="arrTerminal" placeholder="e.g. T3" />
+            </mat-form-field>
+          </div>
+
+          <!-- Row 3: Return Date, Departure Time, Arrival Date, Arrival Time -->
+          <div class="grid grid-cols-4 gap-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Return Date</mat-label>
+              <input matInput [matDatepicker]="returnDatePicker" formControlName="departureDate" />
+              <mat-datepicker-toggle matSuffix [for]="returnDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #returnDatePicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Departure Time</mat-label>
+              <mat-select formControlName="departureTime">
+                <mat-option *ngFor="let t of timeSlots" [value]="t">{{ t }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Arrival Date</mat-label>
+              <input matInput [matDatepicker]="returnArrivalDatePicker" formControlName="arrivalDate" />
+              <mat-datepicker-toggle matSuffix [for]="returnArrivalDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #returnArrivalDatePicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Arrival Time</mat-label>
+              <mat-select formControlName="arrivalTime">
+                <mat-option *ngFor="let t of timeSlots" [value]="t" [disabled]="timeSlots.indexOf(t) < timeSlots.indexOf(returnFlights.at(i).get('departureTime')?.value)">{{ t }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Departure + Arrival Time Dropdowns -->
+        <div class="flex gap-2">
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Dep Time</mat-label>
+            <mat-select formControlName="departureTime">
+              <mat-option *ngFor="let t of timeSlots" [value]="t">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Arr Time</mat-label>
+            <mat-select formControlName="arrivalTime">
+              <mat-option *ngFor="let t of timeSlots" [value]="t" [disabled]="timeSlots.indexOf(t) < timeSlots.indexOf(returnFlights.at(i).get('departureTime')?.value)">{{ t }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+          <div *ngIf="i > 0" class="flex justify-end items-center">
+            <button mat-icon-button color="warn" type="button" (click)="removeReturnFlight(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-end mb-4">
+          <button mat-stroked-button color="primary" type="button" (click)="addReturnFlight()">
+            Add Connecting Flight
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PNR Status -->
+    <h3 class="text-base font-semibold">PNR Status</h3>
+    <div class="grid grid-cols-1 gap-4 mb-4">
+      <div>
+        <mat-radio-group formControlName="pnrStatus" class="flex gap-4">
+          <mat-radio-button value="onTime">On Time</mat-radio-button>
+          <mat-radio-button value="cancelled">Cancelled</mat-radio-button>
+          <mat-radio-button value="rop">ROP</mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+      <mat-form-field appearance="outline">
+        <mat-label>Price/Seat</mat-label>
+        <input matInput type="number" formControlName="pricePerSeat" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Infant Price</mat-label>
+        <input matInput type="number" formControlName="infantPrice" />
+      </mat-form-field>
+    </div>
+
+    <!-- Update Options -->
+    <div class="border p-3 rounded mb-4">
+      <div class="mb-2">
+        <mat-checkbox formControlName="allowTbaUser" class="mb-2">
+          Allow TBA User
+        </mat-checkbox>
+      </div>
+      
+      <mat-checkbox formControlName="updateSameFlightDetails" class="mb-2">
+        Update same flight details in other inventory after 25 Sep 2025
+      </mat-checkbox>
+
+      <div *ngIf="flightForm.get('updateSameFlightDetails')?.value" class="mt-2">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Update in inventory till</mat-label>
+          <input matInput [matDatepicker]="updateTillPicker" formControlName="updateInInventoryTill" />
+          <mat-datepicker-toggle matSuffix [for]="updateTillPicker"></mat-datepicker-toggle>
+          <mat-datepicker #updateTillPicker></mat-datepicker>
+          <mat-hint>If not set, then all future inventory will be updated</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <div class="mt-2">
+        <mat-checkbox formControlName="updateAndNotify">
+          Update and Notify of flight changes to same flight in bookings
+        </mat-checkbox>
+      </div>
+
+      <div *ngIf="flightForm.get('updateAndNotify')?.value" class="mt-2">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Message (sent in the email)</mat-label>
+          <textarea matInput formControlName="message" rows="3"></textarea>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-end">
+      <button mat-flat-button color="primary" type="submit" class="px-6">
+        UPDATE FLIGHT DETAILS IN INVENTORY
+      </button>
+    </div>
+    
+    <!-- Success Message -->
+    <div *ngIf="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mt-4">
+      <span class="block sm:inline">{{ successMessage }}</span>
+    </div>
+    
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4">
+      <span class="block sm:inline">{{ errorMessage }}</span>
+    </div>
+  </form>
+</div>
