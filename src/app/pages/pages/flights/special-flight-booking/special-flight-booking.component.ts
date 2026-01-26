@@ -98,7 +98,7 @@ export class SpecialFlightBookingComponent implements OnInit {
   discount = 0;
   userId = 0; // Will be set from logged-in user
   isSameState = false; // Flag to indicate if user is in same state as company
-  bookingType: 'internal' | 'external' = 'internal';
+  bookingType: 'flight' | 'external_flight' = 'flight';
   externalUkey: string | null = null;
   externalRmkey: string[] = [];
 
@@ -166,7 +166,7 @@ export class SpecialFlightBookingComponent implements OnInit {
     // Get user data from localStorage and populate contact form
     this.populateContactFormFromLocalStorage();
     let fareId = null;
-    let type: 'internal' | 'external' = 'internal';
+    let type: 'flight' | 'external_flight' = 'flight';
     let farePrice: number | null = null;
     let adults = 1;
     let children = 0;
@@ -189,9 +189,10 @@ export class SpecialFlightBookingComponent implements OnInit {
         fareDetails = bookingData.fareDetails;
         flightId = bookingData.flightId;
         fareId = bookingData.fareId;
-        type = bookingData.type === 'external' ? 'external' : 'internal';
+        type =
+          bookingData.type === 'external_flight' ? 'external_flight' : 'flight';
         this.bookingType = type;
-        if (this.bookingType === 'external') {
+        if (this.bookingType === 'external_flight') {
           const fd: any = fareDetails || {};
           const ukey =
             typeof fd.id === 'string' ? fd.id : String(this.fareId || '');
@@ -249,7 +250,7 @@ export class SpecialFlightBookingComponent implements OnInit {
     // Update total price based on passenger counts
     this.booking.totalPrice = this.calculateTotalPrice();
 
-    const isExternalType = type === 'external';
+    const isExternalType = type === 'external_flight';
     if (isExternalType) {
       const ukey =
         fareDetails && typeof fareDetails.id === 'string'
@@ -362,9 +363,7 @@ export class SpecialFlightBookingComponent implements OnInit {
     // Use real API data only for internal fares with numeric id
     const numericFareId = Number(this.fareId);
     const isInternal =
-      type === 'internal' &&
-      Number.isFinite(numericFareId) &&
-      numericFareId > 0;
+      type === 'flight' && Number.isFinite(numericFareId) && numericFareId > 0;
     if (isInternal) {
       console.log('Calling loadFlightDetails API with fareId...');
       this.loadFlightDetails();
@@ -890,7 +889,7 @@ export class SpecialFlightBookingComponent implements OnInit {
         type: this.bookingType
       };
 
-      if (this.bookingType === 'external') {
+      if (this.bookingType === 'external_flight') {
         bookingData.ukey = this.externalUkey || '';
         bookingData.rmkey = this.externalRmkey || [];
         bookingData.sectyp =
@@ -947,11 +946,12 @@ export class SpecialFlightBookingComponent implements OnInit {
   calculateFareCharges() {
     // Determine fare type and price
     const localData = localStorage.getItem('specialBookingData');
-    let type: 'internal' | 'external' = 'internal';
+    let type: 'flight' | 'external_flight' = 'flight';
     let farePrice: number | null = null;
     try {
       const bookingData = localData ? JSON.parse(localData) : {};
-      type = bookingData.type === 'external' ? 'external' : 'internal';
+      type =
+        bookingData.type === 'external_flight' ? 'external_flight' : 'flight';
       farePrice =
         typeof bookingData.farePrice === 'number'
           ? bookingData.farePrice
@@ -960,11 +960,11 @@ export class SpecialFlightBookingComponent implements OnInit {
 
     const numericFlightId = Number(this.flightId);
     const isInternal =
-      type === 'internal' &&
+      type === 'flight' &&
       Number.isFinite(numericFlightId) &&
       numericFlightId > 0;
 
-    if (!isInternal && type !== 'external') {
+    if (!isInternal && type !== 'external_flight') {
       console.error('Cannot determine fare type for calculation');
     } else {
       // Prepare travelers array for API
@@ -989,9 +989,9 @@ export class SpecialFlightBookingComponent implements OnInit {
       let payload: any = { travelers };
       if (isInternal) {
         payload.flight_id = numericFlightId;
-        payload.type = 'internal';
+        payload.type = 'flight';
       } else {
-        payload.type = 'external';
+        payload.type = 'external_flight';
         payload.price = farePrice ?? this.booking.totalPrice;
       }
 
@@ -1362,7 +1362,8 @@ export class SpecialFlightBookingComponent implements OnInit {
       discount: this.discount,
       status: 9, // pending order status for hold booking
       hold_amount: holdAmount, // store hold amount in order table
-      customer_mobile: this.mobileNumberControl?.value || ''
+      customer_mobile: this.mobileNumberControl?.value || '',
+      type: 'flight'
     };
 
     // Call API to create flight order (hold)

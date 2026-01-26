@@ -15,7 +15,7 @@ export interface TravelerDetailsRecord {
 export interface TravelerDetailsDialogData {
   travelers: TravelerDetailsRecord[];
   required: { adult: number; child: number; infant: number };
-  type: 'internal' | 'external';
+  type: 'flight' | 'external_flight';
 }
 
 @Component({

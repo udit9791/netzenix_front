@@ -16,6 +16,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { AuthService } from '../../../../services/auth.service';
 import { RoleConfigService } from 'src/app/core/services/role-config.service';
+import { TenantService } from '../../../../services/tenant.service';
 
 @Component({
   selector: 'vex-login',
@@ -45,6 +46,7 @@ export class LoginComponent {
 
   inputType = 'password';
   visible = false;
+  logoUrl: string = 'assets/img/logo/logo.svg';
 
   constructor(
     private router: Router,
@@ -52,15 +54,22 @@ export class LoginComponent {
     private cd: ChangeDetectorRef,
     private roleConfigService: RoleConfigService,
     private snackbar: MatSnackBar,
-    private authService: AuthService
+    private authService: AuthService,
+    private tenantService: TenantService
   ) {}
 
   ngOnInit(): void {
     // 🔹 Check if already logged in
     const token = localStorage.getItem('token');
     if (token) {
-      this.router.navigate(['/']); // Redirect to dashboard/home
+      this.router.navigate(['/']);
     }
+    this.tenantService.getAppInfo().subscribe((info) => {
+      if (info && info.logoUrl) {
+        this.logoUrl = info.logoUrl;
+        this.cd.markForCheck();
+      }
+    });
   }
 
   send() {

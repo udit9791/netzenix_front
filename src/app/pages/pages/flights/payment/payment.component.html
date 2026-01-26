@@ -143,10 +143,14 @@
       </div>
       
       <!-- Pay Now Button -->
-      <button mat-flat-button color="primary" class="pay-now-button" 
-              [disabled]="selectedPaymentMethod === 'deposit_wallet' && !hasEnoughBalance" 
-              (click)="processPayment()">
-        Pay now
+      <button
+        mat-flat-button
+        color="primary"
+        class="pay-now-button"
+        [disabled]="(selectedPaymentMethod === 'deposit_wallet' && !hasEnoughBalance) || isProcessing"
+        (click)="processPayment()">
+        <span *ngIf="!isProcessing">Pay now</span>
+        <span *ngIf="isProcessing">Processing...</span>
       </button>
       <div class="summary-note">
         *Convenience fee applied is non-refundable incase of cancellation

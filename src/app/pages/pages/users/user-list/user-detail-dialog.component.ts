@@ -28,6 +28,7 @@ export class UserDetailDialogComponent {
   loading = true;
   user: any = null;
   detail: any = null;
+  userType: string = '';
   roles: Array<{ id: number; name: string }> = [];
   selectedRole: string = '';
   imgUrl = environment.imgUrl;
@@ -46,6 +47,7 @@ export class UserDetailDialogComponent {
       next: (res) => {
         this.user = res.user;
         this.detail = res.detail;
+        this.userType = (res as any)?.type || '';
         this.selectedRole = (Array.isArray(this.user?.role_names) && this.user.role_names.length) ? this.user.role_names[0] : '';
         this.userService.getRoles().subscribe((roles) => {
           this.roles = roles.map((r: any) => ({ id: r.id, name: r.name }));

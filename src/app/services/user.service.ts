@@ -9,7 +9,7 @@ import { environment } from 'src/environments/environment';
 export class UserService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getUserById(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/users/${id}`);
@@ -20,6 +20,14 @@ export class UserService {
   }
 
   getStatesByCountryPublic(countryId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/public/states/country/${countryId}`);
+    return this.http.get<any[]>(
+      `${this.apiUrl}/states/country/${countryId}`
+    );
+  }
+
+  getCitiesByStatePublic(stateId: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.apiUrl}/cities/state/${stateId}`
+    );
   }
 }

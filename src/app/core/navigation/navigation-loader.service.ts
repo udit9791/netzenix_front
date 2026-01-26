@@ -258,6 +258,12 @@ export class NavigationLoaderService {
       children: [
         {
           type: 'link',
+          label: 'Tenants',
+          route: '/masters/tenant',
+          icon: 'mat:business'
+        },
+        {
+          type: 'link',
           label: 'Airline',
           route: '/masters/airline',
           icon: 'mat:flight'

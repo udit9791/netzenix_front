@@ -119,9 +119,9 @@
         <div class="flex gap-2">
           <mat-form-field class="flex-1" appearance="outline">
             <mat-label>Departure Date</mat-label>
-            <input matInput [matDatepicker]="onwardDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(onwardFlights.at(i-1).get('arrivalDate')?.value) : null" />
+            <input matInput [matDatepicker]="onwardDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(onwardFlights.at(i-1).get('arrivalDate')?.value) : null" (dateChange)="onDepartureDateChange($event, i, 'onward')" />
             <mat-datepicker-toggle matSuffix [for]="onwardDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #onwardDatePicker></mat-datepicker>
+            <mat-datepicker #onwardDatePicker [startAt]="today"></mat-datepicker>
             <mat-error *ngIf="onwardFlights.at(i).get('departureDate')?.hasError('matDatepickerMin')">Departure date cannot be before previous leg's arrival</mat-error>
           </mat-form-field>
 
@@ -137,9 +137,9 @@
 
           <mat-form-field class="flex-1" appearance="outline">
             <mat-label>Arrival Date</mat-label>
-            <input matInput [matDatepicker]="onwardArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(onwardFlights.at(i).get('departureDate')?.value)" />
+            <input matInput [matDatepicker]="onwardArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(onwardFlights.at(i).get('departureDate')?.value)" (dateChange)="onArrivalDateChange($event, i, 'onward')" />
             <mat-datepicker-toggle matSuffix [for]="onwardArrivalDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #onwardArrivalDatePicker></mat-datepicker>
+            <mat-datepicker #onwardArrivalDatePicker [startAt]="today"></mat-datepicker>
             <mat-error *ngIf="onwardFlights.at(i).get('arrivalDate')?.hasError('arrivalBeforeDeparture') || onwardFlights.at(i).get('arrivalDate')?.hasError('matDatepickerMin')">Arrival date cannot be before departure date</mat-error>
           </mat-form-field>
 
@@ -270,9 +270,9 @@
         <div class="flex gap-2">
           <mat-form-field class="flex-1" appearance="outline">
             <mat-label>Departure Date</mat-label>
-            <input matInput [matDatepicker]="returnDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(returnFlights.at(i-1).get('arrivalDate')?.value) : null" />
+            <input matInput [matDatepicker]="returnDatePicker" formControlName="departureDate" [min]="i > 0 ? getDateValue(returnFlights.at(i-1).get('arrivalDate')?.value) : null" (dateChange)="onDepartureDateChange($event, i, 'return')" />
             <mat-datepicker-toggle matSuffix [for]="returnDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #returnDatePicker></mat-datepicker>
+            <mat-datepicker #returnDatePicker [startAt]="today"></mat-datepicker>
             <mat-error *ngIf="returnFlights.at(i).get('departureDate')?.hasError('matDatepickerMin')">Departure date cannot be before previous leg's arrival</mat-error>
           </mat-form-field>
 
@@ -288,9 +288,9 @@
 
           <mat-form-field class="flex-1" appearance="outline">
             <mat-label>Arrival Date</mat-label>
-            <input matInput [matDatepicker]="returnArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(returnFlights.at(i).get('departureDate')?.value)" />
+            <input matInput [matDatepicker]="returnArrivalDatePicker" formControlName="arrivalDate" [min]="getDateValue(returnFlights.at(i).get('departureDate')?.value)" (dateChange)="onArrivalDateChange($event, i, 'return')" />
             <mat-datepicker-toggle matSuffix [for]="returnArrivalDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #returnArrivalDatePicker></mat-datepicker>
+            <mat-datepicker #returnArrivalDatePicker [startAt]="today"></mat-datepicker>
             <mat-error *ngIf="returnFlights.at(i).get('arrivalDate')?.hasError('arrivalBeforeDeparture') || returnFlights.at(i).get('arrivalDate')?.hasError('matDatepickerMin')">Arrival date cannot be before departure date</mat-error>
           </mat-form-field>
 
@@ -477,8 +477,19 @@
 
      <!-- Submit -->
     <div class="flex justify-end mt-2">
-      <button mat-flat-button color="primary" type="submit">
-        ADD NEW FLIGHT DEAL
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="submitting">
+        <mat-progress-spinner
+          *ngIf="submitting"
+          diameter="20"
+          mode="indeterminate"
+          class="mr-2">
+        </mat-progress-spinner>
+        <span *ngIf="!submitting">ADD NEW FLIGHT DEAL</span>
+        <span *ngIf="submitting">Creating...</span>
       </button>
     </div>
   </form>

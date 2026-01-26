@@ -7,6 +7,7 @@ import { NgIf } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { TenantService } from '../../../../services/tenant.service';
 
 @Component({
   selector: 'vex-forgot-password',
@@ -27,13 +28,21 @@ export class ForgotPasswordComponent implements OnInit {
   form = this.fb.group({
     email: [null, Validators.required]
   });
+  logoUrl: string = 'assets/img/logo/logo.svg';
 
   constructor(
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private tenantService: TenantService
   ) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.tenantService.getAppInfo().subscribe((info) => {
+      if (info && info.logoUrl) {
+        this.logoUrl = info.logoUrl;
+      }
+    });
+  }
 
   send() {
     this.router.navigate(['/']);

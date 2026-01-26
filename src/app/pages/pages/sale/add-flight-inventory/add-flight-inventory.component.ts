@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -14,25 +14,165 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import {
+  MatDatepickerModule,
+  MatDatepickerInputEvent
+} from '@angular/material/datepicker';
+import {
+  MatNativeDateModule,
+  MAT_DATE_FORMATS,
+  MAT_DATE_LOCALE,
+  DateAdapter,
+  NativeDateAdapter
+} from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatDialog } from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA
+} from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { Observable, map, startWith, debounceTime, distinctUntilChanged, switchMap, of, tap, filter, combineLatest } from 'rxjs';
+import {
+  Observable,
+  map,
+  startWith,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  of,
+  tap,
+  filter,
+  combineLatest
+} from 'rxjs';
 
-// Shared
 import { MultiDatePickerComponent } from 'src/app/shared/multi-date-picker/multi-date-picker.component';
 import { FlightInventoryService } from 'src/app/services/flight-inventory.service';
 import { AirportService, Airport } from 'src/app/services/airport.service';
 import { AirlineService, Airline } from 'src/app/services/airline.service';
 import { FareRuleService } from '../../../../services/fare-rule.service';
 import { NotificationService } from '../../../../services/notification.service';
+
+@Component({
+  selector: 'vex-add-flight-inventory-preview-dialog',
+  standalone: true,
+  template: `
+    <h2 mat-dialog-title>Confirm Flight Inventory</h2>
+    <mat-dialog-content class="max-h-[70vh] overflow-auto">
+      <div class="mb-2">
+        <div><span class="font-semibold">Sector:</span> {{ data?.sector }}</div>
+        <div>
+          <span class="font-semibold">Main Flight Date:</span>
+          {{ data?.flight_date }}
+        </div>
+        <div>
+          <span class="font-semibold">Seats Allocated:</span>
+          {{ data?.seat_allocated }}
+        </div>
+        <div>
+          <span class="font-semibold">Price Per Seat:</span>
+          {{ data?.sell_price }}
+        </div>
+        <div>
+          <span class="font-semibold">Refundable:</span>
+          {{ data?.is_refundable ? 'Yes' : 'No' }}
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="font-semibold mb-2">Leg Details</div>
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b">
+              <th class="text-left p-1">Type</th>
+              <th class="text-left p-1">From</th>
+              <th class="text-left p-1">To</th>
+              <th class="text-left p-1">Date</th>
+              <th class="text-left p-1">Dep</th>
+              <th class="text-left p-1">Arr</th>
+              <th class="text-left p-1">Airline</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of data?.details" class="border-b">
+              <td class="p-1">{{ d.type }}</td>
+              <td class="p-1">{{ d.from }}</td>
+              <td class="p-1">{{ d.to }}</td>
+              <td class="p-1">{{ d.flight_date }}</td>
+              <td class="p-1">{{ d.dep_time }}</td>
+              <td class="p-1">{{ d.arr_time }}</td>
+              <td class="p-1">{{ d.airline }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="data?.fare_rules?.length" class="mt-4">
+        <div class="font-semibold mb-2">Refund Rules</div>
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b">
+              <th class="text-left p-1">Days Before Departure</th>
+              <th class="text-left p-1">Refundable Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of data.fare_rules" class="border-b">
+              <td class="p-1">{{ r.days_before_departure }}</td>
+              <td class="p-1">{{ r.refundable_amount }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="dialogRef.close('cancel')">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="dialogRef.close('confirm')">
+        Confirm and Create
+      </button>
+    </mat-dialog-actions>
+  `,
+  imports: [CommonModule, MatDialogModule, MatButtonModule]
+})
+export class AddFlightInventoryPreviewDialogComponent {
+  constructor(
+    public dialogRef: MatDialogRef<AddFlightInventoryPreviewDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {}
+}
+
+export class AddFlightDateAdapter extends NativeDateAdapter {
+  override format(date: Date, displayFormat: any): string {
+    if (displayFormat === 'input') {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}-${month}-${year}`;
+    }
+    return super.format(date, displayFormat);
+  }
+}
+
+export const ADD_FLIGHT_DATE_FORMATS = {
+  parse: {
+    dateInput: 'input'
+  },
+  display: {
+    dateInput: 'input',
+    monthYearLabel: 'MMM yyyy',
+    dateA11yLabel: 'input',
+    monthYearA11yLabel: 'MMMM yyyy'
+  }
+};
 
 @Component({
   selector: 'vex-add-flight-inventory',
@@ -53,11 +193,22 @@ import { NotificationService } from '../../../../services/notification.service';
     MatRadioModule,
     MatDividerModule,
     MatAutocompleteModule,
-    MultiDatePickerComponent
+    MultiDatePickerComponent,
+    MatDialogModule,
+    MatProgressSpinnerModule
+  ],
+  providers: [
+    {
+      provide: DateAdapter,
+      useClass: AddFlightDateAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
+    { provide: MAT_DATE_FORMATS, useValue: ADD_FLIGHT_DATE_FORMATS }
   ]
 })
 export class AddFlightInventoryComponent implements OnInit {
   flightForm!: FormGroup;
+  submitting = false;
 
   constructor(
     private fb: FormBuilder,
@@ -67,26 +218,36 @@ export class AddFlightInventoryComponent implements OnInit {
     private router: Router,
     private _snackBar: MatSnackBar,
     private airportService: AirportService,
-    private airlineService: AirlineService
+    private airlineService: AirlineService,
+    private dialog: MatDialog
   ) {}
 
+  today: Date = new Date();
   timeSlots: string[] = [];
   filteredArrivalTimeSlots: { [key: number]: string[] } = {};
   loading = false;
-  
+
   // Airport autocomplete
   filteredFromAirports: { [key: number]: Observable<Airport[]> } = {};
   filteredToAirports: { [key: number]: Observable<Airport[]> } = {};
   filteredReturnFromAirports: { [key: number]: Observable<Airport[]> } = {};
   filteredReturnToAirports: { [key: number]: Observable<Airport[]> } = {};
-  
+
   // Airline codes
   airlines: Airline[] = [];
   filteredAirlines: { [key: number]: Observable<Airline[]> } = {};
-  filteredDepTimesOnward: { [key: number]: Observable<{ label: string; items: string[] }[]> } = {};
-  filteredArrTimesOnward: { [key: number]: Observable<{ label: string; items: string[] }[]> } = {};
-  filteredDepTimesReturn: { [key: number]: Observable<{ label: string; items: string[] }[]> } = {};
-  filteredArrTimesReturn: { [key: number]: Observable<{ label: string; items: string[] }[]> } = {};
+  filteredDepTimesOnward: {
+    [key: number]: Observable<{ label: string; items: string[] }[]>;
+  } = {};
+  filteredArrTimesOnward: {
+    [key: number]: Observable<{ label: string; items: string[] }[]>;
+  } = {};
+  filteredDepTimesReturn: {
+    [key: number]: Observable<{ label: string; items: string[] }[]>;
+  } = {};
+  filteredArrTimesReturn: {
+    [key: number]: Observable<{ label: string; items: string[] }[]>;
+  } = {};
 
   ngOnInit(): void {
     this.generateTimeSlots();
@@ -97,108 +258,144 @@ export class AddFlightInventoryComponent implements OnInit {
       returnFlights: this.fb.array([]),
 
       // Series details
-       availableSeats: [null, [Validators.required, Validators.min(1)]],
-       availableFor: ['anywhere', Validators.required],
-       bookingCutOff: [null, [Validators.required, Validators.min(0)]],
-       namingCutOff: [null, [Validators.required, Validators.min(0)]],
-       pricePerSeat: [null, [Validators.required, Validators.min(0)]],
-       allowTbaUser: [false],
-       allowHoldBooking: [false],
-       holdBookingAmount: [null, Validators.min(0)],
-       holdBookingType: ['percentage'],
-       holdBookingCutOffDays: [null, Validators.min(0)],
-       holdBookingLimit: [null, Validators.min(1)],
-       infantPrice: [null, Validators.min(0)],
-       
-       // Refundable/Non-Refundable
-       isRefundable: ['non-refundable', Validators.required],
-       fareRules: this.fb.array([]),
-       
-       // Meal and Seat Options
-       mealOption: ['complimentary', Validators.required],
-       seatOption: ['complimentary', Validators.required],
-       
-       // Special Tag
-       specialTag: ['']
+      availableSeats: [null, [Validators.required, Validators.min(1)]],
+      availableFor: ['anywhere', Validators.required],
+      bookingCutOff: [null, [Validators.required, Validators.min(0)]],
+      namingCutOff: [null, [Validators.required, Validators.min(0)]],
+      pricePerSeat: [null, [Validators.required, Validators.min(0)]],
+      allowTbaUser: [false],
+      allowHoldBooking: [false],
+      holdBookingAmount: [null, Validators.min(0)],
+      holdBookingType: ['percentage'],
+      holdBookingCutOffDays: [null, Validators.min(0)],
+      holdBookingLimit: [null, Validators.min(1)],
+      infantPrice: [null, Validators.min(0)],
+
+      // Refundable/Non-Refundable
+      isRefundable: ['non-refundable', Validators.required],
+      fareRules: this.fb.array([]),
+
+      // Meal and Seat Options
+      mealOption: ['complimentary', Validators.required],
+      seatOption: ['complimentary', Validators.required],
+
+      // Special Tag
+      specialTag: ['']
     });
-    
+
     // Listen for changes to price per seat and departure date to revalidate fare rules
     this.flightForm.get('pricePerSeat')?.valueChanges.subscribe(() => {
       this.revalidateFareRules();
     });
-    
-    this.onwardFlights.at(0)?.get('departureDate')?.valueChanges.subscribe(() => {
-      this.revalidateFareRules();
-    });
-    
+
+    this.onwardFlights
+      .at(0)
+      ?.get('departureDate')
+      ?.valueChanges.subscribe(() => {
+        this.revalidateFareRules();
+      });
+
     // Add conditional validation for hold booking fields
-    this.flightForm.get('allowHoldBooking')?.valueChanges.subscribe(allowHold => {
-      const holdBookingAmount = this.flightForm.get('holdBookingAmount');
-      const holdBookingCutOffDays = this.flightForm.get('holdBookingCutOffDays');
-      const holdBookingLimit = this.flightForm.get('holdBookingLimit');
-      const holdBookingType = this.flightForm.get('holdBookingType');
-      
-      if (allowHold) {
-        holdBookingAmount?.setValidators([Validators.required, Validators.min(0)]);
-        holdBookingCutOffDays?.setValidators([
-          Validators.required, 
-          Validators.min(1),
-          this.maxHoldBookingDaysValidator(30)
-        ]);
-        holdBookingLimit?.setValidators([
-          Validators.required, 
-          Validators.min(1),
-          this.maxHoldBookingLimitValidator()
-        ]);
-        this.updateHoldAmountValidation(holdBookingType?.value);
-      } else {
-        holdBookingAmount?.clearValidators();
-        holdBookingCutOffDays?.clearValidators();
-        holdBookingLimit?.clearValidators();
-      }
-      
-      holdBookingAmount?.updateValueAndValidity();
-      holdBookingCutOffDays?.updateValueAndValidity();
-      holdBookingLimit?.updateValueAndValidity();
-    });
-    
+    this.flightForm
+      .get('allowHoldBooking')
+      ?.valueChanges.subscribe((allowHold) => {
+        const holdBookingAmount = this.flightForm.get('holdBookingAmount');
+        const holdBookingCutOffDays = this.flightForm.get(
+          'holdBookingCutOffDays'
+        );
+        const holdBookingLimit = this.flightForm.get('holdBookingLimit');
+        const holdBookingType = this.flightForm.get('holdBookingType');
+
+        if (allowHold) {
+          holdBookingAmount?.setValidators([
+            Validators.required,
+            Validators.min(0)
+          ]);
+          holdBookingCutOffDays?.setValidators([
+            Validators.required,
+            Validators.min(1),
+            this.maxHoldBookingDaysValidator(30)
+          ]);
+          holdBookingLimit?.setValidators([
+            Validators.required,
+            Validators.min(1),
+            this.maxHoldBookingLimitValidator()
+          ]);
+          this.updateHoldAmountValidation(holdBookingType?.value);
+        } else {
+          holdBookingAmount?.clearValidators();
+          holdBookingCutOffDays?.clearValidators();
+          holdBookingLimit?.clearValidators();
+        }
+
+        holdBookingAmount?.updateValueAndValidity();
+        holdBookingCutOffDays?.updateValueAndValidity();
+        holdBookingLimit?.updateValueAndValidity();
+      });
+
     // Update hold booking limit validation when cut-off days change
     this.flightForm.get('holdBookingCutOffDays')?.valueChanges.subscribe(() => {
       if (this.flightForm.get('allowHoldBooking')?.value) {
         this.flightForm.get('holdBookingLimit')?.updateValueAndValidity();
       }
     });
-    
+
     // Add validation based on hold booking type (percentage/flat)
-    this.flightForm.get('holdBookingType')?.valueChanges.subscribe(type => {
+    this.flightForm.get('holdBookingType')?.valueChanges.subscribe((type) => {
       if (this.flightForm.get('allowHoldBooking')?.value) {
         this.updateHoldAmountValidation(type);
       }
     });
-    
+
     // Subscribe to pricePerSeat changes to validate holdBookingAmount for flat type
     this.flightForm.get('pricePerSeat')?.valueChanges.subscribe(() => {
-      if (this.flightForm.get('allowHoldBooking')?.value && 
-          this.flightForm.get('holdBookingType')?.value === 'flat') {
+      if (
+        this.flightForm.get('allowHoldBooking')?.value &&
+        this.flightForm.get('holdBookingType')?.value === 'flat'
+      ) {
         this.flightForm.get('holdBookingAmount')?.updateValueAndValidity();
       }
     });
-    
+
     // Setup airport and airline autocomplete for initial flight groups
     if (this.onwardFlights.at(0)) {
-      this.setupAirportAutocomplete(this.onwardFlights.at(0) as FormGroup, 0, 'onward');
-      this.setupAirlineAutocomplete(this.onwardFlights.at(0) as FormGroup, 0, 'onward');
-      this.setupTimeAutocomplete(this.onwardFlights.at(0) as FormGroup, 0, 'onward');
-    }
-    
-    // Setup airport and airline autocomplete for initial return flight if exists
-    if (this.returnFlights.length > 0 && this.returnFlights.at(0)) {
-      this.setupAirportAutocomplete(this.returnFlights.at(0) as FormGroup, 0, 'return');
-      this.setupAirlineAutocomplete(this.returnFlights.at(0) as FormGroup, 0, 'return');
-      this.setupTimeAutocomplete(this.returnFlights.at(0) as FormGroup, 0, 'return');
+      this.setupAirportAutocomplete(
+        this.onwardFlights.at(0) as FormGroup,
+        0,
+        'onward'
+      );
+      this.setupAirlineAutocomplete(
+        this.onwardFlights.at(0) as FormGroup,
+        0,
+        'onward'
+      );
+      this.setupTimeAutocomplete(
+        this.onwardFlights.at(0) as FormGroup,
+        0,
+        'onward'
+      );
     }
 
-    this.flightForm.get('hasReturn')?.valueChanges.subscribe(v => {
+    // Setup airport and airline autocomplete for initial return flight if exists
+    if (this.returnFlights.length > 0 && this.returnFlights.at(0)) {
+      this.setupAirportAutocomplete(
+        this.returnFlights.at(0) as FormGroup,
+        0,
+        'return'
+      );
+      this.setupAirlineAutocomplete(
+        this.returnFlights.at(0) as FormGroup,
+        0,
+        'return'
+      );
+      this.setupTimeAutocomplete(
+        this.returnFlights.at(0) as FormGroup,
+        0,
+        'return'
+      );
+    }
+
+    this.flightForm.get('hasReturn')?.valueChanges.subscribe((v) => {
       if (v) {
         this.buildReturnFromOnward();
       } else {
@@ -213,6 +410,32 @@ export class AddFlightInventoryComponent implements OnInit {
         this.buildReturnFromOnward();
       }
     });
+  }
+
+  private formatToDdMmYy(date: Date | null | undefined): string | null {
+    if (!date) return null;
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear().toString().slice(-2);
+    return `${d}-${m}-${y}`;
+  }
+
+  onDepartureDateChange(
+    event: MatDatepickerInputEvent<Date>,
+    index: number,
+    type: 'onward' | 'return'
+  ): void {
+    const formatted = this.formatToDdMmYy(event.value);
+    console.log('Departure Date selected', { type, index, formatted });
+  }
+
+  onArrivalDateChange(
+    event: MatDatepickerInputEvent<Date>,
+    index: number,
+    type: 'onward' | 'return'
+  ): void {
+    const formatted = this.formatToDdMmYy(event.value);
+    console.log('Arrival Date selected', { type, index, formatted });
   }
 
   getDateValue(val: any): Date | null {
@@ -288,8 +511,12 @@ export class AddFlightInventoryComponent implements OnInit {
 
       const fromVal = og.get('fromAirport')?.value;
       const toVal = og.get('toAirport')?.value;
-      const toCode = typeof toVal === 'object' && toVal?.code ? toVal.code : (toVal || '');
-      const fromCode = typeof fromVal === 'object' && fromVal?.code ? fromVal.code : (fromVal || '');
+      const toCode =
+        typeof toVal === 'object' && toVal?.code ? toVal.code : toVal || '';
+      const fromCode =
+        typeof fromVal === 'object' && fromVal?.code
+          ? fromVal.code
+          : fromVal || '';
       rg.get('fromAirport')?.setValue(toCode);
       rg.get('toAirport')?.setValue(fromCode);
       rg.get('from_id')?.setValue(og.get('to_id')?.value || null);
@@ -297,7 +524,9 @@ export class AddFlightInventoryComponent implements OnInit {
       rg.get('airline')?.setValue(og.get('airline')?.value || '');
       rg.get('airline_id')?.setValue(og.get('airline_id')?.value || '');
       rg.get('airlineCode')?.setValue(og.get('airlineCode')?.value || '');
-      rg.get('airlineSearch')?.setValue(og.get('airline')?.value || '', { emitEvent: false });
+      rg
+        .get('airlineSearch')
+        ?.setValue(og.get('airline')?.value || '', { emitEvent: false });
       rg.get('flightNumber')?.setValue(og.get('flightNumber')?.value || '');
       rg.get('pnrNumber')?.setValue(og.get('pnrNumber')?.value || '');
       rg.get('baggage')?.setValue(og.get('baggage')?.value || '');
@@ -336,58 +565,72 @@ export class AddFlightInventoryComponent implements OnInit {
       toAirport: ['', Validators.required],
       from_id: [''],
       to_id: [''],
-      departureTime: ['', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)]],
-      arrivalTime: ['', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)]]
+      departureTime: [
+        '',
+        [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)]
+      ],
+      arrivalTime: [
+        '',
+        [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)]
+      ]
     });
-    
+
     // Listen for departure time changes to filter arrival times
-    group.get('departureTime')?.valueChanges.subscribe(time => {
+    group.get('departureTime')?.valueChanges.subscribe((time) => {
       if (time) {
         this.updateArrivalTimeOptions(group, time);
       }
     });
-    
-    
+
     // Listen for airline code changes to update flight number format
-    group.get('airlineCode')?.valueChanges.subscribe(code => {
+    group.get('airlineCode')?.valueChanges.subscribe((code) => {
       if (code) {
         // Set flight number to just the airline code, clearing any existing content
         group.get('flightNumber')?.setValue(code);
       }
     });
-    
+
     return group;
   }
-  
-  updateFlightNumber(index: number, type: 'onward' | 'return' = 'onward', event?: any): void {
-    const flights = type === 'onward' ? this.onwardFlights.at(index) as FormGroup : this.returnFlights.at(index) as FormGroup;
-    
+
+  updateFlightNumber(
+    index: number,
+    type: 'onward' | 'return' = 'onward',
+    event?: any
+  ): void {
+    const flights =
+      type === 'onward'
+        ? (this.onwardFlights.at(index) as FormGroup)
+        : (this.returnFlights.at(index) as FormGroup);
+
     // Get airline code from event if provided (from autocomplete) or from form control
     let airlineCode = '';
     let airlineName = '';
     let airlineId = '';
-    
+
     if (event && event.option) {
       // If event comes from autocomplete selection
       const selectedAirline = event.option.value;
-      
+
       // Get airline details from the selected airline object
       if (selectedAirline && selectedAirline.code) {
         airlineCode = selectedAirline.code;
         airlineName = selectedAirline.name;
         airlineId = selectedAirline.id.toString(); // Convert number to string
-        
+
         // Console log the selected airline code
         console.log('Selected airline code:', airlineCode);
-        
+
         // Update the form controls with the selected airline values
         flights.get('airlineCode')?.setValue(airlineCode);
         flights.get('airline')?.setValue(airlineName);
         flights.get('airline_id')?.setValue(airlineId);
-        
+
         // Update the airlineSearch control to display only the airline name
-        flights.get('airlineSearch')?.setValue(airlineName, {emitEvent: false});
-        
+        flights
+          .get('airlineSearch')
+          ?.setValue(airlineName, { emitEvent: false });
+
         // Clear the flight number and set only the airline code
         flights.get('flightNumber')?.setValue(airlineCode);
       }
@@ -395,7 +638,7 @@ export class AddFlightInventoryComponent implements OnInit {
       airlineCode = flights.get('airlineCode')?.value;
     }
   }
-    
+
   loadAirlines(): void {
     this.airlineService.getAirlines().subscribe({
       next: (airlinesResponse) => {
@@ -412,20 +655,24 @@ export class AddFlightInventoryComponent implements OnInit {
       }
     });
   }
-  
-  setupAirlineAutocomplete(flightGroup: FormGroup, index: number, type: 'onward' | 'return'): void {
+
+  setupAirlineAutocomplete(
+    flightGroup: FormGroup,
+    index: number,
+    type: 'onward' | 'return'
+  ): void {
     const searchControl = flightGroup.get('airlineSearch') as AbstractControl;
-    
+
     if (!searchControl) return;
-    
+
     // Set a unique index for each flight group based on type and index
     const uniqueIndex = type === 'onward' ? index : index + 100;
-    
+
     this.filteredAirlines[uniqueIndex] = searchControl.valueChanges.pipe(
       startWith(''),
       debounceTime(300),
       distinctUntilChanged(),
-      switchMap(value => {
+      switchMap((value) => {
         const searchValue = typeof value === 'string' ? value : '';
         if (searchValue.length < 2) {
           return of(this.airlines.slice(0, 10));
@@ -434,21 +681,24 @@ export class AddFlightInventoryComponent implements OnInit {
       })
     );
   }
-  
+
   // Filter arrival times based on departure time
   updateArrivalTimeOptions(group: FormGroup, departureTime: string): void {
     const arrivalTimeControl = group.get('arrivalTime');
     const currentArrivalTime = arrivalTimeControl?.value;
-    
+
     // Find the index of the departure time in the timeSlots array
-    const depTimeIndex = this.timeSlots.findIndex(t => t === departureTime);
-    
+    const depTimeIndex = this.timeSlots.findIndex((t) => t === departureTime);
+
     if (depTimeIndex !== -1) {
       // Get all times from departure time onwards
       const validArrivalTimes = this.timeSlots.slice(depTimeIndex);
-      
+
       // If current arrival time is before departure time, reset it
-      if (currentArrivalTime && this.timeSlots.indexOf(currentArrivalTime) < depTimeIndex) {
+      if (
+        currentArrivalTime &&
+        this.timeSlots.indexOf(currentArrivalTime) < depTimeIndex
+      ) {
         arrivalTimeControl?.setValue(departureTime);
       }
     }
@@ -468,84 +718,90 @@ export class AddFlightInventoryComponent implements OnInit {
 
   createFareRuleGroup(): FormGroup {
     return this.fb.group({
-      days: [null, [
-        Validators.required, 
-        Validators.min(1),
-        this.validateDaysBeforeDeparture.bind(this)
-      ]],
-      amount: [null, [
-        Validators.required, 
-        Validators.min(0),
-        this.validateRefundAmount.bind(this)
-      ]]
+      days: [
+        null,
+        [
+          Validators.required,
+          Validators.min(1),
+          this.validateDaysBeforeDeparture.bind(this)
+        ]
+      ],
+      amount: [
+        null,
+        [
+          Validators.required,
+          Validators.min(0),
+          this.validateRefundAmount.bind(this)
+        ]
+      ]
     });
   }
 
   validateDaysBeforeDeparture(control: AbstractControl) {
     if (!control.value) return null;
-    
+
     const departureDate = this.onwardFlights.at(0)?.get('departureDate')?.value;
     if (!departureDate) return null;
-    
+
     const today = new Date();
     const departure = new Date(departureDate);
     const diffTime = Math.abs(departure.getTime() - today.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return control.value > diffDays ? { exceedsDeparture: true } : null;
   }
 
   validateRefundAmount(control: AbstractControl) {
     if (!control.value) return null;
-    
+
     const pricePerSeat = this.flightForm.get('pricePerSeat')?.value;
     if (!pricePerSeat) return null;
-    
+
     return control.value > pricePerSeat ? { exceedsPrice: true } : null;
   }
-  
+
   // Method to update hold booking amount validation based on type
   updateHoldAmountValidation(type: string): void {
     const holdBookingAmount = this.flightForm.get('holdBookingAmount');
-    
+
     if (type === 'percentage') {
       holdBookingAmount?.setValidators([
-        Validators.required, 
+        Validators.required,
         Validators.min(0),
         Validators.max(100)
       ]);
     } else {
       // For flat amount, we don't allow it to be greater than seat price
       holdBookingAmount?.setValidators([
-        Validators.required, 
+        Validators.required,
         Validators.min(0),
         this.validateFlatAmount.bind(this)
       ]);
     }
-    
+
     holdBookingAmount?.updateValueAndValidity();
   }
-  
+
   // Custom validator for hold booking amount
   validateHoldBookingAmount(control: AbstractControl) {
     if (!control.value) return null;
-    
+
     const holdBookingType = this.flightForm.get('holdBookingType')?.value;
-    
+
     if (holdBookingType === 'percentage') {
       return control.value > 100 ? { max: true } : null;
     }
-    
+
     return null;
   }
-  
+
   // Custom validator for flat amount not exceeding seat price
   validateFlatAmount(control: AbstractControl) {
     if (!control.value) return null;
-    
+
     const pricePerSeat = this.flightForm.get('pricePerSeat')?.value;
     if (!pricePerSeat) return null;
-    
+
     return control.value > pricePerSeat ? { exceedsPrice: true } : null;
   }
 
@@ -561,9 +817,9 @@ export class AddFlightInventoryComponent implements OnInit {
 
   revalidateFareRules(): void {
     if (this.fareRules.length === 0) return;
-    
+
     // Force revalidation of all fare rules
-    this.fareRules.controls.forEach(control => {
+    this.fareRules.controls.forEach((control) => {
       if (control.get('days')) {
         control.get('days')?.updateValueAndValidity();
       }
@@ -572,37 +828,39 @@ export class AddFlightInventoryComponent implements OnInit {
       }
     });
   }
-  
+
   // Validator to ensure hold booking days doesn't exceed 30 days from departure date
   maxHoldBookingDaysValidator(maxDays: number) {
-    return (control: AbstractControl): {[key: string]: any} | null => {
+    return (control: AbstractControl): { [key: string]: any } | null => {
       if (!control.value) {
         return null;
       }
-      
+
       const days = control.value;
       if (days > maxDays) {
-        return { 'maxDaysExceeded': { value: control.value, max: maxDays } };
+        return { maxDaysExceeded: { value: control.value, max: maxDays } };
       }
-      
+
       return null;
     };
   }
-  
+
   // Validator to ensure hold booking limit doesn't exceed hold booking cut-off days
   maxHoldBookingLimitValidator() {
-    return (control: AbstractControl): {[key: string]: any} | null => {
+    return (control: AbstractControl): { [key: string]: any } | null => {
       if (!control.value) {
         return null;
       }
-      
+
       const limit = control.value;
       const cutOffDays = this.flightForm.get('holdBookingCutOffDays')?.value;
-      
+
       if (cutOffDays && limit > cutOffDays) {
-        return { 'limitExceedsCutOff': { value: control.value, max: cutOffDays } };
+        return {
+          limitExceedsCutOff: { value: control.value, max: cutOffDays }
+        };
       }
-      
+
       return null;
     };
   }
@@ -615,47 +873,55 @@ export class AddFlightInventoryComponent implements OnInit {
   }
 
   // Setup airport autocomplete functionality
-  private setupAirportAutocomplete(flightGroup: FormGroup<any>, index: number, type: 'onward' | 'return') {
+  private setupAirportAutocomplete(
+    flightGroup: FormGroup<any>,
+    index: number,
+    type: 'onward' | 'return'
+  ) {
     if (!flightGroup) return;
-    
+
     // Initialize arrays if needed
-    if (!this.filteredFromAirports[index]) this.filteredFromAirports[index] = of([]);
-    if (!this.filteredToAirports[index]) this.filteredToAirports[index] = of([]);
-    if (!this.filteredReturnFromAirports[index]) this.filteredReturnFromAirports[index] = of([]);
-    if (!this.filteredReturnToAirports[index]) this.filteredReturnToAirports[index] = of([]);
-    
+    if (!this.filteredFromAirports[index])
+      this.filteredFromAirports[index] = of([]);
+    if (!this.filteredToAirports[index])
+      this.filteredToAirports[index] = of([]);
+    if (!this.filteredReturnFromAirports[index])
+      this.filteredReturnFromAirports[index] = of([]);
+    if (!this.filteredReturnToAirports[index])
+      this.filteredReturnToAirports[index] = of([]);
+
     // Setup From Airport autocomplete
     const fromControl = flightGroup.get('fromAirport');
     if (fromControl) {
       // Store the valid airport codes for validation
       let validFromAirports: string[] = [];
-      
+
       if (type === 'onward') {
         this.filteredFromAirports[index] = fromControl.valueChanges.pipe(
           debounceTime(300),
           distinctUntilChanged(),
-          filter(value => typeof value === 'string' && value.length >= 2),
-          switchMap(value => this.airportService.searchAirports(value)),
-          tap(airports => {
+          filter((value) => typeof value === 'string' && value.length >= 2),
+          switchMap((value) => this.airportService.searchAirports(value)),
+          tap((airports) => {
             // Store valid airport codes for validation
-            validFromAirports = airports.map(airport => airport.code);
+            validFromAirports = airports.map((airport) => airport.code);
           })
         );
       } else {
         this.filteredReturnFromAirports[index] = fromControl.valueChanges.pipe(
           debounceTime(300),
           distinctUntilChanged(),
-          filter(value => typeof value === 'string' && value.length >= 2),
-          switchMap(value => this.airportService.searchAirports(value)),
-          tap(airports => {
+          filter((value) => typeof value === 'string' && value.length >= 2),
+          switchMap((value) => this.airportService.searchAirports(value)),
+          tap((airports) => {
             // Store valid airport codes for validation
-            validFromAirports = airports.map(airport => airport.code);
+            validFromAirports = airports.map((airport) => airport.code);
           })
         );
       }
-      
+
       // Add value change event to validate selection and store ID
-      fromControl.valueChanges.subscribe(value => {
+      fromControl.valueChanges.subscribe((value) => {
         if (value && typeof value === 'object' && value.id) {
           // Store the airport ID in the from_id field
           flightGroup.get('from_id')?.setValue(value.id);
@@ -665,39 +931,39 @@ export class AddFlightInventoryComponent implements OnInit {
         }
       });
     }
-    
+
     // Setup To Airport autocomplete
     const toControl = flightGroup.get('toAirport');
     if (toControl) {
       // Store the valid airport codes for validation
       let validToAirports: string[] = [];
-      
+
       if (type === 'onward') {
         this.filteredToAirports[index] = toControl.valueChanges.pipe(
           debounceTime(300),
           distinctUntilChanged(),
-          filter(value => typeof value === 'string' && value.length >= 2),
-          switchMap(value => this.airportService.searchAirports(value)),
-          tap(airports => {
+          filter((value) => typeof value === 'string' && value.length >= 2),
+          switchMap((value) => this.airportService.searchAirports(value)),
+          tap((airports) => {
             // Store valid airport codes for validation
-            validToAirports = airports.map(airport => airport.code);
+            validToAirports = airports.map((airport) => airport.code);
           })
         );
       } else {
         this.filteredReturnToAirports[index] = toControl.valueChanges.pipe(
           debounceTime(300),
           distinctUntilChanged(),
-          filter(value => typeof value === 'string' && value.length >= 2),
-          switchMap(value => this.airportService.searchAirports(value)),
-          tap(airports => {
+          filter((value) => typeof value === 'string' && value.length >= 2),
+          switchMap((value) => this.airportService.searchAirports(value)),
+          tap((airports) => {
             // Store valid airport codes for validation
-            validToAirports = airports.map(airport => airport.code);
+            validToAirports = airports.map((airport) => airport.code);
           })
         );
       }
-      
+
       // Add value change event to validate selection and store ID
-      toControl.valueChanges.subscribe(value => {
+      toControl.valueChanges.subscribe((value) => {
         if (value && typeof value === 'object' && value.id) {
           // Store the airport ID in the to_id field
           flightGroup.get('to_id')?.setValue(value.id);
@@ -709,7 +975,11 @@ export class AddFlightInventoryComponent implements OnInit {
     }
   }
 
-  private setupTimeAutocomplete(flightGroup: FormGroup, index: number, type: 'onward' | 'return') {
+  private setupTimeAutocomplete(
+    flightGroup: FormGroup,
+    index: number,
+    type: 'onward' | 'return'
+  ) {
     if (!flightGroup) return;
     const depCtrl = flightGroup.get('departureTime');
     const arrCtrl = flightGroup.get('arrivalTime');
@@ -729,17 +999,22 @@ export class AddFlightInventoryComponent implements OnInit {
 
     const toGroups = (list: string[]) => {
       const groups: { [label: string]: string[] } = {};
-      list.forEach(t => {
+      list.forEach((t) => {
         const label = categorize(t);
         if (!groups[label]) groups[label] = [];
         groups[label].push(t);
       });
-      return Object.keys(groups).map(label => ({ label, items: groups[label] }));
+      return Object.keys(groups).map((label) => ({
+        label,
+        items: groups[label]
+      }));
     };
 
     const filterTimes = (q: string) => {
       const query = (q || '').toString().toLowerCase();
-      const filtered = query ? this.timeSlots.filter(t => t.toLowerCase().includes(query)) : this.timeSlots;
+      const filtered = query
+        ? this.timeSlots.filter((t) => t.toLowerCase().includes(query))
+        : this.timeSlots;
       return toGroups(filtered);
     };
 
@@ -747,28 +1022,47 @@ export class AddFlightInventoryComponent implements OnInit {
       const query = (q || '').toString().toLowerCase();
       const depIdx = this.timeSlots.indexOf(depVal || '');
       const base = depIdx >= 0 ? this.timeSlots.slice(depIdx) : this.timeSlots;
-      const filtered = query ? base.filter(t => t.toLowerCase().includes(query)) : base;
+      const filtered = query
+        ? base.filter((t) => t.toLowerCase().includes(query))
+        : base;
       return toGroups(filtered);
     };
 
     if (type === 'onward') {
       this.filteredDepTimesOnward[index] = depStream.pipe(map(filterTimes));
-      this.filteredArrTimesOnward[index] = combineLatest([arrStream, depStream]).pipe(
-        map(([arrQ, depVal]) => filterArrivalTimes(arrQ as string, depVal as string))
+      this.filteredArrTimesOnward[index] = combineLatest([
+        arrStream,
+        depStream
+      ]).pipe(
+        map(([arrQ, depVal]) =>
+          filterArrivalTimes(arrQ as string, depVal as string)
+        )
       );
     } else {
       this.filteredDepTimesReturn[index] = depStream.pipe(map(filterTimes));
-      this.filteredArrTimesReturn[index] = combineLatest([arrStream, depStream]).pipe(
-        map(([arrQ, depVal]) => filterArrivalTimes(arrQ as string, depVal as string))
+      this.filteredArrTimesReturn[index] = combineLatest([
+        arrStream,
+        depStream
+      ]).pipe(
+        map(([arrQ, depVal]) =>
+          filterArrivalTimes(arrQ as string, depVal as string)
+        )
       );
     }
   }
 
   private getFlightGroup(type: 'onward' | 'return', index: number): FormGroup {
-    return type === 'onward' ? (this.onwardFlights.at(index) as FormGroup) : (this.returnFlights.at(index) as FormGroup);
+    return type === 'onward'
+      ? (this.onwardFlights.at(index) as FormGroup)
+      : (this.returnFlights.at(index) as FormGroup);
   }
 
-  onTimeInput(type: 'onward' | 'return', index: number, controlName: 'departureTime' | 'arrivalTime', event: Event): void {
+  onTimeInput(
+    type: 'onward' | 'return',
+    index: number,
+    controlName: 'departureTime' | 'arrivalTime',
+    event: Event
+  ): void {
     const group = this.getFlightGroup(type, index);
     const input = event.target as HTMLInputElement;
     let v = (input.value || '').toString();
@@ -784,12 +1078,20 @@ export class AddFlightInventoryComponent implements OnInit {
       let m = Math.min(59, Math.max(0, parseInt(mm, 10) || 0));
       mm = m.toString().padStart(2, '0');
     }
-    const formatted = mm.length ? `${hh}:${mm}` : hh.length === 2 ? `${hh}:` : hh;
+    const formatted = mm.length
+      ? `${hh}:${mm}`
+      : hh.length === 2
+        ? `${hh}:`
+        : hh;
     input.value = formatted;
     group.get(controlName)?.setValue(formatted);
   }
 
-  onTimeBlur(type: 'onward' | 'return', index: number, controlName: 'departureTime' | 'arrivalTime'): void {
+  onTimeBlur(
+    type: 'onward' | 'return',
+    index: number,
+    controlName: 'departureTime' | 'arrivalTime'
+  ): void {
     const group = this.getFlightGroup(type, index);
     let val = (group.get(controlName)?.value || '').toString();
     const match = val.match(/^([0-9]{1,2}):?([0-9]{0,2})$/);
@@ -847,12 +1149,12 @@ export class AddFlightInventoryComponent implements OnInit {
   // Helper function to format date as YYYY-MM-DD without timezone conversion
   formatDate(date: any): string {
     if (!date) return '';
-    
+
     // If it's already a string in ISO format, extract just the date part
     if (typeof date === 'string' && date.includes('T')) {
       return date.split('T')[0];
     }
-    
+
     // Handle MM/DD/YYYY format (like 11/21/2025)
     if (typeof date === 'string' && date.includes('/')) {
       const parts = date.split('/');
@@ -864,7 +1166,7 @@ export class AddFlightInventoryComponent implements OnInit {
         return `${year}-${month}-${day}`;
       }
     }
-    
+
     const d = new Date(date);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -904,37 +1206,50 @@ export class AddFlightInventoryComponent implements OnInit {
   submit() {
     if (this.flightForm.valid) {
       const formValue = this.flightForm.value;
-    //  console.log(formValue.onwardFlights[0]);
+      //  console.log(formValue.onwardFlights[0]);
       // Main flight date = first onward flight departure
       const mainFlightDate = formValue.onwardFlights[0]?.departureDate || null;
-      
+
       // Validate if flight date is at least equal to the booking/naming cut-off days from current date
       const flightDate = new Date(mainFlightDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset time part for accurate day calculation
-      
+
       // Calculate days difference
       const diffTime = flightDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       // Get the maximum of booking and naming cut-off days
-      const maxCutOffDays = Math.max(formValue.bookingCutOff, formValue.namingCutOff);
-      
+      const maxCutOffDays = Math.max(
+        formValue.bookingCutOff,
+        formValue.namingCutOff
+      );
+
       if (diffDays < maxCutOffDays) {
-        this._snackBar.open(`Invalid flight date. The flight date must be at least ${maxCutOffDays} days from today based on your cut-off settings.`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
+        this._snackBar.open(
+          `Invalid flight date. The flight date must be at least ${maxCutOffDays} days from today based on your cut-off settings.`,
+          'Close',
+          {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          }
+        );
         return;
       }
 
-      const getCode = (v: any) => (typeof v === 'object' ? (v.code || v.name) : v);
+      const getCode = (v: any) =>
+        typeof v === 'object' ? v.code || v.name : v;
       const origin = getCode(formValue.onwardFlights[0]?.fromAirport);
-      const finalDest = getCode(formValue.onwardFlights[formValue.onwardFlights.length - 1]?.toAirport);
-      const sectorStr = formValue.hasReturn && formValue.returnFlights && formValue.returnFlights.length > 0
-        ? `${origin}-${finalDest}-${origin}`
-        : `${origin}-${finalDest}`;
-      
+      const finalDest = getCode(
+        formValue.onwardFlights[formValue.onwardFlights.length - 1]?.toAirport
+      );
+      const sectorStr =
+        formValue.hasReturn &&
+        formValue.returnFlights &&
+        formValue.returnFlights.length > 0
+          ? `${origin}-${finalDest}-${origin}`
+          : `${origin}-${finalDest}`;
+
       const payload = {
         flight_date: this.formatDate(mainFlightDate),
         sector: sectorStr,
@@ -951,22 +1266,39 @@ export class AddFlightInventoryComponent implements OnInit {
         infant_price: formValue.infantPrice || 0,
         is_active: true,
         is_refundable: formValue.isRefundable === 'refundable',
-        fare_rules: formValue.isRefundable === 'refundable' ? formValue.fareRules.map((rule: any) => ({
-          days_before_departure: rule.days,
-          refundable_amount: rule.amount
-        })) : [],
+        fare_rules:
+          formValue.isRefundable === 'refundable'
+            ? formValue.fareRules.map((rule: any) => ({
+                days_before_departure: rule.days,
+                refundable_amount: rule.amount
+              }))
+            : [],
         meal_option: formValue.mealOption,
         seat_option: formValue.seatOption,
         special_tag: formValue.specialTag,
         allow_tba_user: formValue.allowTbaUser,
         allow_hold_booking: formValue.allowHoldBooking || false,
-        hold_type: formValue.allowHoldBooking ? (formValue.holdBookingType === 'percentage' ? 'P' : 'F') : null,
-        hold_value: formValue.allowHoldBooking ? formValue.holdBookingAmount : null,
-        hold_booking_days: formValue.allowHoldBooking ? formValue.holdBookingCutOffDays : null,
-        hold_booking_limit: formValue.allowHoldBooking ? formValue.holdBookingLimit : null,
+        hold_type: formValue.allowHoldBooking
+          ? formValue.holdBookingType === 'percentage'
+            ? 'P'
+            : 'F'
+          : null,
+        hold_value: formValue.allowHoldBooking
+          ? formValue.holdBookingAmount
+          : null,
+        hold_booking_days: formValue.allowHoldBooking
+          ? formValue.holdBookingCutOffDays
+          : null,
+        hold_booking_limit: formValue.allowHoldBooking
+          ? formValue.holdBookingLimit
+          : null,
 
         // Flag to indicate presence of return flight details
-        is_return: !!(formValue.hasReturn && formValue.returnFlights && formValue.returnFlights.length > 0),
+        is_return: !!(
+          formValue.hasReturn &&
+          formValue.returnFlights &&
+          formValue.returnFlights.length > 0
+        ),
 
         // Legs (Onward + Return) with their own departureDate
         details: [
@@ -976,12 +1308,16 @@ export class AddFlightInventoryComponent implements OnInit {
             cabin_baggage: f.cabinBaggage,
             flight_number: f.flightNumber,
             terminal: f.terminal,
-      dep_terminal: f.terminal || null,
-      arr_terminal: f.arrivalTerminal || null,
+            dep_terminal: f.terminal || null,
+            arr_terminal: f.arrivalTerminal || null,
             pnr_number: f.pnrNumber || null,
             type: 'Onward',
-            from: typeof f.fromAirport === 'object' ? f.fromAirport.code : f.fromAirport,
-            to: typeof f.toAirport === 'object' ? f.toAirport.code : f.toAirport,
+            from:
+              typeof f.fromAirport === 'object'
+                ? f.fromAirport.code
+                : f.fromAirport,
+            to:
+              typeof f.toAirport === 'object' ? f.toAirport.code : f.toAirport,
             from_id: f.from_id, // Added airport ID
             to_id: f.to_id, // Added airport ID
             airline_id: f.airline_id, // Added airline ID
@@ -998,12 +1334,18 @@ export class AddFlightInventoryComponent implements OnInit {
                 cabin_baggage: f.cabinBaggage,
                 flight_number: f.flightNumber,
                 terminal: f.terminal,
-      dep_terminal: f.terminal || null,
-      arr_terminal: f.arrivalTerminal || null,
+                dep_terminal: f.terminal || null,
+                arr_terminal: f.arrivalTerminal || null,
                 pnr_number: f.pnrNumber || null,
                 type: 'Return',
-                from: typeof f.fromAirport === 'object' ? f.fromAirport.code : f.fromAirport,
-                to: typeof f.toAirport === 'object' ? f.toAirport.code : f.toAirport,
+                from:
+                  typeof f.fromAirport === 'object'
+                    ? f.fromAirport.code
+                    : f.fromAirport,
+                to:
+                  typeof f.toAirport === 'object'
+                    ? f.toAirport.code
+                    : f.toAirport,
                 from_id: f.from_id, // Added airport ID
                 to_id: f.to_id, // Added airport ID
                 airline_id: f.airline_id, // Added airline ID
@@ -1019,17 +1361,30 @@ export class AddFlightInventoryComponent implements OnInit {
 
       console.log('Submitting Payload:', payload);
 
-      this.flightService.createFlightInventory(payload).subscribe({
-        next: (res) => {
-          console.log('API Response:', res);
-          alert('Flight inventory created successfully!');
-          this.flightForm.reset();
-        },
-        error: (err) => {
-          console.error('API Error:', err);
-          alert('Something went wrong. Check console.');
-        }
-      });
+      this.dialog
+        .open(AddFlightInventoryPreviewDialogComponent, {
+          width: '900px',
+          data: payload
+        })
+        .afterClosed()
+        .subscribe((result) => {
+          if (result === 'confirm') {
+            this.submitting = true;
+            this.flightService.createFlightInventory(payload).subscribe({
+              next: (res) => {
+                this.submitting = false;
+                console.log('API Response:', res);
+                alert('Flight inventory created successfully!');
+                this.flightForm.reset();
+              },
+              error: (err) => {
+                this.submitting = false;
+                console.error('API Error:', err);
+                alert('Something went wrong. Check console.');
+              }
+            });
+          }
+        });
     } else {
       console.log('Form invalid');
       this.flightForm.markAllAsTouched();
@@ -1043,7 +1398,12 @@ export class AddFlightInventoryComponent implements OnInit {
 
   preventNegativeInput(event: KeyboardEvent) {
     // Prevent minus sign, plus sign, and 'e' (scientific notation)
-    if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E') {
+    if (
+      event.key === '-' ||
+      event.key === '+' ||
+      event.key === 'e' ||
+      event.key === 'E'
+    ) {
       event.preventDefault();
     }
   }

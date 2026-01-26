@@ -38,6 +38,39 @@
           />
         </mat-form-field>
 
+        <!-- New Password (optional) -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>New Password</mat-label>
+          <input
+            matInput
+            type="password"
+            formControlName="password"
+            placeholder="Enter new password (optional)…"
+          />
+          <mat-hint>
+            Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
+            (e.g. Trav&#64;1234)
+          </mat-hint>
+          <mat-error *ngIf="userForm.get('password')?.hasError('pattern')">
+            Password must be at least 8 characters and include uppercase, lowercase,
+            number and special character
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Confirm New Password (optional) -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Confirm New Password</mat-label>
+          <input
+            matInput
+            type="password"
+            formControlName="confirmPassword"
+            placeholder="Confirm new password…"
+          />
+          <mat-error *ngIf="userForm.hasError('mismatch')">
+            Passwords do not match
+          </mat-error>
+        </mat-form-field>
+
         <!-- Role -->
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Role</mat-label>

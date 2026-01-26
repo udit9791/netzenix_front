@@ -29,6 +29,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMoneyDialogComponent } from './add-money-dialog/add-money-dialog.component';
 import { WalletService } from '../../../services/wallet.service';
+import { TenantService } from '../../../services/tenant.service';
 
 @Component({
   selector: 'vex-toolbar',
@@ -61,6 +62,7 @@ export class ToolbarComponent implements OnInit {
   walletCreditBalance: number = 0.0;
   isWalletRoute: boolean = false;
   userPermissions: string[] = [];
+  logoUrl: string = 'assets/img/logo/logo.svg';
 
   navigateToWallet() {
     this.router.navigate(['/wallet']);
@@ -113,13 +115,19 @@ export class ToolbarComponent implements OnInit {
     private popoverService: VexPopoverService,
     private router: Router,
     private dialog: MatDialog,
-    private walletService: WalletService
+    private walletService: WalletService,
+    private tenantService: TenantService
   ) {}
 
   ngOnInit() {
     this.userPermissions = JSON.parse(
       localStorage.getItem('permissions') || '[]'
     );
+    this.tenantService.getAppInfo().subscribe((info) => {
+      if (info && info.logoUrl) {
+        this.logoUrl = info.logoUrl;
+      }
+    });
     // Fetch wallet balance from API
     this.loadWalletBalance();
 

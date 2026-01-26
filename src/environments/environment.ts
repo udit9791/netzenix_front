@@ -1,10 +1,11 @@
 // src/environments/environment.ts
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost/crm2/crm_new/public/api',
-  imgUrl: 'http://localhost/crm2/crm_new/public/',
+  apiUrl: 'http://localhost/deploye/public/api',
+  imgUrl: 'http://localhost/deploye/public/',
   //production
-  // apiUrl: 'https://bookings.travstock.com/v1/public/api',
-  // imgUrl: 'https://bookings.travstock.com/v1/public/',
+
+  //apiUrl: 'http://159.89.161.235/v1/api',
+  //imgUrl: 'http://159.89.161.235/v1/public/',
   googleMapsApiKey: 'AIzaSyCG5IEOSZwoY0LlVnS0EtOjV5cR7OjWevI'
 };

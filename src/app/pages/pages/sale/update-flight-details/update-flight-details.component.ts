@@ -15,11 +15,41 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatIconModule } from '@angular/material/icon';
+import {
+  MAT_DATE_FORMATS,
+  DateAdapter,
+  MAT_DATE_LOCALE,
+  NativeDateAdapter
+} from '@angular/material/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FlightInventoryService } from '../../../../services/flight-inventory.service';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { AirlineService } from '../../../../services/airline.service';
 import { Observable, map, startWith, tap } from 'rxjs';
+
+export class UpdateFlightDateAdapter extends NativeDateAdapter {
+  override format(date: Date, displayFormat: any): string {
+    if (displayFormat === 'input') {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}-${month}-${year}`;
+    }
+    return super.format(date, displayFormat);
+  }
+}
+
+export const UPDATE_FLIGHT_DATE_FORMATS = {
+  parse: {
+    dateInput: 'input'
+  },
+  display: {
+    dateInput: 'input',
+    monthYearLabel: 'MMM yyyy',
+    dateA11yLabel: 'input',
+    monthYearA11yLabel: 'MMMM yyyy'
+  }
+};
 
 @Component({
   selector: 'app-update-flight-details',
@@ -38,6 +68,14 @@ import { Observable, map, startWith, tap } from 'rxjs';
     MatRadioModule,
     MatIconModule,
     MatAutocompleteModule
+  ],
+  providers: [
+    {
+      provide: DateAdapter,
+      useClass: UpdateFlightDateAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
+    { provide: MAT_DATE_FORMATS, useValue: UPDATE_FLIGHT_DATE_FORMATS }
   ]
 })
 export class UpdateFlightDetailsComponent implements OnInit {
@@ -457,7 +495,8 @@ export class UpdateFlightDetailsComponent implements OnInit {
         departureDate: this.flightData.flight_date || '',
         pnr: this.flightData.pnr || '',
         pnrStatus: this.flightData.pnr_status || 'onTime',
-        pricePerSeat: this.flightData.sell_price ?? this.flightData.amount ?? null,
+        pricePerSeat:
+          this.flightData.sell_price ?? this.flightData.amount ?? null,
         infantPrice: this.flightData.infant_price ?? null,
         allowTbaUser: this.flightData.allow_tba_user || false,
         updateSameFlightDetails: true,
@@ -531,7 +570,8 @@ export class UpdateFlightDetailsComponent implements OnInit {
           }
 
           onwardFlight.patchValue({
-            departureDate: detail.flight_date || this.flightData.flight_date || '',
+            departureDate:
+              detail.flight_date || this.flightData.flight_date || '',
             arrivalDate: detail.arrival_date || detail.flight_date || '',
             flightNumber: detail.flight_number || '',
             pnrNumber: detail.pnr || this.flightData.pnr || '',
@@ -592,8 +632,7 @@ export class UpdateFlightDetailsComponent implements OnInit {
 
           returnFlight.patchValue({
             departureDate: detail.flight_date || '',
-            arrivalDate:
-              detail.arrival_date || detail.flight_date || '',
+            arrivalDate: detail.arrival_date || detail.flight_date || '',
             flightNumber: detail.flight_number || '',
             pnrNumber: detail.pnr || this.flightData.pnr || '',
             fromAirport: detail.from || '',
@@ -687,7 +726,7 @@ export class UpdateFlightDetailsComponent implements OnInit {
 
           // Format as YYYY-MM-DD
           const formattedDate = `${year}-${month}-${day}`;
-          
+
           // Return the actual formatted date without any hardcoded replacements
           return formattedDate;
         } catch (error) {
@@ -708,7 +747,10 @@ export class UpdateFlightDetailsComponent implements OnInit {
         details: FlightDetail[];
       } = {
         // Use the first onward flight's departure date for the main flight_date
-        flight_date: formData.onwardFlights.length > 0 ? formatDate(formData.onwardFlights[0].departureDate) : formatDate(formData.departureDate),
+        flight_date:
+          formData.onwardFlights.length > 0
+            ? formatDate(formData.onwardFlights[0].departureDate)
+            : formatDate(formData.departureDate),
         pnr: formData.pnr,
         pnr_status: formData.pnrStatus,
         sector: sector,
@@ -740,38 +782,12 @@ export class UpdateFlightDetailsComponent implements OnInit {
       }
 
       // Add onward flights to details
-      formData.onwardFlights.forEach((flight: FlightFormData, index: number) => {
-        // Use the flight's own departure date
-        const flightDate = formatDate(flight.departureDate);
-        payload.details.push({
-          type: 'Onward',
-          flight_number: flight.flightNumber,
-          from: flight.fromAirport,
-          to: flight.toAirport,
-          dep_time: flight.departureTime,
-          arr_time: flight.arrivalTime,
-          baggage_weight: flight.baggage,
-          cabin_baggage: flight.cabinBaggage,
-          terminal: flight.terminal,
-          airline_id: flight.airline_id,
-          airline: flight.airline,
-          pnr_number: flight.pnrNumber || null,
-          dep_terminal: flight.depTerminal || null,
-          arr_terminal: flight.arrTerminal || null,
-          flight_date: flightDate,
-          arrival_date: flight.arrivalDate
-            ? formatDate(flight.arrivalDate)
-            : null
-        });
-      });
-
-      // Add return flights to details if hasReturn is true
-    if (formData.hasReturn) {
-        formData.returnFlights.forEach((flight: FlightFormData, index: number) => {
+      formData.onwardFlights.forEach(
+        (flight: FlightFormData, index: number) => {
           // Use the flight's own departure date
           const flightDate = formatDate(flight.departureDate);
           payload.details.push({
-            type: 'Return',
+            type: 'Onward',
             flight_number: flight.flightNumber,
             from: flight.fromAirport,
             to: flight.toAirport,
@@ -790,8 +806,38 @@ export class UpdateFlightDetailsComponent implements OnInit {
               ? formatDate(flight.arrivalDate)
               : null
           });
-        });
-      }  
+        }
+      );
+
+      // Add return flights to details if hasReturn is true
+      if (formData.hasReturn) {
+        formData.returnFlights.forEach(
+          (flight: FlightFormData, index: number) => {
+            // Use the flight's own departure date
+            const flightDate = formatDate(flight.departureDate);
+            payload.details.push({
+              type: 'Return',
+              flight_number: flight.flightNumber,
+              from: flight.fromAirport,
+              to: flight.toAirport,
+              dep_time: flight.departureTime,
+              arr_time: flight.arrivalTime,
+              baggage_weight: flight.baggage,
+              cabin_baggage: flight.cabinBaggage,
+              terminal: flight.terminal,
+              airline_id: flight.airline_id,
+              airline: flight.airline,
+              pnr_number: flight.pnrNumber || null,
+              dep_terminal: flight.depTerminal || null,
+              arr_terminal: flight.arrTerminal || null,
+              flight_date: flightDate,
+              arrival_date: flight.arrivalDate
+                ? formatDate(flight.arrivalDate)
+                : null
+            });
+          }
+        );
+      }
 
       // Call API to update flight inventory
       this.flightService

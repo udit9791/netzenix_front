@@ -21,12 +21,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatStepper } from '@angular/material/stepper';
 import { MatRadioModule } from '@angular/material/radio';
 import { AuthService } from '../../../../services/auth.service';
 import { UserService } from '../../../../services/user.service';
+import { TenantService } from '../../../../services/tenant.service';
 
 @Component({
   selector: 'vex-register',
@@ -45,6 +47,7 @@ import { UserService } from '../../../../services/user.service';
     MatIconModule,
     MatCheckboxModule,
     MatSelectModule,
+    MatAutocompleteModule,
     RouterLink,
     MatSnackBarModule,
     MatDividerModule,
@@ -117,8 +120,16 @@ export class RegisterComponent implements AfterViewInit {
   otpSent = false;
   isSendingOtp = false;
   isVerifyingOtp = false;
+  otpCooldown = 0;
+  private otpTimerId: any = null;
   countries: any[] = [];
   states: any[] = [];
+  cities: any[] = [];
+  filteredCountries: any[] = [];
+  filteredStates: any[] = [];
+  filteredCities: any[] = [];
+  selectedCountryName = '';
+  selectedStateName = '';
   isIndia = false;
   panVerified = false;
   isVerifyingPan = false;
@@ -131,6 +142,21 @@ export class RegisterComponent implements AfterViewInit {
   isVerifyingAadhaar = false;
   rid: string | null = null;
   minAllowedStepIndex = 0;
+  configPanVerify = true;
+  configGstVerify = true;
+  configBankVerify = true;
+  configAadhaarVerify = true;
+  logoUrl: string = 'assets/img/logo/logo.svg';
+  businessTypeOptions: string[] = [
+    'Solo Propriter',
+    'Partnership',
+    'Private LTD',
+    'Public LTD',
+    'LLP'
+  ];
+  natureOfBusinessOptions: string[] = ['Travel Agency', 'Corporate', 'Other'];
+  addressDocumentOptions: string[] = ['Lease Agreement', 'Utility Bill'];
+  referredByOptions: string[] = ['Agent', 'Employee'];
   @ViewChild(MatStepper) stepper!: MatStepper;
 
   constructor(
@@ -140,13 +166,71 @@ export class RegisterComponent implements AfterViewInit {
     private cd: ChangeDetectorRef,
     private snackbar: MatSnackBar,
     private auth: AuthService,
-    private user: UserService
+    private user: UserService,
+    private tenantService: TenantService
   ) {}
 
   ngOnInit(): void {
+    this.tenantService.getAppInfo().subscribe((info) => {
+      if (info && info.logoUrl) {
+        this.logoUrl = info.logoUrl;
+        this.cd.detectChanges();
+      }
+    });
+    this.auth.getRegisterDetail().subscribe({
+      next: (res) => {
+        const data = res || {};
+        this.configPanVerify = data.pan_verify === true;
+        this.configGstVerify = data.gst_verify === true;
+        this.configBankVerify = data.bank_verify === true;
+        this.configAadhaarVerify = data.aadhaar_verify === true;
+        const bt =
+          data.business_type || data.businessTypes || data.businessType;
+        if (Array.isArray(bt) && bt.length) {
+          this.businessTypeOptions = bt;
+        }
+        const nb =
+          data.nature_of_business ||
+          data.natureOfBusiness ||
+          data.nature_of_businesses;
+        if (Array.isArray(nb) && nb.length) {
+          this.natureOfBusinessOptions = nb;
+        }
+        const ad =
+          data.address_document ||
+          data.address_documents ||
+          data.addressDocuments;
+        if (Array.isArray(ad) && ad.length) {
+          this.addressDocumentOptions = ad;
+        }
+        const rb =
+          data.referred_by ||
+          data.referredBy ||
+          data.referred ||
+          data['Referred B'];
+        if (Array.isArray(rb) && rb.length) {
+          this.referredByOptions = rb;
+        }
+        if (!this.configPanVerify) {
+          this.panVerified = true;
+        }
+        if (!this.configBankVerify) {
+          this.bankVerified = true;
+        }
+      },
+      error: () => {}
+    });
     this.user.getPublicCountries().subscribe({
       next: (res) => {
         this.countries = Array.isArray(res) ? res : [];
+        this.filteredCountries = this.countries.slice();
+        const currentCountryId = this.form.get('address.countryId')?.value;
+        if (currentCountryId !== null && currentCountryId !== undefined) {
+          const currentCountry = this.countries.find(
+            (c: any) => Number(c.id) === Number(currentCountryId)
+          );
+          this.selectedCountryName = currentCountry?.name || '';
+        }
       },
       error: () => {
         this.countries = [];
@@ -201,6 +285,7 @@ export class RegisterComponent implements AfterViewInit {
       const selected = this.countries.find(
         (c: any) => Number(c.id) === Number(id)
       );
+      this.selectedCountryName = selected?.name || '';
       this.isIndia =
         !!selected &&
         (selected.code === 'IN' ||
@@ -211,6 +296,7 @@ export class RegisterComponent implements AfterViewInit {
         this.user.getStatesByCountryPublic(Number(id)).subscribe({
           next: (res) => {
             this.states = Array.isArray(res) ? res : [];
+            this.filteredStates = this.states.slice();
           }
         });
         stateCtrl?.clearValidators();
@@ -221,15 +307,53 @@ export class RegisterComponent implements AfterViewInit {
         stateIdCtrl?.updateValueAndValidity();
       } else {
         this.states = [];
+        this.filteredStates = [];
         stateIdCtrl?.clearValidators();
         stateIdCtrl?.setValue(null);
         stateIdCtrl?.updateValueAndValidity();
         stateCtrl?.setValidators([Validators.required]);
         stateCtrl?.updateValueAndValidity();
+        this.selectedStateName = '';
+        this.cities = [];
+        this.filteredCities = [];
+        this.form.get('address.city')?.setValue('');
+      }
+    });
+
+    this.form.get('address.stateId')?.valueChanges.subscribe((stateId) => {
+      const selectedState = this.states.find(
+        (s: any) => Number(s.id) === Number(stateId)
+      );
+      this.selectedStateName = selectedState?.name || '';
+      if (stateId) {
+        this.user.getCitiesByStatePublic(Number(stateId)).subscribe({
+          next: (res) => {
+            const raw = res as any;
+            this.cities = Array.isArray(raw)
+              ? raw
+              : raw && Array.isArray(raw.data)
+                ? raw.data
+                : [];
+            this.filteredCities = this.cities.slice();
+          },
+          error: () => {
+            this.cities = [];
+            this.filteredCities = [];
+          }
+        });
+      } else {
+        this.cities = [];
+        this.filteredCities = [];
+        this.form.get('address.city')?.setValue('');
       }
     });
 
     this.form.get('business.panNumber')?.valueChanges.subscribe((val) => {
+      if (!this.configPanVerify) {
+        this.panVerified = true;
+        this.isVerifyingPan = false;
+        return;
+      }
       const raw = (val || '').toString();
       const sanitized = raw.replace(/\s+/g, '').toUpperCase();
       if (sanitized !== raw) {
@@ -299,6 +423,53 @@ export class RegisterComponent implements AfterViewInit {
       }
       this.gstVerified = false;
       this.isVerifyingGst = false;
+    });
+  }
+
+  onCountryInput(value: string) {
+    const val = (value || '').toString().toLowerCase();
+    this.selectedCountryName = value || '';
+    this.filteredCountries = this.countries.filter((c: any) => {
+      const name = (c.name || '').toLowerCase();
+      const code = (c.code || '').toLowerCase();
+      return name.includes(val) || code.includes(val);
+    });
+  }
+
+  onCountrySelected(name: string) {
+    const val = (name || '').toString().toLowerCase();
+    const selected = this.countries.find(
+      (c: any) => (c.name || '').toLowerCase() === val
+    );
+    const countryId = selected ? selected.id : null;
+    this.selectedCountryName = selected?.name || name || '';
+    this.form.get('address.countryId')?.setValue(countryId);
+  }
+
+  onStateInput(value: string) {
+    const val = (value || '').toString().toLowerCase();
+    this.selectedStateName = value || '';
+    this.filteredStates = this.states.filter((s: any) => {
+      const name = (s.name || '').toLowerCase();
+      return name.includes(val);
+    });
+  }
+
+  onStateSelected(name: string) {
+    const val = (name || '').toString().toLowerCase();
+    const selected = this.states.find(
+      (s: any) => (s.name || '').toLowerCase() === val
+    );
+    const stateId = selected ? selected.id : null;
+    this.selectedStateName = selected?.name || name || '';
+    this.form.get('address.stateId')?.setValue(stateId);
+  }
+
+  onCityInput(value: string) {
+    const val = (value || '').toString().toLowerCase();
+    this.filteredCities = this.cities.filter((c: any) => {
+      const name = (c.name || '').toLowerCase();
+      return name.includes(val);
     });
   }
 
@@ -379,9 +550,9 @@ export class RegisterComponent implements AfterViewInit {
     }
     const hasGst = !!b.get('hasGst')?.value;
     if (
-      !this.panVerified ||
-      (hasGst && !this.gstVerified) ||
-      !this.bankVerified
+      (this.configPanVerify && !this.panVerified) ||
+      (this.configGstVerify && hasGst && !this.gstVerified) ||
+      (this.configBankVerify && !this.bankVerified)
     ) {
       this.snackbar.open(
         'Please complete all verifications before registering.',
@@ -519,9 +690,9 @@ export class RegisterComponent implements AfterViewInit {
           localStorage.removeItem('isVerifyEmail');
         } catch {}
         this.snackbar.open(
-          'Registration submitted. Please wait for activation.',
+          'Thank you for the registration. We will review your documents and get back to you.',
           'OK',
-          { duration: 3000 }
+          { duration: 5000 }
         );
         this.router.navigate(['/login']);
       },
@@ -534,6 +705,9 @@ export class RegisterComponent implements AfterViewInit {
   }
 
   sendOtp() {
+    if (this.otpCooldown > 0) {
+      return;
+    }
     const emailCtrl = this.form.get('signatory.email');
     const email = emailCtrl?.value;
     if (!emailCtrl?.valid) {
@@ -547,6 +721,7 @@ export class RegisterComponent implements AfterViewInit {
       next: () => {
         this.otpSent = true;
         this.snackbar.open('OTP sent to email.', 'OK', { duration: 3000 });
+        this.startOtpCooldown();
       },
       error: (err) => {
         this.snackbar.open(err?.error?.message || 'Failed to send OTP', 'OK', {
@@ -557,6 +732,22 @@ export class RegisterComponent implements AfterViewInit {
         this.isSendingOtp = false;
       }
     });
+  }
+
+  private startOtpCooldown() {
+    if (this.otpTimerId) {
+      clearInterval(this.otpTimerId);
+    }
+    this.otpCooldown = 60;
+    this.otpTimerId = setInterval(() => {
+      if (this.otpCooldown > 0) {
+        this.otpCooldown--;
+      }
+      if (this.otpCooldown <= 0 && this.otpTimerId) {
+        clearInterval(this.otpTimerId);
+        this.otpTimerId = null;
+      }
+    }, 1000);
   }
 
   verifyOtp() {
@@ -615,7 +806,7 @@ export class RegisterComponent implements AfterViewInit {
     const hasGst = !!b.get('hasGst')?.value;
     const gstin = (b.get('gstNumber')?.value || '').toString().trim();
     const agencyName = (b.get('agencyName')?.value || '').toString().trim();
-    if (!hasGst) {
+    if (!hasGst || !this.configGstVerify) {
       this.gstVerified = false;
       return;
     }
@@ -646,9 +837,11 @@ export class RegisterComponent implements AfterViewInit {
   }
 
   verifyBank() {
-    this.isVerifyingBank = true;
-    this.bankVerified = true;
-    return;
+    if (!this.configBankVerify) {
+      this.bankVerified = true;
+      this.isVerifyingBank = false;
+      return;
+    }
 
     const bk = this.form.get('bank') as UntypedFormGroup;
     const payload = {
@@ -687,9 +880,11 @@ export class RegisterComponent implements AfterViewInit {
   }
 
   verifyAadhaar() {
-    this.isVerifyingAadhaar = true;
-    this.aadhaarVerified = true;
-    return;
+    if (!this.configAadhaarVerify) {
+      this.aadhaarVerified = false;
+      this.isVerifyingAadhaar = false;
+      return;
+    }
     const a = this.form.get('address') as UntypedFormGroup;
     const aadhaar = (a.get('aadhaarNumber')?.value || '').toString();
     if (!/^\d{12}$/.test(aadhaar)) {
@@ -840,7 +1035,7 @@ export class RegisterComponent implements AfterViewInit {
 
   saveBusinessStep(stepper: MatStepper) {
     const b = this.form.get('business') as UntypedFormGroup;
-    if (b.invalid || !this.panVerified) {
+    if (b.invalid || (this.configPanVerify && !this.panVerified)) {
       this.snackbar.open('Complete business details and verify PAN.', 'OK', {
         duration: 3000
       });
@@ -893,7 +1088,7 @@ export class RegisterComponent implements AfterViewInit {
     const uploadGstCertificate = b.get('uploadGstCertificate')?.value;
     if (uploadGstCertificate)
       fd.append('uploadGstCertificate', uploadGstCertificate);
-    if (hasGst && !this.gstVerified) {
+    if (this.configGstVerify && hasGst && !this.gstVerified) {
       this.snackbar.open('Verify GST before proceeding.', 'OK', {
         duration: 3000
       });
@@ -915,7 +1110,7 @@ export class RegisterComponent implements AfterViewInit {
 
   saveBankStep(stepper: MatStepper) {
     const bk = this.form.get('bank') as UntypedFormGroup;
-    if (bk.invalid || !this.bankVerified) {
+    if (bk.invalid || (this.configBankVerify && !this.bankVerified)) {
       this.snackbar.open('Complete bank details and verify account.', 'OK', {
         duration: 3000
       });
@@ -1025,9 +1220,9 @@ export class RegisterComponent implements AfterViewInit {
     }
     const hasGst = !!b.get('hasGst')?.value;
     if (
-      !this.panVerified ||
-      (hasGst && !this.gstVerified) ||
-      !this.bankVerified
+      (this.configPanVerify && !this.panVerified) ||
+      (this.configGstVerify && hasGst && !this.gstVerified) ||
+      (this.configBankVerify && !this.bankVerified)
     ) {
       this.snackbar.open(
         'Please complete all verifications before registering.',

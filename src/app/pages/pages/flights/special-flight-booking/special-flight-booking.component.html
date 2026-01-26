@@ -167,7 +167,7 @@
         <p>By proceeding to make payment, you agree to the <a href="#">terms and conditions</a>.</p>
         <div class="button-container" style="display: flex; gap: 10px; margin-top: 15px;">
           <button mat-raised-button color="primary" class="payment-button" [disabled]="!isBookingAllowed()" (click)="openVerificationModal()">Proceed to payment</button>
-          <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external'" mat-raised-button color="accent" class="hold-button" (click)="holdBooking()">Hold Booking</button>
+          <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" (click)="holdBooking()">Hold Booking</button>
         </div>
       </div>
     </div>
@@ -207,7 +207,7 @@
           
           <div class="modal-actions" style="display: flex; gap: 10px; justify-content: center;">
             <button mat-raised-button color="primary" class="proceed-button" [disabled]="isLoading || !isBookingAllowed()" (click)="proceedToPayment()">PROCEED TO PAYMENT</button>
-            <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external'" mat-raised-button color="accent" class="hold-button" [disabled]="isLoading" (click)="holdBooking()">HOLD BOOKING</button>
+            <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" [disabled]="isLoading" (click)="holdBooking()">HOLD BOOKING</button>
           </div>
         </div>
       </div>

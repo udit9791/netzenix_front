@@ -406,6 +406,13 @@ export const appRoutes: VexRoutes = [
         data: { permission: 'view_amenities' },
         children: [
           {
+            path: 'tenant',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/tenant/tenant-list/tenant-list.component'
+              ).then((m) => m.TenantListComponent)
+          },
+          {
             path: 'airline',
             loadChildren: () =>
               import('./pages/pages/masters/airline/airline.module').then(

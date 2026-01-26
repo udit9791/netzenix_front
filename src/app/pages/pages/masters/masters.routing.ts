@@ -6,6 +6,10 @@ export const mastersRoutes: Routes = [
     loadChildren: () => import('./airline/airline.module').then(m => m.AirlineModule)
   },
   {
+    path: 'tenant',
+    loadComponent: () => import('./tenant/tenant-list/tenant-list.component').then(m => m.TenantListComponent)
+  },
+  {
     path: 'airport',
     loadComponent: () => import('./airport/airport-list/airport-list.component').then(m => m.AirportListComponent)
   }

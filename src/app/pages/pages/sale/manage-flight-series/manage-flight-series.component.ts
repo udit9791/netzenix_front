@@ -162,6 +162,8 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
       to_date: this.filterForm.get('toDate')?.value
         ? this.formatDate(this.filterForm.get('toDate')?.value)
         : '',
+      date_filter_type:
+        this.filterForm.get('dateFilterType')?.value || 'travel',
       airline_code: this.filterForm.get('airlineCode')?.value || '',
       min_seats: this.filterForm.get('minSeats')?.value || '',
       pnr: this.filterForm.get('pnr')?.value || '',
@@ -244,6 +246,7 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
       sector: [''],
       fromDate: [today], // ✅ default today
       toDate: [next30Days], // ✅ default 30 days later
+      dateFilterType: ['travel'], // 'created' or 'travel'
       airlineCode: [''],
       minSeats: [''],
       pnr: [''],
@@ -468,6 +471,7 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
       sector: this.filterForm.value.sector || '',
       from_date: formatDate(this.filterForm.value.fromDate),
       to_date: formatDate(this.filterForm.value.toDate),
+      date_filter_type: this.filterForm.value.dateFilterType || 'travel',
       min_seats: this.filterForm.value.minSeats || '',
       airline_code: this.filterForm.value.airlineCode || '', // ✅ backend expects airline_code
       pnr: this.filterForm.value.pnr || '',

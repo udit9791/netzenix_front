@@ -1,0 +1,159 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <div class="flex items-center justify-between px-4 py-3">
+      <vex-breadcrumbs [crumbs]="['Masters', 'Tenants']"></vex-breadcrumbs>
+      <button mat-flat-button color="primary" (click)="openAddDialog()">
+        <mat-icon>add</mat-icon>
+        <span class="ml-2">Add Tenant</span>
+      </button>
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="p-4 space-y-4">
+      <div class="flex flex-wrap gap-4 items-center">
+        <mat-form-field appearance="outline">
+          <mat-label>Search by name or domain</mat-label>
+          <input
+            matInput
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="applyFilter()"
+            placeholder="Search tenants"
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="relative">
+        <table
+          mat-table
+          [dataSource]="dataSource"
+          matSort
+          (matSortChange)="onSortChange()"
+          class="w-full"
+        >
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+              Name
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.name }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="slug">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+              Slug
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.slug || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="domain">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+              Domain
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.domain }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="is_active">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let row">
+              <mat-slide-toggle
+                [checked]="!!row.is_active"
+                (change)="toggleStatus(row)"
+              >
+              </mat-slide-toggle>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="openEditDialog(row)"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: displayedColumns"
+          ></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td
+              class="mat-cell py-4 text-center"
+              [attr.colspan]="displayedColumns.length"
+            >
+              <div
+                *ngIf="isLoading"
+                class="flex justify-center items-center p-4"
+              >
+                <mat-progress-spinner diameter="40"></mat-progress-spinner>
+              </div>
+              <div *ngIf="!isLoading">No tenants found</div>
+            </td>
+          </tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalItems"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="[5, 10, 25, 50]"
+          (page)="onPageChange($event)"
+        >
+        </mat-paginator>
+      </div>
+
+      <ng-template #tenantFormDialog>
+        <h2 mat-dialog-title>
+          {{ dialogMode === 'add' ? 'Add Tenant' : 'Edit Tenant' }}
+        </h2>
+        <mat-dialog-content>
+          <form [formGroup]="tenantForm" class="space-y-4">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Name</mat-label>
+              <input matInput formControlName="name" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Slug (optional)</mat-label>
+              <input matInput formControlName="slug" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Domain</mat-label>
+              <input matInput formControlName="domain" />
+            </mat-form-field>
+
+            <div class="flex items-center">
+              <label class="mr-3 text-sm">Logo</label>
+              <input type="file" (change)="onLogoChange($event)" />
+            </div>
+            <div *ngIf="tenantForm.value.logo" class="text-xs text-secondary">
+              {{ tenantForm.value.logo?.name }}
+            </div>
+
+            <mat-slide-toggle formControlName="is_active">
+              Active
+            </mat-slide-toggle>
+          </form>
+        </mat-dialog-content>
+        <mat-dialog-actions align="end">
+          <button mat-button mat-dialog-close>Cancel</button>
+          <button mat-flat-button color="primary" (click)="saveTenant()">
+            Save
+          </button>
+        </mat-dialog-actions>
+      </ng-template>
+    </div>
+  </vex-page-layout-content>
+</vex-page-layout>

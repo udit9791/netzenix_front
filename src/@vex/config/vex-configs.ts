@@ -8,6 +8,30 @@ import {
 } from './vex-config.interface';
 import deepClone from '@vex/utils/deep-clone';
 
+function getInitialSidenavLogo(): string {
+  if (typeof window === 'undefined') {
+    return 'assets/img/logo/logo.svg';
+  }
+  try {
+    const stored = window.localStorage.getItem('tenant_logo_url');
+    return stored || 'assets/img/logo/logo.svg';
+  } catch {
+    return 'assets/img/logo/logo.svg';
+  }
+}
+
+function getInitialSidenavTitle(): string {
+  if (typeof window === 'undefined') {
+    return 'Travstock';
+  }
+  try {
+    const stored = window.localStorage.getItem('tenant_app_name');
+    return stored || 'Travstock';
+  } catch {
+    return 'Travstock';
+  }
+}
+
 const baseConfig: VexConfig = {
   id: VexConfigName.apollo,
   name: 'Ikaros',
@@ -31,8 +55,8 @@ const baseConfig: VexConfig = {
   layout: 'horizontal',
   boxed: false,
   sidenav: {
-    title: 'VEX',
-    imageUrl: 'assets/img/logo/logo.svg',
+    title: getInitialSidenavTitle(),
+    imageUrl: getInitialSidenavLogo(),
     showCollapsePin: true,
     user: {
       visible: true

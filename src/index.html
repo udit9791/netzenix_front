@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Vex - Angular 17+ Material Design Admin Template</title>
+  <title>Travstock</title>
   <base href="/" />
 
   <meta content="width=device-width, initial-scale=1" name="viewport" />
@@ -63,7 +63,59 @@
     src="assets/img/logo/logo.svg" />
   <div class="vex-splash-screen-loader"></div>
 </div>
+<script>
+  (function () {
+    var splashImg = document.querySelector('#vex-splash-screen img');
+    if (!splashImg) return;
 
+    var apiBase = '/deploye/public/api';
+    var imgBase = '/deploye/public/';
+    var storageKey = 'tenant_logo_url';
+    var titleKey = 'tenant_app_name';
+
+    function setLogo(url) {
+      if (url) {
+        splashImg.src = url;
+      }
+    }
+
+    try {
+      var stored = null;
+      try {
+        stored = window.localStorage.getItem(storageKey);
+      } catch (e) {}
+
+      if (stored) {
+        setLogo(stored);
+        return;
+      }
+
+      fetch(apiBase + '/tenant/app-info', {
+        headers: {
+          'X-Tenant-Domain': window.location.host
+        }
+      })
+        .then(function (res) {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(function (resp) {
+          if (!resp || !resp.data || !resp.data.logo) return;
+          var data = resp.data || {};
+          var logoPath = data.logo ? String(data.logo).replace(/^\/+/, '') : '';
+          var url = imgBase + logoPath;
+          setLogo(url);
+          try {
+            window.localStorage.setItem(storageKey, url);
+            if (data.app_name) {
+              window.localStorage.setItem(titleKey, String(data.app_name));
+            }
+          } catch (e) {}
+        })
+        .catch(function () {});
+    } catch (e) {}
+  })();
+</script>
 <vex-root></vex-root>
 </body>
 </html>

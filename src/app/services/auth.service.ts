@@ -81,6 +81,10 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/verify-aadhaar`, { aadhaar });
   }
 
+  getRegisterDetail(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/register-detail`);
+  }
+
   registerStepSignatory(data: {
     uid?: string;
     type: string;
