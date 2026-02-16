@@ -311,19 +311,38 @@
             <span>Base Price</span>
             <span>₹ {{ (charges?.total_base_fare ?? params?.price_total) | number:'1.2-2' }}</span>
           </div>
-          <div class="flex justify-between text-sm py-1" *ngIf="charges">
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="(charges?.markup ?? 0) > 0"
+          >
+            <span>Markup</span>
+            <span>₹ {{ charges?.markup | number:'1.2-2' }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="charges && charges.ct !== 'included'"
+          >
             <span>Service Fee</span>
             <span>₹ {{ charges?.service_fee | number:'1.2-2' }}</span>
           </div>
-          <div class="flex justify-between text-sm py-1" *ngIf="charges?.is_same_state">
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="charges?.is_same_state && charges?.ct !== 'included'"
+          >
             <span>CGST</span>
             <span>₹ {{ charges?.cgst | number:'1.2-2' }}</span>
           </div>
-          <div class="flex justify-between text-sm py-1" *ngIf="charges?.is_same_state">
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="charges?.is_same_state && charges?.ct !== 'included'"
+          >
             <span>SGST</span>
             <span>₹ {{ charges?.sgst | number:'1.2-2' }}</span>
           </div>
-          <div class="flex justify-between text-sm py-1" *ngIf="charges && !charges.is_same_state">
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="charges && !charges.is_same_state && charges.ct !== 'included'"
+          >
             <span>IGST</span>
             <span>₹ {{ charges?.igst | number:'1.2-2' }}</span>
           </div>

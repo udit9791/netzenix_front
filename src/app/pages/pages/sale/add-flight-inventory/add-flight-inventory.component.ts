@@ -845,22 +845,15 @@ export class AddFlightInventoryComponent implements OnInit {
     };
   }
 
-  // Validator to ensure hold booking limit doesn't exceed hold booking cut-off days
   maxHoldBookingLimitValidator() {
     return (control: AbstractControl): { [key: string]: any } | null => {
-      if (!control.value) {
-        return null;
+      const hours = Number(control.value || 0);
+      const days = Number(
+        this.flightForm.get('holdBookingCutOffDays')?.value || 0
+      );
+      if (!isNaN(hours) && !isNaN(days) && days > 0 && hours > days * 24) {
+        return { limitExceedsCutOff: true };
       }
-
-      const limit = control.value;
-      const cutOffDays = this.flightForm.get('holdBookingCutOffDays')?.value;
-
-      if (cutOffDays && limit > cutOffDays) {
-        return {
-          limitExceedsCutOff: { value: control.value, max: cutOffDays }
-        };
-      }
-
       return null;
     };
   }

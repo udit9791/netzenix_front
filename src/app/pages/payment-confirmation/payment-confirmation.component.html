@@ -99,6 +99,14 @@
             <span class="font-semibold text-green-700">-₹ {{ orderDetails.commission || 0 }}</span>
           </div>
 
+          <div
+            class="flex justify-between py-1 border-b border-gray-200"
+            *ngIf="orderDetails.markup && orderDetails.markup > 0"
+          >
+            <span class="text-gray-700">Markup</span>
+            <span class="font-semibold">₹ {{ orderDetails.markup }}</span>
+          </div>
+
           <div class="flex justify-between py-1 border-b border-gray-200">
             <span class="text-gray-700">TDS on Commission</span>
             <span class="font-semibold">₹ {{ orderDetails.tds_on_commission || 0 }}</span>

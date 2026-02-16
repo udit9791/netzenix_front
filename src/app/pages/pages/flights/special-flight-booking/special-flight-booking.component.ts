@@ -158,6 +158,7 @@ export class SpecialFlightBookingComponent implements OnInit {
     // Try to get data from localStorage first
     const localData = localStorage.getItem('specialBookingData');
 
+    console.log('------------ storage data -----------');
     console.log(localData);
     let flightDetails = null;
     let fareDetails = null;
@@ -191,6 +192,8 @@ export class SpecialFlightBookingComponent implements OnInit {
         fareId = bookingData.fareId;
         type =
           bookingData.type === 'external_flight' ? 'external_flight' : 'flight';
+        console.log('Special booking type (raw):', bookingData.type);
+        console.log('Special booking type (normalized):', type);
         this.bookingType = type;
         if (this.bookingType === 'external_flight') {
           const fd: any = fareDetails || {};
@@ -952,6 +955,12 @@ export class SpecialFlightBookingComponent implements OnInit {
       const bookingData = localData ? JSON.parse(localData) : {};
       type =
         bookingData.type === 'external_flight' ? 'external_flight' : 'flight';
+      console.log(
+        'Fare calculation booking type (raw):',
+        bookingData.type,
+        'normalized:',
+        type
+      );
       farePrice =
         typeof bookingData.farePrice === 'number'
           ? bookingData.farePrice

@@ -117,9 +117,11 @@ export class HotelService {
     adults?: number;
     children?: number;
     childAges?: number[];
+    extraBedFlags?: number[];
     petFriendly?: boolean;
     inventory_id?: number;
     type?: 'normal' | 'confirm';
+    searchtype?: 'city' | 'hotel';
   }): Observable<any> {
     const p: any = {
       q: params.q || '',
@@ -132,12 +134,18 @@ export class HotelService {
     if (params.childAges && params.childAges.length) {
       p.childAges = params.childAges.join(',');
     }
+    if (params.extraBedFlags && params.extraBedFlags.length) {
+      p.extraBedFlags = params.extraBedFlags.join(',');
+    }
     if (params.petFriendly) p.petFriendly = '1';
     if (params.inventory_id !== undefined && params.inventory_id !== null) {
       p.inventory_id = String(params.inventory_id);
     }
     if (params.type) {
       p.type = params.type;
+    }
+    if (params.searchtype) {
+      p.searchtype = params.searchtype;
     }
     return this.http.get(`${this.apiUrl}/hotels/search-availability`, {
       params: p
@@ -329,6 +337,13 @@ export class HotelService {
   updateInventoryPricing(id: number, payload: any): Observable<any> {
     return this.http.patch(
       `${this.apiUrl}/hotel-inventories/${id}/pricing`,
+      payload
+    );
+  }
+
+  getInventoryDetails(id: number, payload: any): Observable<any> {
+    return this.http.patch(
+      `${this.apiUrl}/hotel-inventories/${id}/edit-details`,
       payload
     );
   }

@@ -99,7 +99,10 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Actions</th>
         <td mat-cell *matCellDef="let row">
-          <button *ngIf="currentType === 'normal'" mat-stroked-button color="primary" (click)="openImportDates(importDatesTpl, row)" matTooltip="Import dates">
+          <button mat-stroked-button color="primary" (click)="onEdit(row)" matTooltip="Edit inventory">
+            <mat-icon class="mr-1">edit</mat-icon>
+          </button>
+          <button *ngIf="currentType === 'normal'" mat-stroked-button color="primary" class="ml-2" (click)="openImportDates(importDatesTpl, row)" matTooltip="Import dates">
             <mat-icon class="mr-1">file_upload</mat-icon>
             Import Dates
           </button>

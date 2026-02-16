@@ -14,11 +14,10 @@
         <mat-label>{{ formLabels.from }}</mat-label>
         <input matInput formControlName="from" [matAutocomplete]="fromAuto" placeholder="Type to search airports..." />
         <mat-autocomplete #fromAuto="matAutocomplete" [displayWith]="displayAirport">
-          <mat-option *ngFor="let airport of filteredFrom$ | async" [value]="airport">
+          <mat-option *ngFor="let airport of filteredFrom$ | async" [value]="airport.code">
             <div class="airport-option">
               <span class="airport-code">{{ airport.code }}</span>
-              <span class="airport-name">{{ airport.name }}</span>
-              <span class="airport-city">({{ airport.city }}, {{ airport.country_name || airport.country }})</span>
+              <span class="airport-name" *ngIf="airport.city">({{ airport.city }})</span>
             </div>
           </mat-option>
         </mat-autocomplete>
@@ -30,12 +29,14 @@
       <mat-form-field appearance="outline" class="field to-field to-field-large">
         <mat-label>{{ formLabels.to }}</mat-label>
         <input matInput formControlName="to" [matAutocomplete]="toAuto" placeholder="Type to search airports..." />
-        <mat-autocomplete #toAuto="matAutocomplete" [displayWith]="displayAirport">
-          <mat-option *ngFor="let airport of filteredTo$ | async" [value]="airport">
+        <mat-autocomplete
+          #toAuto="matAutocomplete"
+          [displayWith]="displayAirport"
+          (optionSelected)="onToSelected($event)">
+          <mat-option *ngFor="let airport of filteredTo$ | async" [value]="airport.code">
             <div class="airport-option">
               <span class="airport-code">{{ airport.code }}</span>
-              <span class="airport-name">{{ airport.name }}</span>
-              <span class="airport-city">({{ airport.city }}, {{ airport.country_name || airport.country }})</span>
+              <span class="airport-name" *ngIf="airport.city">({{ airport.city }})</span>
             </div>
           </mat-option>
         </mat-autocomplete>
@@ -181,12 +182,12 @@
         <div class="results-count">
           {{ totalFlights }} flights found
         </div>
-        <div class="sort-options">
+        <!-- <div class="sort-options">
           <span class="sort-label">Sort by:</span>
           <span class="sort-option active">Price <mat-icon>arrow_downward</mat-icon></span>
           <span class="sort-option">Duration</span>
           <span class="sort-option">Departure</span>
-        </div>
+        </div> -->
       </div>
 
       <div *ngIf="loading" class="loading-container">

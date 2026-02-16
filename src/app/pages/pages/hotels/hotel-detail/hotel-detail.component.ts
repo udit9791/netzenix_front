@@ -249,7 +249,39 @@ export class HotelDetailComponent {
     this.hotelService.getHotelInventoryById(invId).subscribe({
       next: (res: any) => {
         this.inventory = res?.data?.inventory || res?.inventory || res || null;
-        this.photoUrl = '/storage/hotel/default.jpg';
+        const inv = this.inventory || {};
+        this.photoUrl =
+          inv?.photo_url || this.photoUrl || '/storage/hotel/default.jpg';
+        if (Array.isArray(inv?.hotel_amenities)) {
+          this.hotelAmenities = inv.hotel_amenities;
+        }
+
+        console.log(inv);
+        if (Array.isArray(inv?.hotel_photos)) {
+          console.log('inventory hotel_photos', inv.hotel_photos);
+          this.hotelPhotos = inv.hotel_photos;
+          const allHotelPhotoUrls: string[] = [];
+          let primaryHotelPhotoUrl: string | null = null;
+          this.hotelPhotos.forEach((cat: any) => {
+            const photos = Array.isArray(cat?.photos) ? cat.photos : [];
+            photos.forEach((p: any) => {
+              if (p && p.url) {
+                allHotelPhotoUrls.push(p.url);
+                if (!primaryHotelPhotoUrl && p.is_primary) {
+                  primaryHotelPhotoUrl = p.url;
+                }
+              }
+            });
+          });
+          if (!primaryHotelPhotoUrl && allHotelPhotoUrls.length) {
+            primaryHotelPhotoUrl = allHotelPhotoUrls[0];
+          }
+          this.primaryHotelPhotoUrl = primaryHotelPhotoUrl;
+          this.hotelPhotoCount = allHotelPhotoUrls.length;
+          if (primaryHotelPhotoUrl) {
+            this.photoUrl = primaryHotelPhotoUrl;
+          }
+        }
         const hotelName =
           this.inventory?.hotel_name || this.inventory?.name || '';
         if (hotelName) {
@@ -305,9 +337,14 @@ export class HotelDetailComponent {
             data.is_refundable !== null
               ? Number(data.is_refundable)
               : null;
-          this.hotelPhotos = Array.isArray(data?.hotel_photos)
+          const dataHotelPhotos = Array.isArray(data?.hotel_photos)
             ? data.hotel_photos
-            : [];
+            : null;
+          const photosSource =
+            dataHotelPhotos && dataHotelPhotos.length
+              ? dataHotelPhotos
+              : this.hotelPhotos || [];
+          this.hotelPhotos = photosSource;
           const allHotelPhotoUrls: string[] = [];
           let primaryHotelPhotoUrl: string | null = null;
           this.hotelPhotos.forEach((cat: any) => {
@@ -331,9 +368,12 @@ export class HotelDetailComponent {
             data?.photo_url ||
             this.photoUrl ||
             '/storage/hotel/default.jpg';
-          this.hotelAmenities = Array.isArray(data?.hotel_amenities)
+          const dataAmenities = Array.isArray(data?.hotel_amenities)
             ? data.hotel_amenities
-            : [];
+            : null;
+          if (dataAmenities && dataAmenities.length) {
+            this.hotelAmenities = dataAmenities;
+          }
           this.hotelLatitude =
             typeof data?.hotel_latitude === 'number'
               ? data.hotel_latitude
@@ -411,6 +451,7 @@ export class HotelDetailComponent {
     const photos: string[] = rawPhotos
       .map((p: any) => (typeof p === 'string' ? p : p?.url || ''))
       .filter((p: string) => !!p);
+    console.log(room);
     const primary = room?.room_photo_url || null;
     let list: string[] = photos;
     if (!list.length && primary) {
@@ -763,6 +804,11 @@ export class HotelDetailComponent {
       children: this.params.children || null,
       childAges: this.params.childAges || null,
       inventory_id: this.params.inventory_id || null,
+      photo_url:
+        this.primaryHotelPhotoUrl ||
+        this.inventory?.photo_url ||
+        this.params.photo_url ||
+        null,
       selected_room_id: room?.room_id ?? null,
       selected_meal_type: opt?.meal_type ?? null,
       selected_meal_type_name: opt?.meal_type_name ?? null,

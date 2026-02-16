@@ -10,6 +10,9 @@ import { environment } from '../../environments/environment';
 export class TenantService {
   private apiUrl = environment.apiUrl;
   private appInfo: any | null = null;
+  private readonly APP_INFO_STORAGE_KEY = 'tenant_app_info';
+  private readonly APP_INFO_TIMESTAMP_KEY = 'tenant_app_info_ts';
+  private readonly APP_INFO_TTL_MS = 24 * 60 * 60 * 1000;
 
   constructor(private http: HttpClient) {}
 
@@ -35,6 +38,24 @@ export class TenantService {
     if (this.appInfo && !forceRefresh) {
       return of(this.appInfo);
     }
+
+    if (!forceRefresh && typeof window !== 'undefined') {
+      try {
+        const cached = window.localStorage.getItem(this.APP_INFO_STORAGE_KEY);
+        const tsRaw = window.localStorage.getItem(this.APP_INFO_TIMESTAMP_KEY);
+        if (cached && tsRaw) {
+          const ts = Number(tsRaw);
+          if (!isNaN(ts) && Date.now() - ts < this.APP_INFO_TTL_MS) {
+            this.appInfo = JSON.parse(cached);
+            return of(this.appInfo);
+          } else {
+            window.localStorage.removeItem(this.APP_INFO_STORAGE_KEY);
+            window.localStorage.removeItem(this.APP_INFO_TIMESTAMP_KEY);
+          }
+        }
+      } catch {}
+    }
+
     return this.http.get(`${this.apiUrl}/tenant/app-info`).pipe(
       map((resp: any) => {
         const data = resp?.data || null;
@@ -54,6 +75,14 @@ export class TenantService {
           };
           if (typeof window !== 'undefined') {
             try {
+              window.localStorage.setItem(
+                this.APP_INFO_STORAGE_KEY,
+                JSON.stringify(this.appInfo)
+              );
+              window.localStorage.setItem(
+                this.APP_INFO_TIMESTAMP_KEY,
+                String(Date.now())
+              );
               if (this.appInfo.app_name) {
                 window.localStorage.setItem(
                   'tenant_app_name',

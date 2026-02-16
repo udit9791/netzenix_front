@@ -317,7 +317,7 @@ export class HotelInventoryManagementComponent implements OnInit {
   }
 
   onEdit(row: InventoryRow) {
-    this.router.navigate(['/sale/hotel-inventory-management/add'], {
+    this.router.navigate(['/sale/hotel-inventory-management/edit'], {
       queryParams: { inventory_id: row.inventory_id, type: this.currentType }
     });
   }

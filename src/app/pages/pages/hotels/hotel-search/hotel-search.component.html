@@ -75,12 +75,22 @@
         </div>
         <div *ngIf="room.children > 0" class="mt-2">
           <div class="text-sm text-gray-700 mb-1">Child Age</div>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <mat-form-field appearance="outline" *ngFor="let age of room.childAges; let j = index">
-              <mat-select [value]="age" (selectionChange)="setChildAge(i, j, $event.value)">
-                <mat-option *ngFor="let a of childAgeOptions" [value]="a">{{ a }}</mat-option>
-              </mat-select>
-            </mat-form-field>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div *ngFor="let age of room.childAges; let j = index">
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-select [value]="age" (selectionChange)="setChildAge(i, j, $event.value)">
+                  <mat-option *ngFor="let a of childAgeOptions" [value]="a">{{ a }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <div class="mt-1">
+                <mat-checkbox
+                  [checked]="room.extraBedFlags[j] || false"
+                  (change)="toggleExtraBed(i, j, $event.checked)"
+                >
+                  Extra bed
+                </mat-checkbox>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -43,6 +43,20 @@
         <input matInput formControlName="checkoutTime" placeholder="e.g., 11:00" />
       </mat-form-field>
 
+      <mat-form-field appearance="outline">
+        <mat-label>Adult Age Limit</mat-label>
+        <mat-select formControlName="adultAgeLimit">
+          <mat-option *ngFor="let a of ageOptions()" [value]="a">
+            {{ a }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div class="text-xs text-gray-600 mt-1">
+        Greater than
+        {{ form.get('adultAgeLimit')?.value || 12 }}
+        years will count as adult.
+      </div>
+
       <!-- Removed simple extra bed price field; detailed section added below -->
 
       <div class="md:col-span-2" *ngIf="hotelDetails">
@@ -116,55 +130,136 @@
             <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mt-3">
               <mat-form-field appearance="outline">
                 <mat-label>Adult(s)</mat-label>
-                <input matInput type="number" formControlName="adults" placeholder="e.g., 2" />
+                <input
+                  matInput
+                  type="number"
+                  formControlName="adults"
+                  placeholder="e.g., 2"
+                  (change)="onRoomPersonsChange(rid)"
+                />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Child(s)</mat-label>
-                <input matInput type="number" formControlName="children" placeholder="e.g., 1" />
+                <input
+                  matInput
+                  type="number"
+                  formControlName="children"
+                  placeholder="e.g., 1"
+                  (change)="onRoomPersonsChange(rid)"
+                />
               </mat-form-field>
-              <mat-form-field appearance="outline">
+              <!-- <mat-form-field appearance="outline">
                 <mat-label>Infant(s)</mat-label>
                 <input matInput type="number" formControlName="infants" placeholder="e.g., 0" />
-              </mat-form-field>
+              </mat-form-field> -->
               <mat-form-field appearance="outline">
                 <mat-label>Max Person(s)</mat-label>
-                <input matInput type="number" formControlName="maxPersons" placeholder="e.g., 3" />
+                <input
+                  matInput
+                  type="number"
+                  formControlName="maxPersons"
+                  placeholder="e.g., 3"
+                  (change)="onMaxPersonsChange(rid)"
+                />
               </mat-form-field>
-              <mat-form-field appearance="outline" *ngIf="mode === 'normal'">
-                <mat-label>No. of Rooms</mat-label>
-                <input matInput type="number" formControlName="frontRoomsCount" placeholder="e.g., 10" />
+              <mat-form-field appearance="outline" >
+                <mat-label>Total Rooms</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  formControlName="frontRoomsCount"
+                  placeholder="e.g., 10"
+                />
+                <mat-hint>Total number of rooms in the hotel</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Free Child Without Bed Count</mat-label>
                 <input matInput type="number" formControlName="freeChildNoBedCount" placeholder="e.g., 1" />
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Free Child Age</mat-label>
+                <mat-label>Child Without Bed Age</mat-label>
                 <mat-select formControlName="freeChildNoBedAge">
-                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
+                  <mat-option *ngFor="let a of childAgeOptions()" [value]="a">{{ a }}</mat-option>
                 </mat-select>
               </mat-form-field>
               
             </div>
 
-            <div class="mt-3 flex items-center gap-2 flex-wrap" *ngIf="mode === 'confirm'">
+            <div
+              class="mt-3 flex items-center gap-2 flex-wrap"
+              *ngIf="mode === 'confirm' || mode === 'normal'"
+            >
               <mat-date-range-input [rangePicker]="picker">
-                <input matStartDate matInput [readonly]="true" formControlName="rangeStart" (dateInput)="onRangeSelected(rid, picker)" (dateChange)="onRangeSelected(rid, picker)"
-                   [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
-                <input matEndDate matInput [readonly]="true" formControlName="rangeEnd" (dateInput)="onRangeSelected(rid, picker)" (dateChange)="onRangeSelected(rid, picker)"
-                   [style.position]="'absolute'" [style.left.px]="-10000" [style.width.px]="1" [style.height.px]="1" [style.padding.px]="0" [style.border]="'0'" [style.clip]="'rect(0 0 0 0)'" [style.clipPath]="'inset(50%)'" [style.overflow]="'hidden'" />
+                <input
+                  matStartDate
+                  matInput
+                  [readonly]="true"
+                  formControlName="rangeStart"
+                  (dateInput)="onRangeSelected(rid, picker)"
+                  (dateChange)="onRangeSelected(rid, picker)"
+                  [style.position]="'absolute'"
+                  [style.left.px]="-10000"
+                  [style.width.px]="1"
+                  [style.height.px]="1"
+                  [style.padding.px]="0"
+                  [style.border]="'0'"
+                  [style.clip]="'rect(0 0 0 0)'"
+                  [style.clipPath]="'inset(50%)'"
+                  [style.overflow]="'hidden'"
+                />
+                <input
+                  matEndDate
+                  matInput
+                  [readonly]="true"
+                  formControlName="rangeEnd"
+                  (dateInput)="onRangeSelected(rid, picker)"
+                  (dateChange)="onRangeSelected(rid, picker)"
+                  [style.position]="'absolute'"
+                  [style.left.px]="-10000"
+                  [style.width.px]="1"
+                  [style.height.px]="1"
+                  [style.padding.px]="0"
+                  [style.border]="'0'"
+                  [style.clip]="'rect(0 0 0 0)'"
+                  [style.clipPath]="'inset(50%)'"
+                  [style.overflow]="'hidden'"
+                />
               </mat-date-range-input>
               <mat-date-range-picker #picker></mat-date-range-picker>
-              <button mat-stroked-button type="button" (click)="picker.open()">Select Dates</button>
+              <button mat-stroked-button type="button" (click)="picker.open()">
+                Select Dates
+              </button>
             </div>
 
             <div class="mt-2 flex flex-wrap gap-2" *ngIf="getDateRanges(rid).length">
               <div class="px-2 py-1 border rounded" *ngFor="let rg of getDateRanges(rid).controls; let i = index">
                 {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}
-                <button mat-icon-button color="warn" type="button" (click)="removeDateRange(rid, i)">
+                <!-- <button mat-icon-button color="warn" type="button" (click)="removeDateRange(rid, i)">
                   <mat-icon>close</mat-icon>
-                </button>
+                </button> -->
               </div>
+            </div>
+
+            <div class="mt-3 flex items-center gap-3 flex-wrap" *ngIf="getDateRanges(rid).length">
+              <span class="text-sm">Meal Types:</span>
+              <mat-checkbox
+                *ngFor="let mk of mealKeys(); trackBy: trackByMeal"
+                [checked]="isMealSelected(rid, mk.key)"
+                (change)="toggleMealType(rid, mk.key, $event.checked)"
+              >
+                {{ mk.label }}
+              </mat-checkbox>
+            </div>
+
+            <div class="mt-3 flex items-center gap-3 flex-wrap" *ngIf="getDateRanges(rid).length">
+              <span class="text-sm">Person Capacity:</span>
+              <mat-checkbox
+                *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey"
+                [checked]="isOccupancySelected(rid, occKey)"
+                (change)="toggleOccupancy(rid, occKey, $event.checked)"
+              >
+                {{ ix + 1 }}
+              </mat-checkbox>
             </div>
 
             <div class="mt-3" *ngIf="getDateRanges(rid).length">
@@ -174,9 +269,16 @@
                     <span class="text-sm">Rooms for {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}</span>
                     <ng-container [formGroup]="asFormGroup(rg)" *ngIf="mode === 'confirm'">
                       <mat-form-field appearance="outline" class="w-40">
-                        <mat-label>No. of Rooms</mat-label>
-                        <input matInput type="number" formControlName="roomsCount" placeholder="e.g., 10" />
+                        <mat-label>No. of Rooms Availability</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          formControlName="roomsCount"
+                          placeholder="e.g., 10"
+                        />
+                      
                       </mat-form-field>
+                        <mat-hint>Number of rooms currently available for booking</mat-hint>
                     </ng-container>
                   </div>
                 </div>
@@ -220,10 +322,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey">
-                    <ng-container *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                  <ng-container *ngFor="let occKey of getSelectedOccupancyKeys(rid); let ix = index; trackBy: trackByOccKey">
+                    <ng-container *ngFor="let mk of getSelectedMealKeys(rid); trackBy: trackByMeal">
                       <tr [class.occ-group-alt]="ix % 2 === 1">
-                        <td class="p-2 border category-col">{{ ix + 1 }} - {{ mk.label }}</td>
+                        <td class="p-2 border category-col">{{ occKey | slice:1 }} - {{ mk.label }}</td>
                         <ng-container *ngIf="mode === 'normal'; else weekdayConfirmInputs">
                           <td class="p-1 border date-cell">
                             <ng-container [formGroup]="asFormGroup(getDateRanges(rid).controls[0])">
@@ -293,10 +395,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <ng-container *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey">
-                    <ng-container *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
+                  <ng-container *ngFor="let occKey of getSelectedOccupancyKeys(rid); let ix = index; trackBy: trackByOccKey">
+                    <ng-container *ngFor="let mk of getSelectedMealKeys(rid); trackBy: trackByMeal">
                       <tr [class.occ-group-alt]="ix % 2 === 1">
-                        <td class="p-2 border category-col">{{ ix + 1 }} - {{ mk.label }}</td>
+                        <td class="p-2 border category-col">{{ occKey | slice:1 }} - {{ mk.label }}</td>
                         <ng-container *ngIf="mode === 'normal'; else weekendConfirmInputs">
                           <td class="p-1 border date-cell">
                             <ng-container [formGroup]="asFormGroup(getDateRanges(rid).controls[0])">
@@ -351,98 +453,288 @@
     <div class="md:col-span-2 mt-6" [formGroup]="form">
       <div class="border rounded p-3">
         <div class="font-medium mb-3">Extra Bed Costs</div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="extraCosts">
-          <!-- Extra Child Without Bed -->
-          <div class="border rounded">
-            <div class="p-2 font-medium">Extra Child Without Bed</div>
-            <table class="w-full border">
-              <thead>
-                <tr>
-                  <th class="p-2 border">Meal</th>
-                  <th class="p-2 border">Price</th>
-                </tr>
-              </thead>
-              <tbody [formGroupName]="'child'">
-                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
-                  <td class="p-2 border">{{ mk.label }}</td>
-                  <td class="p-2 border">
-                    <input type="text" inputmode="numeric" class="pricing-input"
-                      [formControlName]="mk.key"
-                      (keydown)="onNumericKeydown($event)"
-                      (input)="onNumericInput($event, extraCostCtrl('child', mk.key))" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="p-2">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Age (1–17)</mat-label>
-                <mat-select formControlName="childAge">
-                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
+
+        <!-- Global age settings -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4" formGroupName="extraCosts">
+          <div class="grid grid-cols-2 gap-2">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Child Without Bed From (1–17)</mat-label>
+              <mat-select formControlName="childAgeFrom">
+                <mat-option *ngFor="let a of childAgeOptions()" [value]="a">{{ a }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>To</mat-label>
+              <mat-select formControlName="childAgeTo">
+                <mat-option
+                  *ngFor="let a of childAgeOptions()"
+                  [value]="a"
+                  [disabled]="a <= (form.get('extraCosts.childAgeFrom')?.value || 0)"
+                >
+                  {{ a }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
           </div>
-          
-          <!-- Extra Child with Bed -->
-          <div class="border rounded">
-            <div class="p-2 font-medium">Extra Child with Bed</div>
-            <table class="w-full border">
-              <thead>
-                <tr>
-                  <th class="p-2 border">Meal</th>
-                  <th class="p-2 border">Price</th>
-                </tr>
-              </thead>
-              <tbody [formGroupName]="'child_with_bed'">
-                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
-                  <td class="p-2 border">{{ mk.label }}</td>
-                  <td class="p-2 border">
-                    <input type="text" inputmode="numeric" class="pricing-input"
-                      [formControlName]="mk.key"
-                      (keydown)="onNumericKeydown($event)"
-                      (input)="onNumericInput($event, extraCostCtrl('child_with_bed', mk.key))" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="p-2">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Age (1–17)</mat-label>
-                <mat-select formControlName="childWithBedAge">
-                  <mat-option *ngFor="let a of ageOptions()" [value]="a">{{ a }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
+          <div class="grid grid-cols-2 gap-2">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Child with Bed From (1–17)</mat-label>
+              <mat-select formControlName="childWithBedAgeFrom">
+                <mat-option *ngFor="let a of childAgeOptions()" [value]="a">{{ a }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>To</mat-label>
+              <mat-select formControlName="childWithBedAgeTo">
+                <mat-option
+                  *ngFor="let a of childAgeOptions()"
+                  [value]="a"
+                  [disabled]="a <= (form.get('extraCosts.childWithBedAgeFrom')?.value || 0)"
+                >
+                  {{ a }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
           </div>
-          
-          <!-- Extra Bed per Adult (moved to last) -->
-          <div class="border rounded">
-            <div class="p-2 font-medium">Extra Bed per Adult</div>
-            <table class="w-full border">
-              <thead>
-                <tr>
-                  <th class="p-2 border">Meal</th>
-                  <th class="p-2 border">Price</th>
-                </tr>
-              </thead>
-              <tbody [formGroupName]="'adult'">
-                <tr *ngFor="let mk of mealKeys(); trackBy: trackByMeal">
-                  <td class="p-2 border">{{ mk.label }}</td>
-                  <td class="p-2 border">
-                    <input type="text" inputmode="numeric" class="pricing-input"
-                      [formControlName]="mk.key"
-                      (keydown)="onNumericKeydown($event)"
-                      (input)="onNumericInput($event, extraCostCtrl('adult', mk.key))" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        </div>
+
+        <!-- Room-wise extra bed costs -->
+        <div formArrayName="roomDetails" class="space-y-4">
+          <div
+            *ngFor="let roomCtrl of roomDetails.controls; let i = index"
+            [formGroupName]="i"
+            class="border rounded p-3"
+            [ngClass]="i % 2 === 0 ? 'bg-gray-50' : 'bg-white'"
+          >
+            <ng-container *ngIf="isRoomSelected(roomCtrl.get('roomId')?.value)">
+              <div class="font-medium mb-2 px-2 py-1 bg-gray-200 rounded">
+                {{ roomById(roomCtrl.get('roomId')?.value)?.room_name || ('Room ' + (i + 1)) }}
+              </div>
+
+              <!-- Weekday extra bed costs -->
+              <div
+                class="mb-4"
+                formGroupName="extraCosts"
+                *ngIf="getSelectedMealKeys(roomCtrl.get('roomId')?.value)?.length"
+              >
+                <div class="font-medium mb-2 px-2 py-1 bg-yellow-100 rounded">
+                  Weekday Extra Bed Costs
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="weekday">
+                  <div class="border rounded" formGroupName="child">
+                    <div class="p-2 font-medium">Extra Child Without Bed</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          *ngFor="
+                            let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                            trackBy: trackByMeal
+                          "
+                        >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekday', 'child', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="border rounded" formGroupName="child_with_bed">
+                    <div class="p-2 font-medium">Extra Child with Bed</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          *ngFor="
+                            let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                            trackBy: trackByMeal
+                          "
+                        >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekday', 'child_with_bed', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="border rounded" formGroupName="adult">
+                    <div class="p-2 font-medium">Extra Bed per Adult</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          *ngFor="
+                            let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                            trackBy: trackByMeal
+                          "
+                        >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekday', 'adult', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Weekend extra bed costs -->
+              <div
+                *ngIf="
+                  hasWeekend(roomCtrl.get('roomId')?.value) &&
+                  getSelectedMealKeys(roomCtrl.get('roomId')?.value)?.length
+                "
+                formGroupName="extraCosts"
+              >
+                <div class="font-medium mb-2 px-2 py-1 bg-blue-100 rounded">
+                  Week Off Days Extra Bed Costs
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" formGroupName="weekend">
+                  <div class="border rounded" formGroupName="child">
+                    <div class="p-2 font-medium">Extra Child Without Bed</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                    <tbody>
+                      <tr
+                        *ngFor="
+                          let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                          trackBy: trackByMeal
+                        "
+                      >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekend', 'child', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="border rounded" formGroupName="child_with_bed">
+                    <div class="p-2 font-medium">Extra Child with Bed</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          *ngFor="
+                            let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                            trackBy: trackByMeal
+                          "
+                        >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekend', 'child_with_bed', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="border rounded" formGroupName="adult">
+                    <div class="p-2 font-medium">Extra Bed per Adult</div>
+                    <table class="w-full border">
+                      <thead>
+                        <tr>
+                          <th class="p-2 border">Meal</th>
+                          <th class="p-2 border">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          *ngFor="
+                            let mk of getSelectedMealKeys(roomCtrl.get('roomId')?.value);
+                            trackBy: trackByMeal
+                          "
+                        >
+                          <td class="p-2 border">{{ mk.label }}</td>
+                          <td class="p-2 border">
+                            <input
+                              type="text"
+                              inputmode="numeric"
+                              class="pricing-input"
+                              [formControlName]="mk.key"
+                              (keydown)="onNumericKeydown($event)"
+                              (input)="onNumericInput($event, roomExtraCostCtrl(roomCtrl.get('roomId')?.value, 'weekend', 'adult', mk.key))"
+                            />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
           </div>
-          
-          <div class="md:col-span-3 border rounded p-3 mt-4" [formGroup]="form">
-            <ng-container >
-              <h3 class="text-base font-semibold">Refund Policy</h3>
+        </div>
+
+        <div class="md:col-span-3 border rounded p-3 mt-4" [formGroup]="form">
+          <ng-container >
+            <h3 class="text-base font-semibold">Refund Policy</h3>
               <div class="mb-4">
                 <mat-radio-group formControlName="isRefundable" class="flex gap-4">
                   <mat-radio-button value="refundable">Refundable</mat-radio-button>
@@ -557,10 +849,37 @@
         </div>
       </div>
     </div>
-    
+
+    <div class="md:col-span-2 mt-6" [formGroup]="form">
+      <div class="border rounded p-3">
+        <div class="font-medium mb-3">Markup</div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Markup Type</mat-label>
+            <mat-select formControlName="markupType">
+              <mat-option [value]="null">None</mat-option>
+              <mat-option value="flat">Flat</mat-option>
+              <mat-option value="percentage">Percentage</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Markup Value</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="markupValue"
+              min="0"
+            />
+            <mat-hint *ngIf="form.get('markupType')?.value === 'percentage'">
+              Value in %
+            </mat-hint>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
     <div class="md:col-span-2 mt-6 flex justify-end gap-2" [formGroup]="form">
       <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
       <button mat-flat-button color="primary" type="button" [disabled]="saving" (click)="save()">Save Inventory</button>
     </div>
   </div>
-</div>

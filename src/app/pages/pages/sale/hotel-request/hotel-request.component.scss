@@ -9,3 +9,14 @@
   background-color: #e3f2fd;
   color: #1976d2;
 }
+
+.request-row .row-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease-in-out;
+}
+
+.request-row:hover .row-actions {
+  opacity: 1;
+  pointer-events: auto;
+}

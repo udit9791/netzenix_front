@@ -20,8 +20,9 @@
         </div>
       </div>
 
-      <div class="itinerary">
-        <div class="leg" *ngFor="let s of allSegments; let i = index">
+      <div class="itinerary" *ngIf="onwardSegments.length">
+        <div class="section-title">Onward</div>
+        <div class="leg" *ngFor="let s of onwardSegments; let i = index">
           <div class="left">
             <div class="dep-time">{{ s.departureTime }}</div>
             <div class="dep-date">{{ s.flightDateLabel }}</div>
@@ -49,10 +50,46 @@
           </div>
         </div>
 
-        <div class="connecting" *ngFor="let s of allSegments; let idx = index">
-          <div *ngIf="connectingTime(idx) && idx < allSegments.length - 1" class="connecting-row">
+        <div class="connecting" *ngFor="let s of onwardSegments; let idx = index">
+          <div *ngIf="connectingTimeFor(onwardSegments, idx) && idx < onwardSegments.length - 1" class="connecting-row">
             <span class="icon">✈</span>
-            <span>Connecting Time : {{ connectingTime(idx) }}</span>
+            <span>Connecting Time : {{ connectingTimeFor(onwardSegments, idx) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="itinerary" *ngIf="returnSegments.length">
+        <div class="section-title">Return</div>
+        <div class="leg" *ngFor="let s of returnSegments; let i = index">
+          <div class="left">
+            <div class="dep-time">{{ s.departureTime }}</div>
+            <div class="dep-date">{{ s.flightDateLabel }}</div>
+            <div class="spacer"></div>
+            <div class="arr-time">{{ s.arrivalTime }}</div>
+            <div class="arr-date">{{ s.arrivalDateLabel }}</div>
+          </div>
+          <div class="middle">
+            <div class="node start"></div>
+            <div class="line dotted"></div>
+            <div class="node end"></div>
+          </div>
+          <div class="right">
+            <div class="place">
+              <span class="city-strong">{{ s.fromCity || s.from }}</span>
+            </div>
+            <div class="sub">Terminal {{ s.depTerminal || '-' }}</div>
+            <div class="duration">{{ s.duration }}</div>
+            <div class="place">
+              <span class="city-strong">{{ s.toCity || s.to }}</span>
+            </div>
+            <div class="sub">Terminal {{ s.arrTerminal || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="connecting" *ngFor="let s of returnSegments; let idx = index">
+          <div *ngIf="connectingTimeFor(returnSegments, idx) && idx < returnSegments.length - 1" class="connecting-row">
+            <span class="icon">✈</span>
+            <span>Connecting Time : {{ connectingTimeFor(returnSegments, idx) }}</span>
           </div>
         </div>
       </div>

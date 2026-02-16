@@ -1,9 +1,12 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent
+} from '@angular/material/autocomplete';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -118,7 +121,7 @@ import { HttpClientModule } from '@angular/common/http';
     HttpClientModule
   ]
 })
-export class SpecialFlightComponent implements OnInit {
+export class SpecialFlightComponent implements OnInit, OnDestroy {
   // Form field labels
   formLabels = {
     from: 'From (Origin)',
@@ -209,6 +212,12 @@ export class SpecialFlightComponent implements OnInit {
     total: number;
   } | null = null;
 
+  private sectorDatesBySector: { [sector: string]: string[] } = {};
+  private sectorDestinationsByOrigin: { [origin: string]: string[] } = {};
+  private cityNames: { [code: string]: string } = {};
+  originOptions: { code: string; city?: string }[] = [];
+  private urlSearchDone = false;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -220,40 +229,62 @@ export class SpecialFlightComponent implements OnInit {
     const fromCtrl = this.form.get('from') as NgFormControl;
     const toCtrl = this.form.get('to') as NgFormControl;
 
-    // Setup auto-search for From field
+    // Setup auto-search for From field using cached sector origins
     this.filteredFrom$ = fromCtrl.valueChanges.pipe(
       startWith(''),
       debounceTime(300),
       distinctUntilChanged(),
-      switchMap((value) => {
-        const query = typeof value === 'string' ? value : '';
-        return query.length >= 2
-          ? this.flightService.getAirlineAirports(query).pipe(
-              map((response) => {
-                console.log('response from api', response);
-                return response && response.data ? response.data : [];
-              })
-            )
-          : [];
+      map((value) => {
+        const query =
+          typeof value === 'string' ? value.trim().toLowerCase() : '';
+        if (!query) {
+          return this.originOptions;
+        }
+        return this.originOptions.filter((opt) => {
+          const code = opt.code.toLowerCase();
+          const city = (
+            opt.city ||
+            this.cityNames[opt.code] ||
+            ''
+          ).toLowerCase();
+          return code.includes(query) || city.includes(query);
+        });
       })
     );
 
-    // Setup auto-search for To field
+    // Setup auto-search for To field using sector destinations for selected origin
     this.filteredTo$ = toCtrl.valueChanges.pipe(
       startWith(''),
       debounceTime(300),
       distinctUntilChanged(),
-      switchMap((value) => {
-        const query = typeof value === 'string' ? value : '';
-        return query.length >= 2
-          ? this.flightService.getAirlineAirports(query).pipe(
-              map((response) => {
-                return response && response.data ? response.data : [];
-              })
-            )
-          : [];
+      map((value) => {
+        const query =
+          typeof value === 'string' ? value.trim().toLowerCase() : '';
+        const fromCode = this.getFromCode();
+        if (!fromCode || !this.sectorDestinationsByOrigin[fromCode]) {
+          return [];
+        }
+        const allowed = this.sectorDestinationsByOrigin[fromCode];
+        const baseOptions = allowed.map((code) => ({
+          code,
+          city: this.cityNames[code] || ''
+        }));
+        if (!query) {
+          return baseOptions;
+        }
+        return baseOptions.filter((opt) => {
+          const code = opt.code.toLowerCase();
+          const city = (opt.city || '').toLowerCase();
+          return code.includes(query) || city.includes(query);
+        });
       })
     );
+  }
+
+  onToSelected(event: MatAutocompleteSelectedEvent): void {
+    const toCode = event.option.value;
+    this.form.get('to')?.setValue(toCode, { emitEvent: false });
+    this.checkAndFetchAvailableDates();
   }
 
   ngOnInit() {
@@ -262,24 +293,22 @@ export class SpecialFlightComponent implements OnInit {
       // Inform the user of the selection
       //alert(val === 'roundtrip' ? 'Round Trip selected' : 'One Way selected');
 
-      // Update URL to retain only current tripType and clear other params
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {
-          tripType: val,
-          from: null,
-          to: null,
-          departDate: null,
-          returnDate: null,
-          travellers: null,
-          adults: null,
-          children: null,
-          infants: null
-        },
-        replaceUrl: true
-      });
+      // Update URL to reflect current tripType and reload the page
+      this.router
+        .navigate([], {
+          relativeTo: this.route,
+          queryParams: {
+            tripType: val
+          },
+          replaceUrl: true
+        })
+        .then(() => {
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        });
 
-      // Reset filter fields without firing valueChanges to avoid API calls
+      // Reset from/to and date fields without firing valueChanges to avoid extra API calls
       this.form.get('from')?.setValue('', { emitEvent: false });
       this.form.get('to')?.setValue('', { emitEvent: false });
       this.form.get('departDate')?.setValue(null, { emitEvent: false });
@@ -289,9 +318,14 @@ export class SpecialFlightComponent implements OnInit {
       this.availableDates = [];
       this.allowedReturnDates = [];
       this.flightGroups = [];
+      this.filteredFlightGroups = [];
       this.totalFlights = 0;
       this.loading = false;
       this.error = '';
+
+      const tripType = val || undefined;
+      this.fetchAndStoreSectorAvailableDates(tripType);
+      this.refreshAvailableDatesForTripType();
     });
     this.form.get('departDate')?.valueChanges.subscribe((departVal) => {
       const tripType = this.form.value.tripType || 'oneway';
@@ -346,6 +380,15 @@ export class SpecialFlightComponent implements OnInit {
     });
     // Set up listeners for from and to fields to fetch available dates
     this.form.get('from')?.valueChanges.subscribe((fromValue) => {
+      const fromCode = this.getFromCode();
+      if (!fromCode) {
+        this.form.get('to')?.reset();
+        this.form.get('departDate')?.reset();
+        this.availableDates = [];
+        return;
+      }
+      this.form.get('to')?.reset();
+      this.form.get('departDate')?.reset();
       this.checkAndFetchAvailableDates();
     });
 
@@ -372,7 +415,6 @@ export class SpecialFlightComponent implements OnInit {
 
         // Update form with URL parameters
         if (params['from']) {
-          // For airport codes, create a proper airport object
           const fromCodeParam = (params['from'] as string).toUpperCase();
           const currentFromVal = this.form.get('from')?.value;
           const currentFromCode =
@@ -386,40 +428,16 @@ export class SpecialFlightComponent implements OnInit {
                 ? (currentFromVal as string).toUpperCase()
                 : '';
 
-          // Skip refetch if the same code is already selected
           if (currentFromCode === fromCodeParam) {
             fromLoaded = true;
           } else {
-            this.flightService
-              .getAirlineAirports(fromCodeParam)
-              .subscribe((response) => {
-                if (response && response.data && response.data.length > 0) {
-                  // Find exact match for the airport code
-                  const exactMatch = response.data.find(
-                    (airport: any) =>
-                      airport.code?.toUpperCase() === fromCodeParam ||
-                      airport.iata?.toUpperCase() === fromCodeParam
-                  );
-
-                  if (exactMatch) {
-                    this.form.get('from')?.setValue(exactMatch);
-                  } else {
-                    // If no exact match, use the first result
-                    this.form.get('from')?.setValue(response.data[0]);
-                  }
-                } else {
-                  // Fallback to just setting the code as string
-                  this.form.get('from')?.setValue(fromCodeParam);
-                }
-
-                fromLoaded = true;
-                this.checkAndSearchFlights(fromLoaded, toLoaded, params);
-              });
+            this.form.get('from')?.setValue(fromCodeParam);
+            fromLoaded = true;
+            this.checkAndSearchFlights(fromLoaded, toLoaded, params);
           }
         }
 
         if (params['to']) {
-          // For airport codes, create a proper airport object
           const toCodeParam = (params['to'] as string).toUpperCase();
           const currentToVal = this.form.get('to')?.value;
           const currentToCode =
@@ -433,35 +451,12 @@ export class SpecialFlightComponent implements OnInit {
                 ? (currentToVal as string).toUpperCase()
                 : '';
 
-          // Skip refetch if the same code is already selected
           if (currentToCode === toCodeParam) {
             toLoaded = true;
           } else {
-            this.flightService
-              .getAirlineAirports(toCodeParam)
-              .subscribe((response) => {
-                if (response && response.data && response.data.length > 0) {
-                  // Find exact match for the airport code
-                  const exactMatch = response.data.find(
-                    (airport: any) =>
-                      airport.code?.toUpperCase() === toCodeParam ||
-                      airport.iata?.toUpperCase() === toCodeParam
-                  );
-
-                  if (exactMatch) {
-                    this.form.get('to')?.setValue(exactMatch);
-                  } else {
-                    // If no exact match, use the first result
-                    this.form.get('to')?.setValue(response.data[0]);
-                  }
-                } else {
-                  // Fallback to just setting the code as string
-                  this.form.get('to')?.setValue(toCodeParam);
-                }
-
-                toLoaded = true;
-                this.checkAndSearchFlights(fromLoaded, toLoaded, params);
-              });
+            this.form.get('to')?.setValue(toCodeParam);
+            toLoaded = true;
+            this.checkAndSearchFlights(fromLoaded, toLoaded, params);
           }
         }
 
@@ -556,59 +551,87 @@ export class SpecialFlightComponent implements OnInit {
           }
         }
 
-        if (params['departSlots']) {
-          const ds = String(params['departSlots'])
-            .split(',')
-            .filter((x) => !!x);
-          this.departureSlots = new Set(ds);
+        if (!this.urlSearchDone) {
+          this.checkAndSearchFlights(fromLoaded, toLoaded, params);
+          if (fromLoaded && toLoaded) {
+            this.urlSearchDone = true;
+          }
         }
-        if (params['arrivalSlots']) {
-          const as = String(params['arrivalSlots'])
-            .split(',')
-            .filter((x) => !!x);
-          this.arrivalSlots = new Set(as);
-        }
-
-        // If there are no from/to params or they're already loaded, search flights immediately
-        this.checkAndSearchFlights(fromLoaded, toLoaded, params);
       } else {
-        // No URL parameters, just search with default values
+        // No URL parameters: set default sector AMD-DEL and load dates from cached sectors
+        this.form.get('from')?.setValue('AMD');
+        this.form.get('to')?.setValue('DEL');
+        this.checkAndFetchAvailableDates();
+        this.urlSearchDone = true;
         this.searchFlights();
       }
     });
+
+    this.ensureSectorAvailableDatesCached();
+  }
+
+  ngOnDestroy(): void {
+    // No interval to clear; method kept for interface compliance
   }
 
   // Check if both from and to are selected, then fetch available dates
   checkAndFetchAvailableDates() {
-    const fromValue = this.form.get('from')?.value;
-    const toValue = this.form.get('to')?.value;
+    const fromCode = this.getFromCode();
+    const toCode = this.getToCode();
 
-    console.log('checkAndFetchAvailableDates called', { fromValue, toValue });
+    console.log('checkAndFetchAvailableDates called', { fromCode, toCode });
 
-    // Check if values are objects with code property
-    if (
-      fromValue &&
-      toValue &&
-      typeof fromValue === 'object' &&
-      fromValue !== null &&
-      'code' in fromValue &&
-      typeof toValue === 'object' &&
-      toValue !== null &&
-      'code' in toValue
-    ) {
-      console.log(
-        'Fetching available dates for',
-        (fromValue as { code: string }).code,
-        (toValue as { code: string }).code
-      );
-      // Use type assertion to tell TypeScript these objects have a code property
-      this.fetchAvailableDates(
-        (fromValue as { code: string }).code,
-        (toValue as { code: string }).code
-      );
-    } else {
+    if (!fromCode || !toCode || fromCode.length !== 3 || toCode.length !== 3) {
       console.log('Conditions not met for fetching dates');
+      return;
     }
+
+    const sectorKey = `${fromCode}-${toCode}`;
+    const sectorDates = this.sectorDatesBySector[sectorKey];
+
+    if (sectorDates && sectorDates.length) {
+      console.log('Using sector-available-dates for', sectorKey, sectorDates);
+      this.availableDates = sectorDates;
+
+      const currentDepartDate = this.form.get('departDate')?.value;
+      const currentReturnDate = this.form.get('returnDate')?.value;
+
+      console.log('Current form dates before potential reset (sector):', {
+        departDate: currentDepartDate,
+        returnDate: currentReturnDate
+      });
+
+      if (!currentDepartDate && this.availableDates.length > 0) {
+        const firstAvailableDate = new Date(this.availableDates[0]);
+        this.form.get('departDate')?.setValue(firstAvailableDate);
+        console.log(
+          'Auto-set departure date to first sector available date:',
+          firstAvailableDate
+        );
+      }
+
+      if (!currentReturnDate) {
+        this.form.get('returnDate')?.setValue(null);
+      }
+
+      return;
+    }
+
+    console.log(
+      'No sector dates found for',
+      sectorKey,
+      '- clearing availableDates'
+    );
+    this.availableDates = [];
+  }
+
+  private refreshAvailableDatesForTripType(): void {
+    const fromCode = this.getFromCode();
+    const toCode = this.getToCode();
+    if (!fromCode || !toCode || fromCode.length !== 3 || toCode.length !== 3) {
+      return;
+    }
+    this.fetchAvailableDates(fromCode, toCode);
   }
 
   // Fetch available dates from API
@@ -676,6 +699,100 @@ export class SpecialFlightComponent implements OnInit {
       });
   }
 
+  private ensureSectorAvailableDatesCached(): void {
+    this.fetchAndStoreSectorAvailableDates();
+  }
+
+  fetchAndStoreSectorAvailableDates(tripType?: string): void {
+    const effectiveTripType =
+      tripType || (this.form.value.tripType as 'oneway' | 'roundtrip' | null);
+
+    this.loading = true;
+    this.flightService
+      .getSectorAvailableDates(effectiveTripType || undefined)
+      .subscribe({
+        next: (resp) => {
+          this.loading = false;
+          this.applySectorAvailableDates(resp);
+        },
+        error: () => {
+          this.loading = false;
+        }
+      });
+  }
+
+  private applySectorAvailableDates(resp: any): void {
+    const data = resp && resp.data ? resp.data : {};
+    const cities = resp && resp.cities ? resp.cities : {};
+    this.sectorDatesBySector = {};
+    this.sectorDestinationsByOrigin = {};
+    this.cityNames = {};
+    this.originOptions = [];
+    Object.keys(data).forEach((sector) => {
+      const parts = sector.split('-');
+      if (parts.length !== 2) {
+        return;
+      }
+      const from = parts[0].toUpperCase();
+      const to = parts[1].toUpperCase();
+      const raw = (data as any)[sector];
+      let dates: string[] = [];
+      let fromCity = '';
+      let toCity = '';
+      if (Array.isArray(raw)) {
+        dates = raw;
+      } else if (raw && typeof raw === 'object') {
+        if (Array.isArray((raw as any).dates)) {
+          dates = (raw as any).dates;
+        }
+        if (typeof (raw as any).from_city === 'string') {
+          fromCity = (raw as any).from_city;
+        }
+        if (typeof (raw as any).to_city === 'string') {
+          toCity = (raw as any).to_city;
+        }
+      }
+      this.sectorDatesBySector[`${from}-${to}`] = dates;
+      if (fromCity) {
+        this.cityNames[from] = fromCity;
+      }
+      if (toCity) {
+        this.cityNames[to] = toCity;
+      }
+      if (!this.sectorDestinationsByOrigin[from]) {
+        this.sectorDestinationsByOrigin[from] = [];
+      }
+      if (!this.sectorDestinationsByOrigin[from].includes(to)) {
+        this.sectorDestinationsByOrigin[from].push(to);
+      }
+    });
+
+    Object.keys(cities).forEach((code) => {
+      if (typeof (cities as any)[code] === 'string') {
+        this.cityNames[code.toUpperCase()] = (cities as any)[code];
+      }
+    });
+
+    const origins = Object.keys(this.sectorDestinationsByOrigin).sort();
+    this.originOptions = origins.map((code) => ({
+      code,
+      city: this.cityNames[code] || ''
+    }));
+
+    const fromCtrl = this.form.get('from');
+    const toCtrl = this.form.get('to');
+    if (fromCtrl) {
+      const fromVal = fromCtrl.value || '';
+      fromCtrl.setValue(fromVal, { emitEvent: true });
+    }
+    if (toCtrl) {
+      const toVal = toCtrl.value || '';
+      toCtrl.setValue(toVal, { emitEvent: true });
+    }
+
+    this.checkAndFetchAvailableDates();
+  }
+
   /**
    * Checks if all required URL parameters are loaded and then searches for flights
    * @param fromLoaded Whether the 'from' airport data is loaded
@@ -697,6 +814,8 @@ export class SpecialFlightComponent implements OnInit {
     this.error = '';
     this.flightGroups = [];
     this.filteredFlightGroups = [];
+    this.departureSlots.clear();
+    this.arrivalSlots.clear();
 
     const params: any = {};
 
@@ -759,22 +878,7 @@ export class SpecialFlightComponent implements OnInit {
       params.infants = this.form.value.infants;
     }
 
-    if (this.departureSlots.size > 0) {
-      params.departSlots = Array.from(this.departureSlots).join(',');
-    }
-    if (this.arrivalSlots.size > 0) {
-      params.arrivalSlots = Array.from(this.arrivalSlots).join(',');
-    }
-
     const qp: any = { ...params };
-    qp.departSlots =
-      this.departureSlots.size > 0
-        ? Array.from(this.departureSlots).join(',')
-        : null;
-    qp.arrivalSlots =
-      this.arrivalSlots.size > 0
-        ? Array.from(this.arrivalSlots).join(',')
-        : null;
 
     this.router.navigate([], {
       relativeTo: this.route,
@@ -943,7 +1047,7 @@ export class SpecialFlightComponent implements OnInit {
     } else {
       this.departureSlots.add(slot);
     }
-    this.searchFlights();
+    this.applyFilters();
   }
 
   toggleArrivalSlot(slot: string) {
@@ -952,7 +1056,7 @@ export class SpecialFlightComponent implements OnInit {
     } else {
       this.arrivalSlots.add(slot);
     }
-    this.searchFlights();
+    this.applyFilters();
   }
 
   isDepartureSlotSelected(slot: string): boolean {
@@ -1141,9 +1245,19 @@ export class SpecialFlightComponent implements OnInit {
   };
 
   // Display only airport code in uppercase in input after selection
-  displayAirport(airport: any): string {
-    return airport ? `${airport.code.toUpperCase()}` : '';
-  }
+  displayAirport = (airport: any): string => {
+    if (!airport) {
+      return '';
+    }
+    if (typeof airport === 'string') {
+      const code = airport.trim().toUpperCase();
+      const city = this.cityNames[code];
+      return city ? `${code} (${city})` : code;
+    }
+    const code = airport.code ? String(airport.code).toUpperCase() : '';
+    const city = airport.city || this.cityNames[code] || '';
+    return city ? `${code} (${city})` : code;
+  };
 
   swap() {
     const f = this.form.value.from;
@@ -1360,7 +1474,7 @@ export class SpecialFlightComponent implements OnInit {
         fareId: safeFareId,
         flightDetails: group,
         fareDetails: fareDetailsToStore,
-        type: 'external',
+        type: 'external_flight',
         sectyp: sectyp,
         farePrice: fare?.price ?? fare?.price ?? null,
         adults: adults,
@@ -1390,13 +1504,14 @@ export class SpecialFlightComponent implements OnInit {
     if (typeof fromValue === 'object' && fromValue !== null) {
       const obj = fromValue as { code?: string; iata?: string };
       if (obj.code && obj.code.trim() !== '') {
-        return obj.code.trim().toUpperCase();
+        return obj.code.trim().toUpperCase().substring(0, 3);
       }
       if (obj.iata && obj.iata.trim() !== '') {
-        return obj.iata.trim().toUpperCase();
+        return obj.iata.trim().toUpperCase().substring(0, 3);
       }
     } else if (typeof fromValue === 'string' && fromValue.trim() !== '') {
-      return fromValue.trim().toUpperCase();
+      const v = fromValue.trim().toUpperCase();
+      return v.length >= 3 ? v.substring(0, 3) : '';
     }
     return '';
   }
@@ -1409,13 +1524,14 @@ export class SpecialFlightComponent implements OnInit {
     if (typeof toValue === 'object' && toValue !== null) {
       const obj = toValue as { code?: string; iata?: string };
       if (obj.code && obj.code.trim() !== '') {
-        return obj.code.trim().toUpperCase();
+        return obj.code.trim().toUpperCase().substring(0, 3);
       }
       if (obj.iata && obj.iata.trim() !== '') {
-        return obj.iata.trim().toUpperCase();
+        return obj.iata.trim().toUpperCase().substring(0, 3);
       }
     } else if (typeof toValue === 'string' && toValue.trim() !== '') {
-      return toValue.trim().toUpperCase();
+      const v = toValue.trim().toUpperCase();
+      return v.length >= 3 ? v.substring(0, 3) : '';
     }
     return '';
   }

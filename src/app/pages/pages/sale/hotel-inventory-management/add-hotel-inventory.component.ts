@@ -95,6 +95,7 @@ export class AddHotelInventoryComponent implements OnInit {
   defaultCityNameTarget = 'Udaipur';
   defaultHotelName = 'Alpine Hotel Restaurant';
   mode: 'confirm' | 'normal' = 'confirm';
+  inventoryId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -120,6 +121,7 @@ export class AddHotelInventoryComponent implements OnInit {
       status: ['available', Validators.required],
       checkinTime: ['', Validators.required],
       checkoutTime: ['', Validators.required],
+      adultAgeLimit: [12, Validators.required],
       isRefundable: ['non-refundable', Validators.required],
       fareRules: this.fb.array([]),
       allowHoldBooking: [false],
@@ -127,12 +129,13 @@ export class AddHotelInventoryComponent implements OnInit {
       holdBookingAmount: [null],
       holdBookingCutOffDays: [null],
       holdBookingLimit: [null],
+      markupType: [null],
+      markupValue: [null],
       extraCosts: this.fb.group({
-        adult: this.fb.group({}),
-        child: this.fb.group({}),
-        child_with_bed: this.fb.group({}),
-        childAge: [null],
-        childWithBedAge: [null]
+        childAgeFrom: [null],
+        childAgeTo: [null],
+        childWithBedAgeFrom: [null],
+        childWithBedAgeTo: [null]
       }),
       blackoutDates: this.fb.array([]),
       blackoutDateInput: [null],
@@ -151,6 +154,9 @@ export class AddHotelInventoryComponent implements OnInit {
 
     const invIdStr = this.route.snapshot.queryParamMap.get('inventory_id');
     const invId = invIdStr ? Number(invIdStr) : 0;
+    if (invId) {
+      this.inventoryId = invId;
+    }
     const typeParam = this.route.snapshot.queryParamMap.get('type');
     if (typeParam === 'normal' || typeParam === 'confirm') {
       this.mode = typeParam as any;
@@ -207,6 +213,8 @@ export class AddHotelInventoryComponent implements OnInit {
     const limitCtrl = this.form.get('holdBookingLimit') as FormControl;
     const priceCtrl = this.form.get('pricePerNight') as FormControl;
     const allowCtrl = this.form.get('allowHoldBooking') as FormControl;
+    const markupTypeCtrl = this.form.get('markupType') as FormControl;
+    const markupValueCtrl = this.form.get('markupValue') as FormControl;
     const setAmountValidators = () => {
       const v: any[] = [Validators.required, Validators.min(0)];
       if (typeCtrl?.value === 'percentage') v.push(Validators.max(100));
@@ -239,6 +247,16 @@ export class AddHotelInventoryComponent implements OnInit {
       cutOffCtrl.updateValueAndValidity({ emitEvent: false });
       limitCtrl.updateValueAndValidity({ emitEvent: false });
     });
+    const setMarkupValidators = () => {
+      const v: any[] = [Validators.min(0)];
+      if (markupTypeCtrl?.value === 'percentage') v.push(Validators.max(100));
+      markupValueCtrl.setValidators(v);
+      markupValueCtrl.updateValueAndValidity({ emitEvent: false });
+    };
+    setMarkupValidators();
+    markupTypeCtrl?.valueChanges
+      .pipe(distinctUntilChanged())
+      .subscribe(() => setMarkupValidators());
     allowCtrl?.valueChanges.subscribe((enabled) => {
       const apply = (c: FormControl, validators: any[]) => {
         c.setValidators(enabled ? validators : []);
@@ -278,7 +296,87 @@ export class AddHotelInventoryComponent implements OnInit {
       hotelSearch: inv.hotel_name || '',
       checkinTime: inv.check_in_time || '',
       checkoutTime: inv.check_out_time || '',
-      extraBedPrice: inv.extra_bed_price ?? null
+      extraBedPrice: inv.extra_bed_price ?? null,
+      markupType:
+        inv.markup_type === 'P'
+          ? 'percentage'
+          : inv.markup_type === 'F'
+            ? 'flat'
+            : null,
+      markupValue: inv.markup_value != null ? Number(inv.markup_value) : null
+    });
+    const invExtra = inv.extra_costs || inv.extraCosts || null;
+    if (invExtra) {
+      const extraPatch: any = {};
+      if (invExtra.child_age_from != null) {
+        extraPatch.childAgeFrom = invExtra.child_age_from;
+      }
+      if (invExtra.child_age_to != null) {
+        extraPatch.childAgeTo = invExtra.child_age_to;
+      }
+      if (invExtra.child_with_bed_age_from != null) {
+        extraPatch.childWithBedAgeFrom = invExtra.child_with_bed_age_from;
+      }
+      if (invExtra.child_with_bed_age_to != null) {
+        extraPatch.childWithBedAgeTo = invExtra.child_with_bed_age_to;
+      }
+      if (Object.keys(extraPatch).length) {
+        this.form.patchValue({
+          extraCosts: extraPatch
+        });
+      }
+    }
+    const isRef = inv.is_refundable;
+    const isRefVal =
+      isRef === true || isRef === 1 || isRef === '1'
+        ? 'refundable'
+        : 'non-refundable';
+    this.form.patchValue({
+      isRefundable: isRefVal
+    });
+    const rules = Array.isArray(inv.refund_rules)
+      ? inv.refund_rules
+      : Array.isArray(inv.refundRules)
+        ? inv.refundRules
+        : [];
+    while (this.fareRules.length) {
+      this.fareRules.removeAt(0);
+    }
+    if (isRefVal === 'refundable' && rules.length) {
+      rules.forEach((r: any) => {
+        const days =
+          r.days_before_checkin != null
+            ? r.days_before_checkin
+            : r.days != null
+              ? r.days
+              : null;
+        const amount =
+          r.amount != null
+            ? r.amount
+            : r.refundable_amount != null
+              ? r.refundable_amount
+              : null;
+        this.fareRules.push(
+          this.fb.group({
+            days: [days, [Validators.required, Validators.min(1)]],
+            amount: [amount, [Validators.required, Validators.min(0)]]
+          })
+        );
+      });
+    }
+    const allowHold = inv.allow_hold_booking ?? inv.allowHoldBooking;
+    const holdType = inv.hold_type ?? inv.holdType;
+    const holdValue = inv.hold_value ?? inv.holdValue;
+    const holdDays = inv.hold_booking_days ?? inv.holdBookingDays;
+    const holdLimit = inv.hold_booking_limit ?? inv.holdBookingLimit;
+    const holdTypeForm =
+      holdType === 'F' || holdType === 'flat' ? 'flat' : 'percentage';
+    this.form.patchValue({
+      allowHoldBooking: !!allowHold,
+      holdBookingType: holdTypeForm,
+      holdBookingAmount: holdValue != null ? Number(holdValue) : null,
+      holdBookingCutOffDays: holdDays != null ? Number(holdDays) : null,
+      holdBookingLimit: holdLimit != null ? Number(holdLimit) : null
     });
     this.hotelService.getHotelById(inv.hotel_id).subscribe({
       next: (res: any) => {
@@ -331,16 +429,67 @@ export class AddHotelInventoryComponent implements OnInit {
                       error: () => {}
                     });
                 }
+                const childFromCtrl = this.form.get('extraCosts.childAgeFrom');
+                const childToCtrl = this.form.get('extraCosts.childAgeTo');
+                if (childFromCtrl && childToCtrl) {
+                  childFromCtrl.valueChanges
+                    .pipe(distinctUntilChanged())
+                    .subscribe((fromVal: any) => {
+                      const fromNum = Number(fromVal ?? 0);
+                      const toVal = Number(childToCtrl.value ?? 0);
+                      if (childToCtrl.value != null && toVal <= fromNum) {
+                        childToCtrl.setValue(null);
+                      }
+                    });
+                }
+                const childBedFromCtrl = this.form.get(
+                  'extraCosts.childWithBedAgeFrom'
+                );
+                const childBedToCtrl = this.form.get(
+                  'extraCosts.childWithBedAgeTo'
+                );
+                if (childBedFromCtrl && childBedToCtrl) {
+                  childBedFromCtrl.valueChanges
+                    .pipe(distinctUntilChanged())
+                    .subscribe((fromVal: any) => {
+                      const fromNum = Number(fromVal ?? 0);
+                      const toVal = Number(childBedToCtrl.value ?? 0);
+                      if (childBedToCtrl.value != null && toVal <= fromNum) {
+                        childBedToCtrl.setValue(null);
+                      }
+                    });
+                }
               },
               error: () => {}
             });
         }
+        const blackoutSet = new Set<string>();
+        rooms.forEach((r: any) => {
+          const list = r.blackout_dates || r.blackoutDates || [];
+          (Array.isArray(list) ? list : []).forEach((d: any) => {
+            const s = typeof d === 'string' ? d : this.dateToStr(d);
+            if (s) blackoutSet.add(s);
+          });
+        });
+        const blackoutArr = Array.from(blackoutSet);
+        const blackoutFormArr = this.blackoutDates;
+        while (blackoutFormArr.length) {
+          blackoutFormArr.removeAt(0);
+        }
+        blackoutArr.forEach((d) => blackoutFormArr.push(this.fb.control(d)));
         this.loadHotelRooms(inv.hotel_id);
         setTimeout(() => {
           const selectedIds = rooms
             .map((r: any) => Number(r.room_id))
             .filter((n: any) => !!n);
           this.selectedRoomIds = Array.from(new Set(selectedIds));
+          const mealKeyList = this.mealKeys().map((m) => m.key);
+          const mealKeyForId = (id: any): string | null => {
+            const n = Number(id);
+            if (!n || isNaN(n)) return null;
+            const key = `meal_${n}`;
+            return mealKeyList.includes(key) ? key : null;
+          };
           for (const r of rooms) {
             const rid = Number(r.room_id);
             const grp = this.getRoomGroup(rid);
@@ -356,7 +505,6 @@ export class AddHotelInventoryComponent implements OnInit {
             (det.weekend_days || []).forEach((code: string) =>
               wdArr.push(this.fb.control(code))
             );
-
             const ranges = Array.isArray(r.ranges) ? r.ranges : [];
             const dates = Array.isArray(r.dates) ? r.dates : [];
             const rangesArr = this.getDateRanges(rid);
@@ -381,12 +529,18 @@ export class AddHotelInventoryComponent implements OnInit {
                 if (pr.start_date !== from || pr.end_date !== to) continue;
                 const kind = pr.type === 'weekend_days' ? 'weekend' : 'weekday';
                 const occ = `p${Number(pr.person) || 1}`;
-                const mk = this.mealKeys().find(
-                  (m) =>
-                    String(m.label).toLowerCase() ===
-                    String(pr.meal_type).toLowerCase()
-                );
-                const mealKey = mk?.key;
+                let mealKey =
+                  typeof pr.meal_type === 'number'
+                    ? mealKeyForId(pr.meal_type)
+                    : null;
+                if (!mealKey) {
+                  const mk = this.mealKeys().find(
+                    (m) =>
+                      String(m.label).toLowerCase() ===
+                      String(pr.meal_type).toLowerCase()
+                  );
+                  mealKey = mk?.key || null;
+                }
                 if (!mealKey) continue;
                 const ctrl = this.getPriceControl(
                   init,
@@ -396,6 +550,30 @@ export class AddHotelInventoryComponent implements OnInit {
                 );
                 ctrl?.setValue(String(pr.amount));
               }
+            }
+            const roomExtra = r.extra_costs || r.extraCosts || null;
+            if (roomExtra) {
+              const applyExtra = (
+                day: 'weekday' | 'weekend',
+                kind: 'adult' | 'child' | 'child_with_bed'
+              ) => {
+                const list = roomExtra[day]?.[kind] || [];
+                (Array.isArray(list) ? list : []).forEach((entry: any) => {
+                  const key =
+                    typeof entry.meal_type === 'number'
+                      ? mealKeyForId(entry.meal_type)
+                      : null;
+                  if (!key) return;
+                  const ctrl = this.roomExtraCostCtrl(rid, day, kind, key);
+                  ctrl.setValue(String(entry.amount ?? ''));
+                });
+              };
+              applyExtra('weekday', 'adult');
+              applyExtra('weekday', 'child');
+              applyExtra('weekday', 'child_with_bed');
+              applyExtra('weekend', 'adult');
+              applyExtra('weekend', 'child');
+              applyExtra('weekend', 'child_with_bed');
             }
           }
         }, 300);
@@ -520,6 +698,7 @@ export class AddHotelInventoryComponent implements OnInit {
       next: (res: any) => {
         this.mealOptions = Array.isArray(res) ? res : res?.data ? res.data : [];
         this.buildExtraCostsControls();
+        this.buildRoomExtraCostsControls();
       },
       error: () => {}
     });
@@ -618,6 +797,7 @@ export class AddHotelInventoryComponent implements OnInit {
           this.selectedRoomIds = rooms?.length ? [rooms[0]?.id] : [];
           this.buildRoomDetailsControls(rooms);
         }
+        this.buildRoomExtraCostsControls();
       },
       error: () => {}
     });
@@ -665,7 +845,10 @@ export class AddHotelInventoryComponent implements OnInit {
           rangeStart: [null],
           rangeEnd: [null],
           dateRanges: this.fb.array([]),
-          weekendDays: this.fb.array([])
+          weekendDays: this.fb.array([]),
+          extraCosts: this.fb.group({}),
+          selectedMeals: this.fb.array([]),
+          selectedOccupancies: this.fb.array([])
         })
       );
     });
@@ -692,7 +875,10 @@ export class AddHotelInventoryComponent implements OnInit {
         rangeStart: [null],
         rangeEnd: [null],
         dateRanges: this.fb.array([]),
-        weekendDays: this.fb.array([])
+        weekendDays: this.fb.array([]),
+        extraCosts: this.fb.group({}),
+        selectedMeals: this.fb.array([]),
+        selectedOccupancies: this.fb.array([])
       })
     );
   }
@@ -795,6 +981,12 @@ export class AddHotelInventoryComponent implements OnInit {
         }
       }
     }
+  }
+
+  isRoomSelected(roomId: any): boolean {
+    if (roomId == null) return false;
+    const target = String(roomId);
+    return this.selectedRoomIds.some((id) => String(id) === target);
   }
 
   roomById(roomId: number): any | null {
@@ -1198,28 +1390,16 @@ export class AddHotelInventoryComponent implements OnInit {
     return Array.from({ length: 17 }, (_, i) => i + 1);
   }
 
+  childAgeOptions(): number[] {
+    const ctrl = this.form?.get('adultAgeLimit');
+    const raw = ctrl ? Number(ctrl.value ?? 17) : 17;
+    const max = !isNaN(raw) && raw >= 1 && raw <= 17 ? Math.floor(raw) : 17;
+    return Array.from({ length: max }, (_, i) => i + 1);
+  }
+
   buildExtraCostsControls(): void {
     const extra = this.form.get('extraCosts') as FormGroup;
     if (!extra) return;
-    const ensureKind = (kind: string) => {
-      const existing = extra.get(kind) as FormGroup | null;
-      const group = existing ?? this.fb.group({});
-      if (!existing) extra.addControl(kind, group);
-      this.mealKeys().forEach((mk) => {
-        if (!group.contains(mk.key)) {
-          group.addControl(
-            mk.key,
-            this.fb.control(null, [
-              Validators.pattern(/^\d+$/),
-              Validators.min(0)
-            ])
-          );
-        }
-      });
-    };
-    ensureKind('adult');
-    ensureKind('child');
-    ensureKind('child_with_bed');
   }
 
   extraCostCtrl(
@@ -1227,9 +1407,9 @@ export class AddHotelInventoryComponent implements OnInit {
     mealKey: string
   ): FormControl {
     const extra = this.form.get('extraCosts') as FormGroup;
-    const g = extra?.get(kind) as FormGroup;
     return (
-      (g?.get(mealKey) as FormControl) || (this.fb.control(null) as FormControl)
+      (extra?.get(mealKey) as FormControl) ||
+      (this.fb.control(null) as FormControl)
     );
   }
 
@@ -1247,6 +1427,98 @@ export class AddHotelInventoryComponent implements OnInit {
   occupancyKeysFor(roomId: number): string[] {
     const n = this.occupancyCount(roomId);
     return Array.from({ length: n }, (_, i) => `p${i + 1}`);
+  }
+
+  getSelectedOccupancyKeys(roomId: number): string[] {
+    const grp = this.getRoomGroup(roomId);
+    const arr = grp.get('selectedOccupancies') as FormArray | null;
+    const allKeys = this.occupancyKeysFor(roomId);
+    const raw = ((arr?.value ?? []) as string[]) || [];
+    const set = new Set(raw.filter((k) => allKeys.includes(k)));
+    if (!set.size) return allKeys;
+    return allKeys.filter((k) => set.has(k));
+  }
+
+  isOccupancySelected(roomId: number, occKey: string): boolean {
+    const selected = this.getSelectedOccupancyKeys(roomId);
+    return selected.includes(occKey);
+  }
+
+  toggleOccupancy(roomId: number, occKey: string, checked: boolean): void {
+    const grp = this.getRoomGroup(roomId);
+    let arr = grp.get('selectedOccupancies') as FormArray | null;
+    if (!arr) {
+      arr = this.fb.array([]);
+      grp.addControl('selectedOccupancies', arr);
+    }
+    const allKeys = this.occupancyKeysFor(roomId);
+    const current = ((arr.value ?? []) as string[]).filter((k) =>
+      allKeys.includes(k)
+    );
+    if (checked) {
+      if (!current.length) {
+        arr.push(this.fb.control(occKey));
+        return;
+      }
+      if (!current.includes(occKey)) {
+        arr.push(this.fb.control(occKey));
+      }
+      return;
+    }
+    if (!current.length) {
+      allKeys.forEach((k) => {
+        if (k !== occKey) {
+          arr!.push(this.fb.control(k));
+        }
+      });
+      return;
+    }
+    const idx = (arr.value as string[]).indexOf(occKey);
+    if (idx > -1) {
+      arr.removeAt(idx);
+    }
+  }
+
+  onRoomPersonsChange(roomId: number): void {
+    const grp = this.getRoomGroup(roomId);
+    const adults = Number(grp.get('adults')?.value ?? 0) || 0;
+    const children = Number(grp.get('children')?.value ?? 0) || 0;
+    const sum = adults + children;
+    if (sum > 0) {
+      const currentMax = Number(grp.get('maxPersons')?.value ?? 0) || 0;
+      if (sum > currentMax) {
+        grp.get('maxPersons')?.setValue(sum);
+        this.onMaxPersonsChange(roomId);
+        return;
+      }
+    }
+    this.onMaxPersonsChange(roomId);
+  }
+
+  onMaxPersonsChange(roomId: number): void {
+    const grp = this.getRoomGroup(roomId);
+    const adults = Number(grp.get('adults')?.value ?? 0) || 0;
+    const children = Number(grp.get('children')?.value ?? 0) || 0;
+    const sum = adults + children;
+    if (sum > 0) {
+      let maxPersons = Number(grp.get('maxPersons')?.value ?? 0) || 0;
+      if (maxPersons > sum) {
+        maxPersons = sum;
+        grp.get('maxPersons')?.setValue(maxPersons);
+      }
+    }
+    const ranges = this.getDateRanges(roomId);
+    const n = this.occupancyCount(roomId);
+    for (const ctrl of ranges.controls) {
+      const grp = ctrl as FormGroup;
+      grp.setControl(
+        'prices',
+        this.fb.group({
+          weekday: this.createOccupancyPricesGroup(n),
+          weekend: this.createOccupancyPricesGroup(n)
+        })
+      );
+    }
   }
 
   createOccupancyPricesGroup(count: number): FormGroup {
@@ -1280,6 +1552,123 @@ export class AddHotelInventoryComponent implements OnInit {
     const idx = arr.value.indexOf(day);
     if (checked && idx === -1) arr.push(this.fb.control(day));
     if (!checked && idx > -1) arr.removeAt(idx);
+  }
+
+  buildRoomExtraCostsControls(): void {
+    const keys = this.mealKeys().map((m) => m.key);
+    if (!keys.length) return;
+    this.roomDetails.controls.forEach((ctrl) => {
+      const roomGrp = ctrl as FormGroup;
+      let extra = roomGrp.get('extraCosts') as FormGroup | null;
+      if (!extra) {
+        extra = this.fb.group({});
+        roomGrp.addControl('extraCosts', extra);
+      }
+      const ensureDay = (day: 'weekday' | 'weekend') => {
+        let dayGrp = extra!.get(day) as FormGroup | null;
+        if (!dayGrp) {
+          dayGrp = this.fb.group({});
+          extra!.addControl(day, dayGrp);
+        }
+        ['adult', 'child', 'child_with_bed'].forEach((kind) => {
+          let kindGrp = dayGrp!.get(kind) as FormGroup | null;
+          if (!kindGrp) {
+            kindGrp = this.fb.group({});
+            dayGrp!.addControl(kind, kindGrp);
+          }
+          keys.forEach((mk) => {
+            if (!kindGrp!.get(mk)) {
+              kindGrp!.addControl(
+                mk,
+                this.fb.control(null, [
+                  Validators.pattern(/^\d+$/),
+                  Validators.min(0)
+                ])
+              );
+            }
+          });
+        });
+      };
+      ensureDay('weekday');
+      ensureDay('weekend');
+    });
+  }
+
+  roomExtraCostCtrl(
+    roomId: number,
+    day: 'weekday' | 'weekend',
+    kind: 'adult' | 'child' | 'child_with_bed',
+    mealKey: string
+  ): FormControl {
+    const grp = this.getRoomGroup(roomId);
+    const extra = grp.get('extraCosts') as FormGroup | null;
+    const dayGrp = extra?.get(day) as FormGroup | null;
+    const kindGrp = dayGrp?.get(kind) as FormGroup | null;
+    return (
+      (kindGrp?.get(mealKey) as FormControl) ||
+      (this.fb.control(null) as FormControl)
+    );
+  }
+
+  getSelectedMeals(roomId: number): string[] {
+    const grp = this.getRoomGroup(roomId);
+    const arr = grp.get('selectedMeals') as FormArray | null;
+    const val = (arr?.value ?? []) as string[];
+    return Array.isArray(val) ? val : [];
+  }
+
+  isMealSelected(roomId: number, mealKey: string): boolean {
+    const selected = this.getSelectedMeals(roomId);
+    if (!selected.length) return true;
+    return selected.includes(mealKey);
+  }
+
+  getSelectedMealKeys(roomId: number): {
+    key: string;
+    label: string;
+  }[] {
+    const selected = this.getSelectedMeals(roomId);
+    if (!selected.length) return this.mealKeys();
+    const set = new Set(selected);
+    return this.mealKeys().filter((m) => set.has(m.key));
+  }
+
+  toggleMealType(roomId: number, mealKey: string, checked: boolean): void {
+    const grp = this.getRoomGroup(roomId);
+    let arr = grp.get('selectedMeals') as FormArray | null;
+    if (!arr) {
+      arr = this.fb.array([]);
+      grp.addControl('selectedMeals', arr);
+    }
+    const current = (arr.value as string[]) || [];
+    const idx = current.indexOf(mealKey);
+    if (checked) {
+      if (!current.length) {
+        this.mealKeys().forEach((m) => {
+          if (m.key === mealKey || current.includes(m.key)) {
+            if (!current.includes(m.key)) {
+              arr!.push(this.fb.control(m.key));
+            }
+          }
+        });
+        return;
+      }
+      if (idx === -1) {
+        arr.push(this.fb.control(mealKey));
+      }
+    } else {
+      if (!current.length) {
+        this.mealKeys().forEach((m) => {
+          if (m.key !== mealKey) {
+            arr!.push(this.fb.control(m.key));
+          }
+        });
+        return;
+      }
+      if (idx > -1) {
+        arr.removeAt(idx);
+      }
+    }
   }
 
   hasWeekend(roomId: number): boolean {
@@ -1335,16 +1724,56 @@ export class AddHotelInventoryComponent implements OnInit {
     return !!s && /^\d+$/.test(s);
   }
 
+  private getRoomExtraCostsPayload(roomId: number): any | null {
+    const grp = this.getRoomGroup(roomId);
+    const extra = grp.get('extraCosts') as FormGroup | null;
+    if (!extra) return null;
+    const mealList = this.mealKeys();
+    const out: any = {};
+    const collectForDay = (day: 'weekday' | 'weekend') => {
+      const dayGrp = extra.get(day) as FormGroup | null;
+      if (!dayGrp) return;
+      const dayOut: any = {};
+      (['adult', 'child', 'child_with_bed'] as const).forEach((kind) => {
+        const kindGrp = dayGrp.get(kind) as FormGroup | null;
+        if (!kindGrp) return;
+        const entries: any[] = [];
+        mealList.forEach((mk) => {
+          const ctrl = kindGrp.get(mk.key) as FormControl | null;
+          const val = ctrl?.value;
+          if (this.isNonEmptyNumeric(val)) {
+            entries.push({
+              meal_type: this.mealIdForKey(mk.key, mk.label),
+              amount: Number(val)
+            });
+          }
+        });
+        if (entries.length) dayOut[kind] = entries;
+      });
+      if (Object.keys(dayOut).length) out[day] = dayOut;
+    };
+    collectForDay('weekday');
+    collectForDay('weekend');
+    return Object.keys(out).length ? out : null;
+  }
+
   isBasePricesComplete(roomId: number, kind: 'weekday' | 'weekend'): boolean {
     const ranges = this.getDateRanges(roomId).controls;
     if (!ranges.length) return false;
-    const mealKeys = this.mealKeys().map((m) => m.key);
+    const selected = this.getSelectedMeals(roomId);
+    if (!selected.length) return false;
+    const mealKeys = selected as string[];
+    const occKeys = this.getSelectedOccupancyKeys(roomId);
+    if (!occKeys.length) return false;
+    const baseOccKey = occKeys[0];
     for (const rg of ranges) {
       const grp = rg as FormGroup;
-      const p1 = grp.get(`prices.${kind}.p1`) as FormGroup | null;
-      if (!p1) return false;
+      const baseGrp = grp.get(
+        `prices.${kind}.${baseOccKey}`
+      ) as FormGroup | null;
+      if (!baseGrp) return false;
       for (const mk of mealKeys) {
-        const ctrl = p1.get(mk) as FormControl | null;
+        const ctrl = baseGrp.get(mk) as FormControl | null;
         if (!ctrl || !this.isNonEmptyNumeric(ctrl.value)) return false;
       }
     }
@@ -1428,7 +1857,7 @@ export class AddHotelInventoryComponent implements OnInit {
       const grp = this.getRoomGroup(rid);
       const detailsForRoom: any[] = [];
       const ranges = this.getDateRanges(rid).controls;
-      const occKeys = this.occupancyKeysFor(rid);
+      const occKeys = this.getSelectedOccupancyKeys(rid);
       let roomsTotal = 0;
       for (const rg of ranges) {
         const from = rg.value?.from;
@@ -1476,12 +1905,15 @@ export class AddHotelInventoryComponent implements OnInit {
       const blackout_dates = (this.blackoutDates?.value as string[]) || [];
       if (detailsForRoom.length) {
         allDetails.push(...detailsForRoom);
+        const roomExtraCosts = this.getRoomExtraCostsPayload(rid);
         roomDetailsArr.push({
           room_id: rid,
           adults: Number(grp.get('adults')?.value ?? 0) || 0,
           child: Number(grp.get('children')?.value ?? 0) || 0,
           infants: Number(grp.get('infants')?.value ?? 0) || 0,
           max_person: Number(grp.get('maxPersons')?.value ?? 0) || 0,
+          total_rooms: Number(grp.get('frontRoomsCount')?.value ?? 0) || 0,
+          rooms_availability: roomsTotal,
           no_of_room: roomsTotal,
           free_child_without_bed_count:
             Number(grp.get('freeChildNoBedCount')?.value ?? 0) || 0,
@@ -1491,6 +1923,7 @@ export class AddHotelInventoryComponent implements OnInit {
               : null,
           weekend_days: (this.getWeekendDays(rid).value || []) as string[],
           blackout_dates,
+          extra_costs: roomExtraCosts,
           details: detailsForRoom
         });
       }
@@ -1564,6 +1997,16 @@ export class AddHotelInventoryComponent implements OnInit {
       hold_booking_limit:
         this.form.get('holdBookingLimit')?.value != null
           ? Number(this.form.get('holdBookingLimit')?.value)
+          : null,
+      markup_type:
+        this.form.get('markupType')?.value === 'percentage'
+          ? 'P'
+          : this.form.get('markupType')?.value === 'flat'
+            ? 'F'
+            : null,
+      markup_value:
+        this.form.get('markupValue')?.value != null
+          ? Number(this.form.get('markupValue')?.value)
           : null
     };
     return { type: this.mode, inventories: [inventory] };
@@ -1571,31 +2014,38 @@ export class AddHotelInventoryComponent implements OnInit {
 
   getExtraCostsPayload(): any {
     const extra = this.form.get('extraCosts') as FormGroup;
-    if (!extra) return {};
-    const out: any = { adult: {}, child: {}, child_with_bed: {} };
-    const kinds: Array<keyof typeof out> = ['adult', 'child', 'child_with_bed'];
-    const options = Array.isArray(this.mealOptions) ? this.mealOptions : [];
-    kinds.forEach((kind) => {
-      const g = extra.get(kind as string) as FormGroup | null;
-      if (!g) return;
-      options.forEach((opt: any) => {
-        const mealId = Number(opt?.id ?? 0);
-        if (!mealId) return;
-        const ctrlKey = `meal_${mealId}`;
-        const v = (g.get(ctrlKey) as FormControl | null)?.value;
-        if (this.isNonEmptyNumeric(v)) {
-          out[kind][mealId] = Number(v);
-        }
-      });
-    });
-    const childAge = (extra.get('childAge') as FormControl | null)?.value;
-    const childWithBedAge = (extra.get('childWithBedAge') as FormControl | null)
+    const out: any = {};
+    const childAgeFrom = (extra?.get('childAgeFrom') as FormControl | null)
       ?.value;
-    if (childAge != null && String(childAge).trim() !== '') {
-      out.child_age = Number(childAge);
+    const childAgeTo = (extra?.get('childAgeTo') as FormControl | null)?.value;
+    const childWithBedAgeFrom = (
+      extra?.get('childWithBedAgeFrom') as FormControl | null
+    )?.value;
+    const childWithBedAgeTo = (
+      extra?.get('childWithBedAgeTo') as FormControl | null
+    )?.value;
+    const normalize = (val: any): number | null => {
+      if (val === null || val === undefined) return null;
+      const s = String(val).trim();
+      if (!s) return null;
+      const n = Number(s);
+      return isNaN(n) ? null : n;
+    };
+    const caFrom = normalize(childAgeFrom);
+    const caTo = normalize(childAgeTo);
+    const cwbFrom = normalize(childWithBedAgeFrom);
+    const cwbTo = normalize(childWithBedAgeTo);
+    if (caFrom !== null) {
+      out.child_age_from = caFrom;
     }
-    if (childWithBedAge != null && String(childWithBedAge).trim() !== '') {
-      out.child_with_bed_age = Number(childWithBedAge);
+    if (caTo !== null) {
+      out.child_age_to = caTo;
+    }
+    if (cwbFrom !== null) {
+      out.child_with_bed_age_from = cwbFrom;
+    }
+    if (cwbTo !== null) {
+      out.child_with_bed_age_to = cwbTo;
     }
     return out;
   }
@@ -1647,19 +2097,6 @@ export class AddHotelInventoryComponent implements OnInit {
         errors.push(`${f.label} is required`);
       }
     });
-    const extra = this.form.get('extraCosts') as FormGroup;
-    const mealKeys = this.mealKeys().map((m) => m.key);
-    ['adult', 'child', 'child_with_bed'].forEach((kind) => {
-      const g = extra?.get(kind) as FormGroup;
-      mealKeys.forEach((mk) => {
-        const v = (g?.get(mk) as FormControl | null)?.value;
-        if (!this.isNonEmptyNumeric(v)) {
-          errors.push(
-            `Extra ${kind.replace('_', ' ')} ${mk} price is required`
-          );
-        }
-      });
-    });
     for (const rid of this.selectedRoomIds) {
       const grp = this.getRoomGroup(rid);
       const roomName = this.roomById(rid)?.room_name || String(rid);
@@ -1687,17 +2124,59 @@ export class AddHotelInventoryComponent implements OnInit {
       if (!ranges.length) {
         errors.push(`Select at least one date range for ${roomName}`);
       }
+      const meals = this.getSelectedMeals(rid);
+      if (!meals.length) {
+        errors.push(`Select at least one meal type for ${roomName}`);
+      }
+      const extra = grp.get('extraCosts') as FormGroup | null;
+      if (extra) {
+        const checkExtra = (
+          kind: 'adult' | 'child' | 'child_with_bed',
+          label: string,
+          day: 'weekday' | 'weekend'
+        ) => {
+          const dayGrp = extra.get(day) as FormGroup | null;
+          const kindGrp = dayGrp?.get(kind) as FormGroup | null;
+          meals.forEach((mk) => {
+            const ctrl = kindGrp?.get(mk) as FormControl | null;
+            if (!ctrl || !this.isNonEmptyNumeric(ctrl.value)) {
+              const dayLabel = day === 'weekday' ? 'weekday' : 'week off';
+              errors.push(
+                `Extra ${label} ${dayLabel} ${mk} price is required for ${roomName}`
+              );
+            }
+          });
+        };
+        checkExtra('child', 'child without bed', 'weekday');
+        checkExtra('child_with_bed', 'child with bed', 'weekday');
+        checkExtra('adult', 'bed per adult', 'weekday');
+        if (this.hasWeekend(rid)) {
+          checkExtra('child', 'child without bed', 'weekend');
+          checkExtra('child_with_bed', 'child with bed', 'weekend');
+          checkExtra('adult', 'bed per adult', 'weekend');
+        }
+      }
       const weekdayOk = this.isBasePricesComplete(rid, 'weekday');
       if (!weekdayOk) {
+        const occKeys = this.getSelectedOccupancyKeys(rid);
+        const occLabel =
+          occKeys.length && /^p\d+$/.test(occKeys[0])
+            ? `${Number(occKeys[0].slice(1))}-person`
+            : 'base';
         errors.push(
-          `Add 1-person weekday prices for all meals for ${roomName}`
+          `Add ${occLabel} weekday prices for all meals for ${roomName}`
         );
       }
       if (this.hasWeekend(rid)) {
         const weekendOk = this.isBasePricesComplete(rid, 'weekend');
         if (!weekendOk) {
+          const occKeys = this.getSelectedOccupancyKeys(rid);
+          const occLabel =
+            occKeys.length && /^p\d+$/.test(occKeys[0])
+              ? `${Number(occKeys[0].slice(1))}-person`
+              : 'base';
           errors.push(
-            `Add 1-person week off prices for all meals for ${roomName}`
+            `Add ${occLabel} week off prices for all meals for ${roomName}`
           );
         }
       }

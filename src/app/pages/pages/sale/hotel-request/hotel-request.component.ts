@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -11,8 +11,16 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
-import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
+import {
+  FormsModule,
+  ReactiveFormsModule,
+  FormControl,
+  FormBuilder,
+  FormGroup,
+  Validators
+} from '@angular/forms';
 import { VexSecondaryToolbarComponent } from '@vex/components/vex-secondary-toolbar/vex-secondary-toolbar.component';
 import { VexBreadcrumbsComponent } from '@vex/components/vex-breadcrumbs/vex-breadcrumbs.component';
 import { VexPageLayoutComponent } from '@vex/components/vex-page-layout/vex-page-layout.component';
@@ -47,6 +55,7 @@ import { UserService } from '../../../../core/services/user.service';
     MatFormFieldModule,
     MatSelectModule,
     MatProgressSpinnerModule,
+    MatDialogModule,
     MatCardModule,
     FormsModule,
     ReactiveFormsModule
@@ -76,13 +85,23 @@ export class HotelRequestComponent implements OnInit {
   supplierCtrl = new FormControl<number | null>(null);
   tenantOptions: Array<{ id: number; name: string }> = [];
   supplierOptions: Array<{ id: number; name: string }> = [];
+  @ViewChild('confirmDialogTpl') confirmDialogTpl!: TemplateRef<any>;
+  confirmForm: FormGroup;
+  confirmDialogOrderId: number | null = null;
 
   constructor(
     private bookingService: BookingService,
     private notificationService: NotificationService,
     private router: Router,
-    private userService: UserService
-  ) {}
+    private userService: UserService,
+    private fb: FormBuilder,
+    public dialog: MatDialog
+  ) {
+    this.confirmForm = this.fb.group({
+      hotelReferenceId: ['', Validators.required],
+      notes: ['']
+    });
+  }
 
   ngOnInit(): void {
     const isMasterRaw = localStorage.getItem('is_master');
@@ -185,20 +204,60 @@ export class HotelRequestComponent implements OnInit {
 
   processingId: number | null = null;
 
-  onConfirm(orderId: number): void {
+  onProcess(orderId: number): void {
     if (!orderId) return;
-    const ok = window.confirm('Confirm this hotel request?');
+    const ok = window.confirm('Mark this hotel request as under process?');
     if (!ok) return;
     this.processingId = orderId;
-    this.bookingService.confirmHotelRequest(orderId).subscribe({
+    this.bookingService.processHotelRequest(orderId).subscribe({
+      next: () => {
+        this.notificationService.success('Request marked as under process');
+        this.processingId = null;
+        this.loadRequests();
+      },
+      error: () => {
+        this.notificationService.error('Failed to process request');
+        this.processingId = null;
+      }
+    });
+  }
+
+  onConfirm(orderId: number): void {
+    if (!orderId) return;
+    this.confirmDialogOrderId = orderId;
+    this.confirmForm.reset({
+      hotelReferenceId: '',
+      notes: ''
+    });
+    this.dialog.open(this.confirmDialogTpl, {
+      width: '420px'
+    });
+  }
+
+  submitConfirmDialog(): void {
+    if (!this.confirmDialogOrderId) return;
+    if (this.confirmForm.invalid) {
+      this.confirmForm.markAllAsTouched();
+      return;
+    }
+    const orderId = this.confirmDialogOrderId;
+    const value = this.confirmForm.value;
+    this.processingId = orderId;
+    const body = {
+      hotel_reference_id: value.hotelReferenceId,
+      notes: value.notes || ''
+    };
+    this.bookingService.confirmHotelRequest(orderId, body).subscribe({
       next: () => {
         this.notificationService.success('Request confirmed');
         this.processingId = null;
+        this.dialog.closeAll();
         this.loadRequests();
       },
       error: () => {
         this.notificationService.error('Failed to confirm request');
         this.processingId = null;
+        this.dialog.closeAll();
       }
     });
   }

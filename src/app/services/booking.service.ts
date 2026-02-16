@@ -39,10 +39,17 @@ export class BookingService {
     });
   }
 
-  confirmHotelRequest(orderId: number): Observable<any> {
+  processHotelRequest(orderId: number): Observable<any> {
+    return this.http.post(
+      `${environment.apiUrl}/bookings/hotel-requests/${orderId}/process`,
+      {}
+    );
+  }
+
+  confirmHotelRequest(orderId: number, body?: any): Observable<any> {
     return this.http.post(
       `${environment.apiUrl}/bookings/hotel-requests/${orderId}/confirm`,
-      {}
+      body || {}
     );
   }
 

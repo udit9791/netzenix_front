@@ -94,13 +94,36 @@
                 <mat-icon>visibility</mat-icon>
               </button>
               <ng-container *ngIf="r.status == 11">
-                <button mat-stroked-button color="primary" class="mr-2" (click)="onConfirm(r.reference_id)" [disabled]="processingId === r.reference_id">
-                  <mat-icon class="mr-1">check_circle</mat-icon>
-                  Confirm
+                <button
+                  mat-icon-button
+                  color="primary"
+                  class="mr-2"
+                  (click)="onProcess(r.reference_id)"
+                  [disabled]="processingId === r.reference_id"
+                  title="Under Process"
+                >
+                  <mat-icon class="mr-1">schedule</mat-icon>
                 </button>
-                <button mat-stroked-button color="warn" (click)="onDecline(r.reference_id)" [disabled]="processingId === r.reference_id">
+              </ng-container>
+              <ng-container *ngIf="r.status == 12">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  class="mr-2"
+                  (click)="onConfirm(r.reference_id)"
+                  [disabled]="processingId === r.reference_id"
+                  title="Confirm"
+                >
+                  <mat-icon class="mr-1">check_circle</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="onDecline(r.reference_id)"
+                  [disabled]="processingId === r.reference_id"
+                  title="Decline"
+                >
                   <mat-icon class="mr-1">cancel</mat-icon>
-                  Decline
                 </button>
               </ng-container>
             </td>
@@ -113,3 +136,42 @@
     </mat-card-content>
   </mat-card>
 </div>
+
+<ng-template #confirmDialogTpl>
+  <h2 mat-dialog-title>Confirm Hotel Request</h2>
+  <mat-dialog-content class="p-4">
+    <form [formGroup]="confirmForm" class="flex flex-col gap-3">
+      <mat-form-field appearance="outline" class="pt-2">
+        <mat-label>Hotel Reference ID</mat-label>
+        <input matInput formControlName="hotelReferenceId" />
+        <mat-error
+          *ngIf="
+            confirmForm.get('hotelReferenceId')?.invalid &&
+            confirmForm.get('hotelReferenceId')?.touched
+          "
+        >
+          Hotel reference ID is required
+        </mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Extra Notes (optional)</mat-label>
+        <textarea
+          matInput
+          rows="3"
+          formControlName="notes"
+        ></textarea>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="dialog.closeAll()">Cancel</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      (click)="submitConfirmDialog()"
+    >
+      Submit
+    </button>
+  </mat-dialog-actions>
+</ng-template>

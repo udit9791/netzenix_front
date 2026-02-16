@@ -93,6 +93,21 @@ export class HotelBookingConfirmationComponent implements OnInit {
   newGuestLastName = '';
   newGuestAge = 5;
   manualGuestError = '';
+  imgBaseUrl: string = environment.imgUrl;
+
+  fullImgUrl(path: string | null | undefined): string {
+    const fallback = '/storage/hotel/default.jpg';
+    const base = this.imgBaseUrl || '';
+    if (!path) {
+      const b = base.endsWith('/') ? base.slice(0, -1) : base;
+      const p = fallback.startsWith('/') ? fallback.slice(1) : fallback;
+      return `${b}/${p}`;
+    }
+    if (/^https?:\/\//i.test(path)) return path;
+    const b = base.endsWith('/') ? base.slice(0, -1) : base;
+    const p = path.startsWith('/') ? path.slice(1) : path;
+    return `${b}/${p}`;
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -155,6 +170,11 @@ export class HotelBookingConfirmationComponent implements OnInit {
         )
       };
       this.selectedOption = stored?.selected_option || null;
+      const storedPhoto =
+        stored?.photo_url ||
+        this.inventory?.photo_url ||
+        '/storage/hotel/default.jpg';
+      this.photoUrl = this.fullImgUrl(storedPhoto);
       this.nights = this.computeNights(this.params.from, this.params.to);
       this.summaryText = `${this.nights} Nights, ${this.params.adults} Adults${this.params.children > 0 ? `, ${this.params.children} Child` : ''} • ${this.params.rooms} Room${this.params.selected_meal_type_name ? ` • ${this.params.selected_meal_type_name}` : ''}`;
       const invId = Number(this.params.inventory_id || 0);

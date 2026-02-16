@@ -1,6 +1,10 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+  MatDialogModule
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -12,7 +16,14 @@ import { environment } from 'src/environments/environment';
   templateUrl: './special-flight-details-dialog.component.html',
   styleUrls: ['./special-flight-details-dialog.component.scss'],
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatTabsModule, HttpClientModule]
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTabsModule,
+    HttpClientModule
+  ]
 })
 export class SpecialFlightDetailsDialogComponent implements OnInit {
   loadingCharges = false;
@@ -38,7 +49,14 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
 
   constructor(
     public dialogRef: MatDialogRef<SpecialFlightDetailsDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { group: any; fare: any; adults?: number; children?: number; infants?: number },
+    @Inject(MAT_DIALOG_DATA)
+    public data: {
+      group: any;
+      fare: any;
+      adults?: number;
+      children?: number;
+      infants?: number;
+    },
     private http: HttpClient
   ) {}
 
@@ -61,15 +79,21 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
         summaryStops: this.summaryStops,
         summaryDuration: this.summaryDuration,
         checkinWeight: this.checkinWeight,
-        cabinWeight: this.cabinWeight,
+        cabinWeight: this.cabinWeight
       });
     } catch {}
   }
 
+  get onwardSegments(): any[] {
+    return this.data?.group?.onwardSegments || [];
+  }
+
+  get returnSegments(): any[] {
+    return this.data?.group?.returnSegments || [];
+  }
+
   get allSegments(): any[] {
-    const onward = this.data?.group?.onwardSegments || [];
-    const ret = this.data?.group?.returnSegments || [];
-    return [...onward, ...ret];
+    return [...this.onwardSegments, ...this.returnSegments];
   }
 
   get originCode(): string {
@@ -95,16 +119,15 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
     return this.data?.group?.duration || '';
   }
 
-  connectingTime(segIndex: number): string | null {
-    // Show connecting time between current segment end and next segment start
-    const a = this.allSegments[segIndex];
-    const b = this.allSegments[segIndex + 1];
+  connectingTimeFor(segments: any[], segIndex: number): string | null {
+    const a = segments[segIndex];
+    const b = segments[segIndex + 1];
     if (!a || !b) return null;
     try {
-      const aDate = (a.arrivalDate || a.flightDate) || '';
-      const bDate = (b.flightDate || b.arrivalDate) || '';
-      const aDT = new Date(`${aDate}T${(a.arrivalTime || '00:00')}:00`);
-      const bDT = new Date(`${bDate}T${(b.departureTime || '00:00')}:00`);
+      const aDate = a.arrivalDate || a.flightDate || '';
+      const bDate = b.flightDate || b.arrivalDate || '';
+      const aDT = new Date(`${aDate}T${a.arrivalTime || '00:00'}:00`);
+      const bDT = new Date(`${bDate}T${b.departureTime || '00:00'}:00`);
       const diffMs = bDT.getTime() - aDT.getTime();
       if (isNaN(diffMs) || diffMs <= 0) return null;
       const mins = Math.round(diffMs / 60000);
@@ -125,7 +148,7 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
     if (invVal !== undefined && invVal !== null) {
       return Number(invVal) === 1 || invVal === true;
     }
-    return !!(this.data?.fare?.rules?.includes('R'));
+    return !!this.data?.fare?.rules?.includes('R');
   }
 
   get baseFare(): number {
@@ -135,7 +158,8 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
     }
     const sell = this.data?.fare?.flight_inventory?.sell_price;
     const price = this.data?.fare?.price;
-    const val = sell !== undefined && sell !== null ? Number(sell) : Number(price) || 0;
+    const val =
+      sell !== undefined && sell !== null ? Number(sell) : Number(price) || 0;
     return isNaN(val) ? 0 : val;
   }
 
@@ -160,7 +184,10 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
   }
 
   get displayCancellationRules(): { label: string; amount: number }[] {
-    const rules = this.fareCalculationData?.fare_rules || this.data?.fare?.flight_inventory?.fare_rules || [];
+    const rules =
+      this.fareCalculationData?.fare_rules ||
+      this.data?.fare?.flight_inventory?.fare_rules ||
+      [];
     if (!Array.isArray(rules)) return [];
     return rules.map((r: any) => ({
       label: `${r?.days_before_departure ?? '-'} Days To Departure`,
@@ -178,7 +205,11 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
 
   private loadFareCharges() {
     try {
-      const flightIdRaw = this.data?.fare?.id || this.data?.group?.inventoryId || this.data?.group?.id || 0;
+      const flightIdRaw =
+        this.data?.fare?.id ||
+        this.data?.group?.inventoryId ||
+        this.data?.group?.id ||
+        0;
       const numericFareId = Number(flightIdRaw);
       const isInternal = Number.isFinite(numericFareId) && numericFareId > 0;
       const flight_id = isInternal ? numericFareId : 0;
@@ -201,28 +232,31 @@ export class SpecialFlightDetailsDialogComponent implements OnInit {
       let payload: any = { travelers };
       if (isInternal) {
         payload.flight_id = flight_id;
-        payload.type = 'internal';
+        payload.type = 'flight';
       } else {
         const price = Number(this.data?.fare?.price) || 0;
-        payload.type = 'external';
+        payload.type = 'external_flight';
         payload.price = price;
       }
       console.log('calculate-charges payload', payload);
-      this.http.post<any>(`${environment.apiUrl}/orders/calculate-charges`, payload).subscribe({
-        next: (response) => {
-          if (response?.success && response?.data) {
-            this.fareCalculationData = response.data;
-            console.log('calculate-charges response', response);
-          } else {
-            this.errorCharges = response?.message || 'Failed to load fare charges';
+      this.http
+        .post<any>(`${environment.apiUrl}/orders/calculate-charges`, payload)
+        .subscribe({
+          next: (response) => {
+            if (response?.success && response?.data) {
+              this.fareCalculationData = response.data;
+              console.log('calculate-charges response', response);
+            } else {
+              this.errorCharges =
+                response?.message || 'Failed to load fare charges';
+            }
+            this.loadingCharges = false;
+          },
+          error: () => {
+            this.errorCharges = 'Error loading fare charges';
+            this.loadingCharges = false;
           }
-          this.loadingCharges = false;
-        },
-        error: () => {
-          this.errorCharges = 'Error loading fare charges';
-          this.loadingCharges = false;
-        }
-      });
+        });
     } catch {
       this.errorCharges = 'Error initializing fare charges';
       this.loadingCharges = false;

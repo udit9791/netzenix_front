@@ -316,6 +316,15 @@ export const appRoutes: VexRoutes = [
         data: { permission: 'create_normal_hotel_inventory' }
       },
       {
+        path: 'sale/hotel-inventory-management/edit',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/hotel-inventory-management/edit-hotel-inventory.component'
+          ).then((m) => m.EditHotelInventoryComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'edit_normal_hotel_inventory' }
+      },
+      {
         path: 'sale/hotel-inventory-management/edit-date-inventory',
         loadComponent: () =>
           import(

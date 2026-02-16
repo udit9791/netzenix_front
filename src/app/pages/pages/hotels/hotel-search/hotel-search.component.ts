@@ -93,9 +93,12 @@ export class HotelSearchComponent {
   modeCtrl!: FormControl;
   filteredOptions$: Observable<any[]> = of([]);
   @ViewChild('roomsGuestsTpl') roomsGuestsTpl!: TemplateRef<any>;
-  roomsConfig: { adults: number; children: number; childAges: number[] }[] = [
-    { adults: 2, children: 0, childAges: [] }
-  ];
+  roomsConfig: {
+    adults: number;
+    children: number;
+    childAges: number[];
+    extraBedFlags: boolean[];
+  }[] = [{ adults: 2, children: 0, childAges: [], extraBedFlags: [] }];
   childAgeOptions: number[] = Array.from({ length: 18 }, (_, i) => i);
   minCheckIn: Date = this.today();
   minCheckOut: Date = this.addDays(this.today(), 1);
@@ -108,6 +111,7 @@ export class HotelSearchComponent {
   confirmAvailableDates: Array<{ date: string; total: number }> = [];
   selectedHotelId: number | null = null;
   selectedInventoryId: number | null = null;
+  locationSearchType: 'city' | 'hotel' | null = null;
 
   fullImgUrl(path: string | null | undefined): string {
     const fallback = '/storage/hotel/default.jpg';
@@ -250,6 +254,13 @@ export class HotelSearchComponent {
         const childAgesParam = String(
           (params['childAges'] ?? params['child_ages'] ?? '').toString()
         );
+        const extraBedFlagsParam = String(
+          (
+            params['extraBedFlags'] ??
+            params['extra_bed_flags'] ??
+            ''
+          ).toString()
+        );
         let parsedAges: number[] = [];
         if (childAgesParam) {
           parsedAges = childAgesParam
@@ -257,14 +268,28 @@ export class HotelSearchComponent {
             .map((x) => Number(x))
             .filter((n) => !isNaN(n as any));
         }
+        let parsedExtraFlags: boolean[] = [];
+        if (extraBedFlagsParam) {
+          parsedExtraFlags = extraBedFlagsParam.split(',').map((x) => {
+            const n = Number(x);
+            return !isNaN(n as any) && n > 0;
+          });
+        }
         const c = Math.min(Number(children), 4);
         while (parsedAges.length < c) parsedAges.push(5);
         if (parsedAges.length > c) parsedAges = parsedAges.slice(0, c);
         if (this.roomsConfig.length === 0) {
-          this.roomsConfig = [{ adults: 2, children: 0, childAges: [] }];
+          this.roomsConfig = [
+            { adults: 2, children: 0, childAges: [], extraBedFlags: [] }
+          ];
         }
         this.roomsConfig[0].children = c;
         this.roomsConfig[0].childAges = parsedAges;
+        const flags: boolean[] = [];
+        for (let i = 0; i < c; i++) {
+          flags.push(parsedExtraFlags[i] === true);
+        }
+        this.roomsConfig[0].extraBedFlags = flags;
       }
       const v = this.form.value;
       if (v.checkIn && v.checkOut) {
@@ -277,6 +302,7 @@ export class HotelSearchComponent {
     if (!option) return;
     if (option.type === 'hotel' && option.id) {
       this.selectedHotelId = Number(option.id);
+      this.locationSearchType = 'hotel';
       this.hotelService.getHotelById(Number(option.id)).subscribe({
         next: (res: any) => {
           const name = res?.hotel?.name || option.label || '';
@@ -308,6 +334,7 @@ export class HotelSearchComponent {
     this.form.patchValue({ location: display });
     this.selectedHotelId = null;
     this.selectedInventoryId = null;
+    this.locationSearchType = option.type === 'city' ? 'city' : null;
   }
 
   get petFriendlyCtrl(): FormControl {
@@ -358,7 +385,12 @@ export class HotelSearchComponent {
 
   incrementRooms() {
     if (this.roomsConfig.length >= 4) return;
-    this.roomsConfig.push({ adults: 2, children: 0, childAges: [] });
+    this.roomsConfig.push({
+      adults: 2,
+      children: 0,
+      childAges: [],
+      extraBedFlags: []
+    });
   }
 
   decrementRooms() {
@@ -386,6 +418,7 @@ export class HotelSearchComponent {
     if (room.children >= 4) return;
     room.children += 1;
     room.childAges.push(5);
+    room.extraBedFlags.push(false);
   }
 
   decrementChildren(i: number) {
@@ -394,12 +427,22 @@ export class HotelSearchComponent {
     if (room.children <= 0) return;
     room.children -= 1;
     room.childAges.pop();
+    room.extraBedFlags.pop();
   }
 
   setChildAge(roomIndex: number, childIndex: number, age: number) {
     const room = this.roomsConfig[roomIndex];
     if (!room) return;
     room.childAges[childIndex] = age;
+  }
+
+  toggleExtraBed(roomIndex: number, childIndex: number, checked: boolean) {
+    const room = this.roomsConfig[roomIndex];
+    if (!room) return;
+    if (!room.extraBedFlags || room.extraBedFlags.length !== room.children) {
+      room.extraBedFlags = Array.from({ length: room.children }, () => false);
+    }
+    room.extraBedFlags[childIndex] = checked;
   }
 
   applyRoomsGuests() {
@@ -421,6 +464,16 @@ export class HotelSearchComponent {
     const childAgesCombined: number[] = this.roomsConfig
       .reduce((acc: number[], r) => acc.concat(r.childAges || []), [])
       .filter((x) => typeof x === 'number' && !isNaN(x));
+    const extraBedFlagsCombined: number[] = [];
+    this.roomsConfig.forEach((r) => {
+      for (let j = 0; j < r.children; j++) {
+        const f =
+          Array.isArray(r.extraBedFlags) &&
+          j < r.extraBedFlags.length &&
+          r.extraBedFlags[j];
+        extraBedFlagsCombined.push(f ? 1 : 0);
+      }
+    });
     const invId = Number(h?.inventory_id || this.selectedInventoryId || 0);
     this.router.navigate(['/hotels/detail'], {
       queryParams: {
@@ -432,6 +485,10 @@ export class HotelSearchComponent {
         childAges:
           v.children > 0 && childAgesCombined.length
             ? childAgesCombined.join(',')
+            : null,
+        extraBedFlags:
+          v.children > 0 && extraBedFlagsCombined.length
+            ? extraBedFlagsCombined.join(',')
             : null,
         inventory_id: invId || null,
         type: this.searchType || null
@@ -454,9 +511,23 @@ export class HotelSearchComponent {
     const v = this.form.value;
     const from = v.checkIn ? this.formatDate(v.checkIn) : '';
     const to = v.checkOut ? this.formatDate(v.checkOut) : '';
+    let locationSearchType: 'city' | 'hotel' | null = this.locationSearchType;
+    if (!locationSearchType) {
+      locationSearchType = this.selectedHotelId ? 'hotel' : 'city';
+    }
     const childAgesCombined: number[] = this.roomsConfig
       .reduce((acc: number[], r) => acc.concat(r.childAges || []), [])
       .filter((x) => typeof x === 'number' && !isNaN(x));
+    const extraBedFlagsCombined: number[] = [];
+    this.roomsConfig.forEach((r) => {
+      for (let j = 0; j < r.children; j++) {
+        const f =
+          Array.isArray(r.extraBedFlags) &&
+          j < r.extraBedFlags.length &&
+          r.extraBedFlags[j];
+        extraBedFlagsCombined.push(f ? 1 : 0);
+      }
+    });
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -470,7 +541,12 @@ export class HotelSearchComponent {
           v.children > 0 && childAgesCombined.length
             ? childAgesCombined.join(',')
             : null,
+        extraBedFlags:
+          v.children > 0 && extraBedFlagsCombined.length
+            ? extraBedFlagsCombined.join(',')
+            : null,
         type: this.searchType || null,
+        searchtype: locationSearchType,
         inventory_id: this.selectedInventoryId || null
       },
       queryParamsHandling: 'merge'
@@ -497,8 +573,12 @@ export class HotelSearchComponent {
         adults: v.adults,
         children: v.children,
         childAges: childAgesCombined.length ? childAgesCombined : undefined,
+        extraBedFlags: extraBedFlagsCombined.length
+          ? extraBedFlagsCombined
+          : undefined,
         petFriendly: !!v.petFriendly,
         type: this.searchType,
+        searchtype: locationSearchType || undefined,
         inventory_id: this.selectedInventoryId || undefined
       })
       .subscribe({

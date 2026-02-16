@@ -60,19 +60,41 @@ export class FlightInventoryService {
     });
   }
 
-  getAvailableDates(from: string, to: string, tripType?: string): Observable<any> {
-    const typeParam = tripType ? `&tripType=${encodeURIComponent(tripType)}` : '';
+  getAvailableDates(
+    from: string,
+    to: string,
+    tripType?: string
+  ): Observable<any> {
+    const typeParam = tripType
+      ? `&tripType=${encodeURIComponent(tripType)}`
+      : '';
     return this.http.get(
       `${this.apiUrl}/airports/available-dates?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${typeParam}`
     );
   }
 
-  getPairedReturnDate(from: string, to: string, departDate: string): Observable<any> {
+  getSectorAvailableDates(tripType?: string): Observable<any> {
+    let params = new HttpParams();
+    if (tripType) {
+      params = params.set('tripType', tripType);
+    }
+    return this.http.get(`${this.apiUrl}/airports/sector-available-dates`, {
+      params
+    });
+  }
+
+  getPairedReturnDate(
+    from: string,
+    to: string,
+    departDate: string
+  ): Observable<any> {
     const params = new HttpParams()
       .set('from', from)
       .set('to', to)
       .set('departDate', departDate);
-    return this.http.get(`${this.apiUrl}/airports/paired-return-date`, { params });
+    return this.http.get(`${this.apiUrl}/airports/paired-return-date`, {
+      params
+    });
   }
 
   uploadFlightInventory(formData: FormData): Observable<HttpEvent<any>> {
@@ -108,13 +130,25 @@ export class FlightInventoryService {
 
     return `${this.apiUrl}/flight_inventory_excel?${params.toString()}`;
   }
-    
-  updateSeatBlocked(payload: { id: number, seat_blocked: number }): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/flight_inventory/${payload.id}/update-seat-blocked`, payload);
+
+  updateSeatBlocked(payload: {
+    id: number;
+    seat_blocked: number;
+  }): Observable<any> {
+    return this.http.patch(
+      `${this.apiUrl}/flight_inventory/${payload.id}/update-seat-blocked`,
+      payload
+    );
   }
-  
-  updateSeatAllocated(payload: { id: number, seat_allocated: number }): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/flight_inventory/${payload.id}/update-seat-allocated`, payload);
+
+  updateSeatAllocated(payload: {
+    id: number;
+    seat_allocated: number;
+  }): Observable<any> {
+    return this.http.patch(
+      `${this.apiUrl}/flight_inventory/${payload.id}/update-seat-allocated`,
+      payload
+    );
   }
 
   /**
@@ -160,7 +194,7 @@ export class FlightInventoryService {
     [key: string]: any;
   }): Observable<any> {
     let params = new HttpParams();
-    
+
     if (filters) {
       Object.keys(filters).forEach((key) => {
         if (

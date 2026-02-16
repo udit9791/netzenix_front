@@ -54,6 +54,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   serviceFeeigst: number = 0;
   commission: number = 0;
   tdsonCommission: number = 0;
+  markup: number = 0;
 
   // Payment method related properties
   selectedPaymentMethod: string = '';
@@ -140,6 +141,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
             this.convenienceFee = this.bookingDetails.service_fee || 0;
             this.commission = this.bookingDetails.commission || 0;
             this.tdsonCommission = this.bookingDetails.tds_on_commission || 0;
+            this.markup = this.bookingDetails.markup || 0;
 
             // Hold and status
             this.bookingStatus = Number(this.bookingDetails.status || 0);
