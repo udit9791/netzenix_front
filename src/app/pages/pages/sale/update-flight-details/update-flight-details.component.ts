@@ -105,11 +105,82 @@ export class UpdateFlightDetailsComponent implements OnInit {
       pnrStatus: ['onTime'],
       pricePerSeat: [null, [Validators.required, Validators.min(0)]],
       infantPrice: [null, Validators.min(0)],
+      bookingCutOff: [null, Validators.min(0)],
+      namingCutOff: [null, Validators.min(0)],
       allowTbaUser: [false],
       updateSameFlightDetails: [true],
       updateInInventoryTill: [''],
       updateAndNotify: [true],
-      message: ['']
+      message: [''],
+      mealOption: ['complimentary', Validators.required],
+      seatOption: ['complimentary', Validators.required],
+      allowHoldBooking: [false],
+      holdBookingAmount: [null, Validators.min(0)],
+      holdBookingType: ['percentage'],
+      holdBookingCutOffDays: [null, Validators.min(0)],
+      holdBookingLimit: [null, Validators.min(1)],
+      isRefundable: ['non-refundable', Validators.required],
+      fareRules: this.fb.array([])
+    });
+
+    this.flightForm.get('pricePerSeat')?.valueChanges.subscribe(() => {
+      this.revalidateFareRules();
+    });
+
+    this.onwardFlights
+      .at(0)
+      ?.get('departureDate')
+      ?.valueChanges.subscribe(() => {
+        this.revalidateFareRules();
+      });
+
+    this.flightForm
+      .get('allowHoldBooking')
+      ?.valueChanges.subscribe((allowHold) => {
+        const holdBookingAmount = this.flightForm.get('holdBookingAmount');
+        const holdBookingCutOffDays = this.flightForm.get(
+          'holdBookingCutOffDays'
+        );
+        const holdBookingLimit = this.flightForm.get('holdBookingLimit');
+        const holdBookingType = this.flightForm.get('holdBookingType');
+
+        if (allowHold) {
+          holdBookingAmount?.setValidators([
+            Validators.required,
+            Validators.min(0)
+          ]);
+          holdBookingCutOffDays?.setValidators([
+            Validators.required,
+            Validators.min(1),
+            this.maxHoldBookingDaysValidator(30)
+          ]);
+          holdBookingLimit?.setValidators([
+            Validators.required,
+            Validators.min(1),
+            this.maxHoldBookingLimitValidator()
+          ]);
+          this.updateHoldAmountValidation(holdBookingType?.value);
+        } else {
+          holdBookingAmount?.clearValidators();
+          holdBookingCutOffDays?.clearValidators();
+          holdBookingLimit?.clearValidators();
+        }
+
+        holdBookingAmount?.updateValueAndValidity();
+        holdBookingCutOffDays?.updateValueAndValidity();
+        holdBookingLimit?.updateValueAndValidity();
+      });
+
+    this.flightForm.get('holdBookingCutOffDays')?.valueChanges.subscribe(() => {
+      if (this.flightForm.get('allowHoldBooking')?.value) {
+        this.flightForm.get('holdBookingLimit')?.updateValueAndValidity();
+      }
+    });
+
+    this.flightForm.get('holdBookingType')?.valueChanges.subscribe((type) => {
+      if (this.flightForm.get('allowHoldBooking')?.value) {
+        this.updateHoldAmountValidation(type);
+      }
     });
   }
 
@@ -129,7 +200,8 @@ export class UpdateFlightDetailsComponent implements OnInit {
             // Now fetch flight details
             this.flightService.getFlightById(flightId).subscribe({
               next: (response) => {
-                this.flightData = response;
+                const data: any = response;
+                this.flightData = data && data.flight ? data.flight : data;
                 this.populateForm();
                 // Check if return flights are available
                 this.checkReturnFlightAvailability();
@@ -364,6 +436,10 @@ export class UpdateFlightDetailsComponent implements OnInit {
     return this.flightForm.get('returnFlights') as FormArray;
   }
 
+  get fareRules(): FormArray {
+    return this.flightForm.get('fareRules') as FormArray;
+  }
+
   createOnwardFlight() {
     const group = this.fb.group({
       departureDate: ['', Validators.required],
@@ -446,6 +522,122 @@ export class UpdateFlightDetailsComponent implements OnInit {
     return group;
   }
 
+  createFareRuleGroup(): FormGroup {
+    return this.fb.group({
+      days: [
+        null,
+        [
+          Validators.required,
+          Validators.min(1),
+          this.validateDaysBeforeDeparture.bind(this)
+        ]
+      ],
+      amount: [
+        null,
+        [
+          Validators.required,
+          Validators.min(0),
+          this.validateRefundAmount.bind(this)
+        ]
+      ]
+    });
+  }
+
+  validateDaysBeforeDeparture(control: any) {
+    if (!control.value) return null;
+    const departureDate = this.onwardFlights.at(0)?.get('departureDate')?.value;
+    if (!departureDate) return null;
+    const today = new Date();
+    const departure = new Date(departureDate);
+    const diffTime = Math.abs(departure.getTime() - today.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return control.value > diffDays ? { exceedsDeparture: true } : null;
+  }
+
+  validateRefundAmount(control: any) {
+    if (!control.value) return null;
+    const pricePerSeat = this.flightForm.get('pricePerSeat')?.value;
+    if (!pricePerSeat) return null;
+    return control.value > pricePerSeat ? { exceedsPrice: true } : null;
+  }
+
+  updateHoldAmountValidation(type: string): void {
+    const holdBookingAmount = this.flightForm.get('holdBookingAmount');
+    if (type === 'percentage') {
+      holdBookingAmount?.setValidators([
+        Validators.required,
+        Validators.min(0),
+        Validators.max(100)
+      ]);
+    } else {
+      holdBookingAmount?.setValidators([
+        Validators.required,
+        Validators.min(0),
+        this.validateFlatAmount.bind(this)
+      ]);
+    }
+    holdBookingAmount?.updateValueAndValidity();
+  }
+
+  validateFlatAmount(control: any) {
+    if (!control.value) return null;
+    const pricePerSeat = this.flightForm.get('pricePerSeat')?.value;
+    if (!pricePerSeat) return null;
+    return control.value > pricePerSeat ? { exceedsPrice: true } : null;
+  }
+
+  addFareRule(): void {
+    this.fareRules.push(this.createFareRuleGroup());
+    this.revalidateFareRules();
+  }
+
+  removeFareRule(index: number): void {
+    this.fareRules.removeAt(index);
+  }
+
+  revalidateFareRules(): void {
+    if (this.fareRules.length === 0) return;
+    this.fareRules.controls.forEach((control) => {
+      if (control.get('days')) {
+        control.get('days')?.updateValueAndValidity();
+      }
+      if (control.get('amount')) {
+        control.get('amount')?.updateValueAndValidity();
+      }
+    });
+  }
+
+  maxHoldBookingDaysValidator(maxDays: number) {
+    return (control: any): { [key: string]: any } | null => {
+      if (!control.value) {
+        return null;
+      }
+      const days = control.value;
+      if (days > maxDays) {
+        return { maxDaysExceeded: { value: control.value, max: maxDays } };
+      }
+      return null;
+    };
+  }
+
+  maxHoldBookingLimitValidator() {
+    return (control: any): { [key: string]: any } | null => {
+      if (!control.value) {
+        return null;
+      }
+      const limit = control.value;
+      const cutOffDays = this.flightForm.get('holdBookingCutOffDays')?.value;
+      if (!cutOffDays) {
+        return null;
+      }
+      const maxHours = cutOffDays * 24;
+      if (limit > maxHours) {
+        return { limitExceedsCutOff: { value: control.value, max: maxHours } };
+      }
+      return null;
+    };
+  }
+
   addOnwardFlight() {
     this.onwardFlights.push(this.createOnwardFlight());
   }
@@ -487,22 +679,68 @@ export class UpdateFlightDetailsComponent implements OnInit {
 
   populateForm() {
     if (this.flightData) {
+      // console.log(this.flightData);
       // Ensure time slots are generated before populating form
       this.generateTimeSlots();
 
       // Set basic flight details
+      const isRefundable =
+        this.flightData.is_refundable === 1 ||
+        this.flightData.is_refundable === '1' ||
+        this.flightData.is_refundable === true;
+
       this.flightForm.patchValue({
-        departureDate: this.flightData.flight_date || '',
+        departureDate: this.flightData.flight_date
+          ? (new Date(this.flightData.flight_date) as any)
+          : null,
         pnr: this.flightData.pnr || '',
         pnrStatus: this.flightData.pnr_status || 'onTime',
         pricePerSeat:
           this.flightData.sell_price ?? this.flightData.amount ?? null,
         infantPrice: this.flightData.infant_price ?? null,
+        bookingCutOff: this.flightData.booking_cut_off_days ?? null,
+        namingCutOff: this.flightData.naming_cut_off_days ?? null,
         allowTbaUser: this.flightData.allow_tba_user || false,
         updateSameFlightDetails: true,
-        updateInInventoryTill: this.flightData.flight_date || '',
-        updateAndNotify: true
+        updateInInventoryTill: this.flightData.flight_date
+          ? (new Date(this.flightData.flight_date) as any)
+          : null,
+        updateAndNotify: true,
+        isRefundable: isRefundable ? 'refundable' : 'non-refundable',
+        allowHoldBooking: !!this.flightData.allow_hold_booking,
+        mealOption: this.flightData.meal_option || 'complimentary',
+        seatOption: this.flightData.seat_option || 'complimentary',
+        holdBookingType:
+          this.flightData.hold_type === 'P'
+            ? 'percentage'
+            : this.flightData.hold_type === 'F'
+              ? 'flat'
+              : 'percentage',
+        holdBookingAmount: this.flightData.hold_value ?? null,
+        holdBookingCutOffDays: this.flightData.hold_booking_days ?? null,
+        holdBookingLimit: this.flightData.hold_booking_limit ?? null
       });
+
+      while (this.fareRules.length > 0) {
+        this.fareRules.removeAt(0);
+      }
+
+      if (
+        isRefundable &&
+        this.flightData.fare_rules &&
+        Array.isArray(this.flightData.fare_rules)
+      ) {
+        this.flightData.fare_rules.forEach((rule: any) => {
+          const group = this.createFareRuleGroup();
+          group.patchValue({
+            days: rule.days_before_departure ?? null,
+            amount: rule.refundable_amount
+              ? parseFloat(rule.refundable_amount)
+              : null
+          });
+          this.fareRules.push(group);
+        });
+      }
 
       // Clear existing onward flights
       while (this.onwardFlights.length !== 0) {
@@ -542,6 +780,8 @@ export class UpdateFlightDetailsComponent implements OnInit {
       const onwardFlightDetails = this.flightData.details?.filter(
         (detail: FlightDetail) => detail.type === 'Onward'
       );
+
+      console.log(this.flightData.details);
       if (onwardFlightDetails && onwardFlightDetails.length > 0) {
         onwardFlightDetails.forEach((detail: FlightDetail) => {
           const onwardFlight = this.createOnwardFlight();
@@ -570,9 +810,16 @@ export class UpdateFlightDetailsComponent implements OnInit {
           }
 
           onwardFlight.patchValue({
-            departureDate:
-              detail.flight_date || this.flightData.flight_date || '',
-            arrivalDate: detail.arrival_date || detail.flight_date || '',
+            departureDate: detail.flight_date
+              ? (new Date(detail.flight_date) as any)
+              : this.flightData.flight_date
+                ? (new Date(this.flightData.flight_date) as any)
+                : null,
+            arrivalDate: detail.arrival_date
+              ? (new Date(detail.arrival_date) as any)
+              : detail.flight_date
+                ? (new Date(detail.flight_date) as any)
+                : null,
             flightNumber: detail.flight_number || '',
             pnrNumber: detail.pnr || this.flightData.pnr || '',
             fromAirport: detail.from || '',
@@ -631,8 +878,14 @@ export class UpdateFlightDetailsComponent implements OnInit {
           }
 
           returnFlight.patchValue({
-            departureDate: detail.flight_date || '',
-            arrivalDate: detail.arrival_date || detail.flight_date || '',
+            departureDate: detail.flight_date
+              ? (new Date(detail.flight_date) as any)
+              : null,
+            arrivalDate: detail.arrival_date
+              ? (new Date(detail.arrival_date) as any)
+              : detail.flight_date
+                ? (new Date(detail.flight_date) as any)
+                : null,
             flightNumber: detail.flight_number || '',
             pnrNumber: detail.pnr || this.flightData.pnr || '',
             fromAirport: detail.from || '',
@@ -740,10 +993,23 @@ export class UpdateFlightDetailsComponent implements OnInit {
         pnr: string;
         pnr_status: string;
         sector: string;
+        booking_cut_off_days?: number | null;
+        naming_cut_off_days?: number | null;
         allow_tba_user: boolean;
         sell_price?: number;
         amount?: number;
         infant_price?: number;
+        allow_hold_booking?: boolean;
+        hold_type?: string | null;
+        hold_value?: number | null;
+        hold_booking_days?: number | null;
+        hold_booking_limit?: number | null;
+        meal_option?: string;
+        seat_option?: string;
+        fare_rules?: {
+          days_before_departure: number;
+          refundable_amount: number;
+        }[];
         details: FlightDetail[];
       } = {
         // Use the first onward flight's departure date for the main flight_date
@@ -754,10 +1020,38 @@ export class UpdateFlightDetailsComponent implements OnInit {
         pnr: formData.pnr,
         pnr_status: formData.pnrStatus,
         sector: sector,
+        booking_cut_off_days:
+          formData.bookingCutOff != null ? formData.bookingCutOff : null,
+        naming_cut_off_days:
+          formData.namingCutOff != null ? formData.namingCutOff : null,
         allow_tba_user: formData.allowTbaUser,
         sell_price: formData.pricePerSeat ?? null,
         amount: formData.pricePerSeat ?? null,
         infant_price: formData.infantPrice ?? null,
+        allow_hold_booking: !!formData.allowHoldBooking,
+        hold_type: formData.allowHoldBooking
+          ? formData.holdBookingType === 'percentage'
+            ? 'P'
+            : 'F'
+          : null,
+        hold_value: formData.allowHoldBooking
+          ? formData.holdBookingAmount
+          : null,
+        hold_booking_days: formData.allowHoldBooking
+          ? formData.holdBookingCutOffDays
+          : null,
+        hold_booking_limit: formData.allowHoldBooking
+          ? formData.holdBookingLimit
+          : null,
+        meal_option: formData.mealOption,
+        seat_option: formData.seatOption,
+        fare_rules:
+          formData.isRefundable === 'refundable' && formData.fareRules
+            ? formData.fareRules.map((rule: any) => ({
+                days_before_departure: rule.days,
+                refundable_amount: rule.amount
+              }))
+            : [],
         details: []
       };
 

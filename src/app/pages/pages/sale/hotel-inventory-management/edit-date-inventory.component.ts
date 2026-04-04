@@ -10,6 +10,11 @@ import {
 } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import {
+  MatDatepickerModule,
+  MatDateRangePicker
+} from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { HotelService } from '../../../../services/hotel.service';
@@ -31,6 +36,8 @@ import { VexPageLayoutContentDirective } from '@vex/components/vex-page-layout/v
     NgIf,
     MatFormFieldModule,
     MatInputModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatButtonModule,
     RouterModule,
     VexSecondaryToolbarComponent,
@@ -59,30 +66,35 @@ export class EditDateInventoryComponent implements OnInit {
     const id = idStr ? Number(idStr) : 0;
     this.inventoryId = id;
     if (id) {
-      this.hotelService.getInventoryDates(id).subscribe({
+      this.hotelService.getHotelInventoryById(id).subscribe({
         next: (res: any) => {
-          const data = Array.isArray(res?.data) ? res.data : [];
-          this.rooms = data;
+          const payload = res?.data ?? res;
+          const rooms = Array.isArray(payload?.rooms) ? payload.rooms : [];
+          this.rooms = rooms;
           const arr = this.roomsFormArray();
-          while (arr.length) arr.removeAt(0);
-          for (const r of data) {
-            const dates = this.fb.array([] as any);
-            for (const d of r.dates || []) {
-              (dates as any).push(
+          while (arr.length) {
+            arr.removeAt(0);
+          }
+          rooms.forEach((r: any) => {
+            const datesFa = this.fb.array([] as any);
+            (Array.isArray(r.dates) ? r.dates : []).forEach((d: any) => {
+              (datesFa as any).push(
                 this.fb.group({
                   date: [d.date],
                   no_of_room: [d.no_of_room]
                 })
               );
-            }
+            });
             arr.push(
               this.fb.group({
                 room_id: [r.room_id],
-                room_name: [r.room_name],
-                dates
+                room_name: [r.room_name || r.room_description || ''],
+                rangeStart: [null],
+                rangeEnd: [null],
+                dates: datesFa
               })
             );
-          }
+          });
         },
         error: () => {}
       });
@@ -145,5 +157,74 @@ export class EditDateInventoryComponent implements OnInit {
 
   noOfRoomControl(dCtrl: AbstractControl): FormControl {
     return (dCtrl as FormGroup).get('no_of_room') as FormControl;
+  }
+
+  dateToStr(d: any): string {
+    if (!d) return '';
+    const dt = d instanceof Date ? d : new Date(d);
+    const y = dt.getFullYear();
+    const m = dt.getMonth() + 1;
+    const day = dt.getDate();
+    const mm = m < 10 ? `0${m}` : String(m);
+    const dd = day < 10 ? `0${day}` : String(day);
+    return `${y}-${mm}-${dd}`;
+  }
+
+  addDatesRange(
+    roomCtrl: AbstractControl,
+    picker?: MatDateRangePicker<Date>
+  ): void {
+    const g = roomCtrl as FormGroup;
+    const start = g.get('rangeStart')?.value;
+    const end = g.get('rangeEnd')?.value;
+    if (!start || !end) {
+      if (picker) picker.open();
+      return;
+    }
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate = end instanceof Date ? end : new Date(end);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return;
+    }
+    if (startDate > endDate) {
+      return;
+    }
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    const datesArr = g.get('dates') as FormArray;
+    const existing = new Set(
+      (datesArr?.controls || []).map((c) =>
+        String((c as FormGroup).get('date')?.value)
+      )
+    );
+    const cur = new Date(startDate);
+    while (cur <= endDate) {
+      const ds = this.dateToStr(cur);
+      if (!existing.has(ds)) {
+        datesArr.push(
+          this.fb.group({
+            date: [ds],
+            no_of_room: [0]
+          })
+        );
+        existing.add(ds);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    g.patchValue({ rangeStart: null, rangeEnd: null });
+    if (picker) picker.close();
+  }
+
+  onRangeSelected(index: number, picker?: MatDateRangePicker<Date>): void {
+    const arr = this.roomsFormArray();
+    if (index < 0 || index >= arr.length) {
+      return;
+    }
+    const grp = arr.at(index) as FormGroup;
+    const start = grp.get('rangeStart')?.value;
+    const end = grp.get('rangeEnd')?.value;
+    if (start && end) {
+      this.addDatesRange(grp, picker);
+    }
   }
 }

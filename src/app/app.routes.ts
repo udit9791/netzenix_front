@@ -5,6 +5,7 @@ import { SpecialFlightBookingComponent } from './pages/pages/flights/special-fli
 import { FlightGroupComponent } from './pages/pages/flights/flight-group-request/flight-group-request.component';
 import { FttPackagesComponent } from './pages/pages/holiday/ftt-packages/ftt-packages.component';
 import { GroupTourComponent } from './pages/pages/holiday/group-tour/group-tour.component';
+import { GroupTourDetailComponent } from './pages/pages/holiday/group-tour/group-tour-detail.component';
 import { AdhocGroupComponent } from './pages/pages/holiday/adhoc-group/adhoc-group.component';
 import { PrivateToursComponent } from './pages/pages/holiday/private-tours/private-tours.component';
 import { ProfileComponent } from './pages/pages/profile/profile.component';
@@ -122,6 +123,33 @@ export const appRoutes: VexRoutes = [
         data: { permission: 'create_users' }
       },
       {
+        path: 'sub-users',
+        loadComponent: () =>
+          import(
+            './pages/pages/users/sub-user-list/sub-user-list.component'
+          ).then((m) => m.SubUserListComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_confirm_hotel_search' }
+      },
+      {
+        path: 'sub-users/create',
+        loadComponent: () =>
+          import(
+            './pages/pages/users/create-sub-user/create-sub-user.component'
+          ).then((m) => m.CreateSubUserComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_confirm_hotel_search' }
+      },
+      {
+        path: 'sub-users/edit/:id',
+        loadComponent: () =>
+          import(
+            './pages/pages/users/edit-sub-user/edit-sub-user.component'
+          ).then((m) => m.EditSubUserComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_confirm_hotel_search' }
+      },
+      {
         path: 'permissions',
         loadComponent: () =>
           import('./pages/pages/permissions/permissions.component').then(
@@ -136,19 +164,19 @@ export const appRoutes: VexRoutes = [
         path: 'flights/special',
         component: SpecialFlightComponent,
         canActivate: [PermissionGuard],
-        data: { permission: 'view_flights' }
+        data: { permission: 'view_flights_search' }
       },
       {
         path: 'flights/special-booking/:id',
         component: SpecialFlightBookingComponent,
         canActivate: [PermissionGuard],
-        data: { permission: 'view_flights' }
+        data: { permission: 'view_flights_search' }
       },
       {
         path: 'flights/payment/:id',
         component: FlightsPaymentComponent,
         canActivate: [PermissionGuard],
-        data: { permission: 'view_flights' }
+        data: { permission: 'view_flights_search' }
       },
       {
         path: 'flights/payment-confirmation/:id',
@@ -171,7 +199,9 @@ export const appRoutes: VexRoutes = [
             './pages/pages/hotels/hotel-search/hotel-search.component'
           ).then((m) => m.HotelSearchComponent),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_search_hotel' }
+        data: {
+          permission: ['view_normal_hotel_search', 'view_confirm_hotel_search']
+        }
       },
       {
         path: 'hotels/detail',
@@ -180,7 +210,9 @@ export const appRoutes: VexRoutes = [
             './pages/pages/hotels/hotel-detail/hotel-detail.component'
           ).then((m) => m.HotelDetailComponent),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_search_hotel' }
+        data: {
+          permission: ['view_normal_hotel_search', 'view_confirm_hotel_search']
+        }
       },
       {
         path: 'hotels/booking-confirmation',
@@ -189,7 +221,9 @@ export const appRoutes: VexRoutes = [
             './pages/pages/hotels/hotel-booking-confirmation/hotel-booking-confirmation.component'
           ).then((m) => m.HotelBookingConfirmationComponent),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_search_hotel' }
+        data: {
+          permission: ['view_normal_hotel_search', 'view_confirm_hotel_search']
+        }
       },
       {
         path: 'flights/booking-confirmation/:id',
@@ -199,6 +233,15 @@ export const appRoutes: VexRoutes = [
           ).then((m) => m.PaymentConfirmationComponent),
         canActivate: [PermissionGuard],
         data: { permission: 'view_flights' }
+      },
+      {
+        path: 'flights/booking-cancellation/:id',
+        loadComponent: () =>
+          import(
+            './pages/booking-cancellation/booking-cancellation.component'
+          ).then((m) => m.BookingCancellationComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flights_search' }
       },
       {
         path: 'flights/group-request',
@@ -227,7 +270,22 @@ export const appRoutes: VexRoutes = [
         path: 'holiday/group-tour',
         component: GroupTourComponent,
         canActivate: [PermissionGuard],
-        data: { permission: 'view_holidays' }
+        data: { permission: 'view_flights_search' }
+      },
+      {
+        path: 'holiday/group-tour/:id',
+        component: GroupTourDetailComponent,
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flights_search' }
+      },
+      {
+        path: 'holiday/group-tour/:id/book-trip',
+        loadComponent: () =>
+          import(
+            './pages/pages/holiday/group-tour/group-tour-book-trip.component'
+          ).then((m) => m.GroupTourBookTripComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flights_search' }
       },
       {
         path: 'holiday/adhoc-group',
@@ -259,7 +317,7 @@ export const appRoutes: VexRoutes = [
             './pages/pages/sale/manage-activity/activity-list.component'
           ).then((m) => m.ActivityListComponent),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_flight_inventory' }
+        data: { permission: 'view_activity' }
       },
       {
         path: 'sale/manage-activity/add',
@@ -358,7 +416,7 @@ export const appRoutes: VexRoutes = [
             './pages/pages/sale/manage-bookings/manage-bookings.component'
           ).then((m) => m.ManageBookingsComponent),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_sales' }
+        data: { permission: 'view_hotel_access' }
       },
       {
         path: 'sale/add-flight-inventory',
@@ -387,6 +445,42 @@ export const appRoutes: VexRoutes = [
         canActivate: [PermissionGuard],
         data: { permission: 'view_sales' }
       },
+      {
+        path: 'sale/transportation',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/transportation/transportation.component'
+          ).then((m) => m.TransportationComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flight_inventory' }
+      },
+      {
+        path: 'sale/itinerary-builder',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/itinerary-builder/itinerary-builder.component'
+          ).then((m) => m.ItineraryBuilderComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flight_inventory' }
+      },
+      {
+        path: 'sale/itinerary-builder/add',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/itinerary-builder-form/itinerary-builder-form.component'
+          ).then((m) => m.ItineraryBuilderFormComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flight_inventory' }
+      },
+      {
+        path: 'sale/itinerary-builder/edit/:id',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/itinerary-builder-form/itinerary-builder-form.component'
+          ).then((m) => m.ItineraryBuilderFormComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_flight_inventory' }
+      },
 
       // ✅ Transactions (top-level)
       {
@@ -396,7 +490,16 @@ export const appRoutes: VexRoutes = [
             (m) => m.TransactionsComponent
           ),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_sales' }
+        data: { permission: 'view_transections' }
+      },
+      {
+        path: 'transactions/cancel-requests/:id',
+        loadComponent: () =>
+          import(
+            './pages/cancel-requests/cancel-request-proceed.component'
+          ).then((m) => m.CancelRequestProceedComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'edit_cancel_request' }
       },
       {
         path: 'transactions/cancel-requests',
@@ -405,7 +508,7 @@ export const appRoutes: VexRoutes = [
             (m) => m.CancelRequestsComponent
           ),
         canActivate: [PermissionGuard],
-        data: { permission: 'view_sales' }
+        data: { permission: 'view_cancel_request' }
       },
 
       // ✅ Masters
@@ -422,6 +525,13 @@ export const appRoutes: VexRoutes = [
               ).then((m) => m.TenantListComponent)
           },
           {
+            path: 'tenant-permissions/:id',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/tenant/tenant-permissions/tenant-permissions.component'
+              ).then((m) => m.TenantPermissionsComponent)
+          },
+          {
             path: 'airline',
             loadChildren: () =>
               import('./pages/pages/masters/airline/airline.module').then(
@@ -436,11 +546,36 @@ export const appRoutes: VexRoutes = [
               ).then((m) => m.TenantPlanListComponent)
           },
           {
+            path: 'tenant-plans/:id',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/plans/tenant-plan-detail/tenant-plan-detail.component'
+              ).then((m) => m.TenantPlanDetailComponent)
+          },
+          {
             path: 'user-plans',
             loadComponent: () =>
               import(
                 './pages/pages/masters/plans/user-plan-list/user-plan-list.component'
               ).then((m) => m.UserPlanListComponent)
+          },
+          {
+            path: 'price-enquiries',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/plans/price-enquiries-list/price-enquiries-list.component'
+              ).then((m) => m.PriceEnquiriesListComponent),
+            canActivate: [PermissionGuard],
+            data: { permission: 'view_price_enquiry' }
+          },
+          {
+            path: 'price-enquiries/:id',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/plans/price-enquiry-detail/price-enquiry-detail.component'
+              ).then((m) => m.PriceEnquiryDetailComponent),
+            canActivate: [PermissionGuard],
+            data: { permission: 'view_price_enquiry' }
           },
           {
             path: 'airport',
@@ -471,6 +606,20 @@ export const appRoutes: VexRoutes = [
               ).then((m) => m.HotelListComponent)
           },
           {
+            path: 'commission',
+            loadComponent: () =>
+              import(
+                './pages/pages/masters/commission/commission-master.component'
+              ).then((m) => m.CommissionMasterComponent)
+          },
+          {
+            path: 'settings',
+            loadComponent: () =>
+              import('./pages/pages/masters/settings/settings.component').then(
+                (m) => m.SettingsComponent
+              )
+          },
+          {
             path: '',
             pathMatch: 'full',
             redirectTo: 'airline'
@@ -485,6 +634,13 @@ export const appRoutes: VexRoutes = [
           ),
         canActivate: [PermissionGuard],
         data: { permission: 'view_wallet' }
+      },
+      {
+        path: 'subscription-pending',
+        loadComponent: () =>
+          import(
+            './pages/subscription-pending/subscription-pending.component'
+          ).then((m) => m.SubscriptionPendingComponent)
       },
       {
         path: 'payment-confirmation',
@@ -505,7 +661,9 @@ export const appRoutes: VexRoutes = [
         loadComponent: () =>
           import('./pages/my-bookings/my-bookings.component').then(
             (m) => m.MyBookingsComponent
-          )
+          ),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_my_booking' }
       }
     ]
   },

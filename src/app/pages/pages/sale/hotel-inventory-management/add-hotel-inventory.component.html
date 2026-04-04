@@ -126,6 +126,21 @@
           <div class="text-sm">Available: {{ roomById(rid)?.available_rooms }}</div>
           <div class="text-sm">Max Occupancy: {{ roomById(rid)?.max_occupancy || '-' }}</div>
 
+          <div
+            class="mt-2 text-xs text-red-600"
+            *ngIf="getExistingDatesForRoom(rid).length"
+          >
+            Already added inventory dates:
+            <span
+              *ngFor="let d of getExistingDatesForRoom(rid); let i = index"
+            >
+              {{ formatDateStr(d) }}<span
+                *ngIf="i < getExistingDatesForRoom(rid).length - 1"
+                >,</span
+              >
+            </span>
+          </div>
+
           <ng-container [formGroup]="getRoomGroup(rid)">
             <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mt-3">
               <mat-form-field appearance="outline">
@@ -225,7 +240,10 @@
                   [style.overflow]="'hidden'"
                 />
               </mat-date-range-input>
-              <mat-date-range-picker #picker></mat-date-range-picker>
+              <mat-date-range-picker
+                #picker
+                [dateClass]="dateClassForRoom(rid)"
+              ></mat-date-range-picker>
               <button mat-stroked-button type="button" (click)="picker.open()">
                 Select Dates
               </button>
@@ -234,13 +252,13 @@
             <div class="mt-2 flex flex-wrap gap-2" *ngIf="getDateRanges(rid).length">
               <div class="px-2 py-1 border rounded" *ngFor="let rg of getDateRanges(rid).controls; let i = index">
                 {{ formatDateStr(rg.value.from) }} - {{ formatDateStr(rg.value.to) }}
-                <!-- <button mat-icon-button color="warn" type="button" (click)="removeDateRange(rid, i)">
+                <button mat-icon-button color="warn" type="button" (click)="removeDateRange(rid, i)">
                   <mat-icon>close</mat-icon>
-                </button> -->
+                </button>
               </div>
             </div>
 
-            <div class="mt-3 flex items-center gap-3 flex-wrap" *ngIf="getDateRanges(rid).length">
+            <div class="mt-3 flex items-center gap-3 flex-wrap">
               <span class="text-sm">Meal Types:</span>
               <mat-checkbox
                 *ngFor="let mk of mealKeys(); trackBy: trackByMeal"
@@ -251,7 +269,7 @@
               </mat-checkbox>
             </div>
 
-            <div class="mt-3 flex items-center gap-3 flex-wrap" *ngIf="getDateRanges(rid).length">
+            <div class="mt-3 flex items-center gap-3 flex-wrap">
               <span class="text-sm">Person Capacity:</span>
               <mat-checkbox
                 *ngFor="let occKey of occupancyKeysFor(rid); let ix = index; trackBy: trackByOccKey"
@@ -753,7 +771,7 @@
                     </mat-form-field>
                     <div class="flex items-center gap-2">
                       <mat-form-field appearance="outline" class="flex-1">
-                        <mat-label>Refundable Amount (₹)</mat-label>
+                        <mat-label>Penalty Amount (₹)</mat-label>
                         <input matInput type="number" formControlName="amount" min="0" [max]="form.get('pricePerNight')?.value" />
                         <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('required')">Amount is required</mat-error>
                         <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('min')">Amount cannot be negative</mat-error>

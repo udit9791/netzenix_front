@@ -40,7 +40,7 @@ import { TenantService } from '../../../../services/tenant.service';
 })
 export class LoginComponent {
   form = this.fb.group({
-    email: ['', Validators.required],
+    login_id: ['', Validators.required],
     password: ['', Validators.required]
   });
 
@@ -80,55 +80,68 @@ export class LoginComponent {
       return;
     }
 
-    const { email, password } = this.form.value;
+    const { login_id, password } = this.form.value;
 
-    this.authService.login({ email: email!, password: password! }).subscribe({
-      next: (res) => {
-        this.snackbar.open('Login successful!', 'OK', { duration: 3000 });
+    this.authService
+      .login({ login_id: login_id!, password: password! })
+      .subscribe({
+        next: (res) => {
+          this.snackbar.open('Login successful!', 'OK', { duration: 3000 });
 
-        // 🔹 Save token
-        if (res.token) {
-          localStorage.setItem('token', res.token);
+          // 🔹 Save token
+          if (res.token) {
+            localStorage.setItem('token', res.token);
+          }
+
+          // 🔹 Save user info
+          if (res.user) {
+            localStorage.setItem('user', JSON.stringify(res.user));
+          }
+
+          // 🔹 Save roles
+          if (res.roles) {
+            localStorage.setItem('roles', JSON.stringify(res.roles));
+          }
+
+          // 🔹 Save permissions
+          if (res.permissions) {
+            localStorage.setItem(
+              'permissions',
+              JSON.stringify(res.permissions)
+            );
+          }
+          // Save permissions & roles for navigation / guards
+          const perms = res.permissions || [];
+          const roleNames = res.role_names || res.user?.role_names || [];
+          localStorage.setItem('permissions', JSON.stringify(perms));
+          localStorage.setItem('roles', JSON.stringify(roleNames));
+
+          const isMaster = res.roles?.some((r: any) => {
+            const id = Number(r?.id ?? r?.role_id ?? r);
+            return id === 1 || id === 2;
+          })
+            ? '1'
+            : '0';
+
+          //  alert(isMaster);
+          //    alert(res.roles[0].id);
+          localStorage.setItem('is_master', isMaster);
+
+          // Apply role-based theme
+          this.roleConfigService.applyRoleConfigFromUser(
+            res.user ?? { roles: res.roles, role_names: res.role_names }
+          );
+
+          this.router.navigate(['/']).then(() => {
+            window.location.reload();
+          });
+        },
+        error: (err) => {
+          this.snackbar.open(err.error?.message || 'Login failed', 'OK', {
+            duration: 3000
+          });
         }
-
-        // 🔹 Save user info
-        if (res.user) {
-          localStorage.setItem('user', JSON.stringify(res.user));
-        }
-
-        // 🔹 Save roles
-        if (res.roles) {
-          localStorage.setItem('roles', JSON.stringify(res.roles));
-        }
-
-        // 🔹 Save permissions
-        if (res.permissions) {
-          localStorage.setItem('permissions', JSON.stringify(res.permissions));
-        }
-        // Save permissions & roles for navigation / guards
-        const perms = res.permissions || [];
-        const roles = res.role_names || res.user?.role_names || [];
-        localStorage.setItem('permissions', JSON.stringify(perms));
-        localStorage.setItem('roles', JSON.stringify(roles));
-        const im = res.is_master;
-        const isMaster = im === true || im === 1 || im === '1' ? '1' : '0';
-        localStorage.setItem('is_master', isMaster);
-
-        // Apply role-based theme
-        this.roleConfigService.applyRoleConfigFromUser(
-          res.user ?? { roles: res.roles, role_names: res.role_names }
-        );
-
-        this.router.navigate(['/']).then(() => {
-          window.location.reload();
-        });
-      },
-      error: (err) => {
-        this.snackbar.open(err.error?.message || 'Login failed', 'OK', {
-          duration: 3000
-        });
-      }
-    });
+      });
   }
 
   toggleVisibility() {

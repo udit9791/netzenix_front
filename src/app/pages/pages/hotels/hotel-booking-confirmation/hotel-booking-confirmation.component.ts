@@ -16,6 +16,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { VexSecondaryToolbarComponent } from '@vex/components/vex-secondary-toolbar/vex-secondary-toolbar.component';
 import { VexBreadcrumbsComponent } from '@vex/components/vex-breadcrumbs/vex-breadcrumbs.component';
 import { VexPageLayoutComponent } from '@vex/components/vex-page-layout/vex-page-layout.component';
@@ -24,6 +25,7 @@ import { VexPageLayoutContentDirective } from '@vex/components/vex-page-layout/v
 import { HotelService } from '../../../../services/hotel.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 type TravelerOption = {
   type: 'Adult' | 'Child' | 'Infant';
@@ -49,6 +51,7 @@ type TravelerOption = {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatDialogModule,
     VexSecondaryToolbarComponent,
     VexBreadcrumbsComponent,
     VexPageLayoutComponent,
@@ -87,6 +90,11 @@ export class HotelBookingConfirmationComponent implements OnInit {
   selectedOption: any = null;
   roomBreakdowns: any[] = [];
   childAgeOptions: number[] = Array.from({ length: 18 }, (_, i) => i);
+  paidChildWithBed = 0;
+  freeChildren = 0;
+  paidChildNoBed = 0;
+  extraBedAdults = 0;
+  extraBedChildren = 0;
   showManualGuestForm = false;
   newGuestType: 'Adult' | 'Child' | 'Infant' = 'Adult';
   newGuestFirstName = '';
@@ -114,7 +122,8 @@ export class HotelBookingConfirmationComponent implements OnInit {
     private router: Router,
     private hotelService: HotelService,
     private fb: FormBuilder,
-    private http: HttpClient
+    private http: HttpClient,
+    private dialog: MatDialog
   ) {
     this.form = this.fb.group({
       title: ['Mr', Validators.required],
@@ -156,6 +165,10 @@ export class HotelBookingConfirmationComponent implements OnInit {
         childAges: Array.isArray(stored?.childAges)
           ? String((stored.childAges || []).join(','))
           : String(stored?.childAges || ''),
+        extraBedFlags: Array.isArray(stored?.extraBedFlags)
+          ? String((stored.extraBedFlags || []).join(','))
+          : String(stored?.extraBedFlags || ''),
+        type: String(stored?.type || 'confirm'),
         inventory_id: Number(stored?.inventory_id || 0),
         selected_room_id: Number(stored?.selected_room_id || 0),
         selected_meal_type: Number(stored?.selected_meal_type || 0),
@@ -196,82 +209,138 @@ export class HotelBookingConfirmationComponent implements OnInit {
       //   return;
       // }
       this.loading = true;
+      const totalChildren = Number(this.params.children || 0);
       this.hotelService
-        .getSelectedInventoryDetail(invId, detailId, {
+        .detailAvailability({
           from: this.params.from,
           to: this.params.to,
           rooms: this.params.rooms,
           adults: this.params.adults,
           children: this.params.children,
-          childAges: this.params.childAges,
-          selected_room_id: this.params.selected_room_id,
-          selected_meal_type: this.params.selected_meal_type,
+          childAges: this.params.childAges
+            ? String(this.params.childAges)
+                .split(',')
+                .map((x: string) => Number(x))
+                .filter((x: number) => !isNaN(x))
+            : [],
+          extraBedFlags: this.params.extraBedFlags
+            ? String(this.params.extraBedFlags)
+                .split(',')
+                .map((x: string) => Number(x))
+                .filter((x: number) => !isNaN(x))
+            : [],
           inventory_id: this.params.inventory_id
         })
         .subscribe({
           next: (dres: any) => {
             const data = dres?.data ?? dres ?? {};
-            const charges = data?.charges || null;
-            this.charges = charges;
+            const roomsData = Array.isArray(data?.rooms_data)
+              ? data.rooms_data
+              : [];
+            const selectedRoomId = Number(this.params.selected_room_id || 0);
+            const selectedMealType = Number(
+              this.params.selected_meal_type || 0
+            );
 
-            const invU = data?.inventory || null;
-            if (invU) {
-              this.inventory = { ...(this.inventory || {}), ...invU };
-              if (invU.hotel_name) {
-                this.hotelName = String(invU.hotel_name);
-              }
-              if (
-                typeof invU.star_rating !== 'undefined' &&
-                invU.star_rating !== null
-              ) {
-                this.starRating = Number(invU.star_rating || 0);
-              }
-              if (invU.address) {
-                this.address = String(invU.address || '');
-              }
+            const roomRow =
+              roomsData.find(
+                (r: any) => Number(r?.room_id || 0) === selectedRoomId
+              ) || null;
+            const roomOptions = Array.isArray(roomRow?.options)
+              ? roomRow.options
+              : [];
+            const opt =
+              roomOptions.find(
+                (o: any) => Number(o?.meal_type || 0) === selectedMealType
+              ) || null;
+
+            if (!roomRow || !opt) {
+              this.error = 'Selected room or meal not available';
+              this.loading = false;
+              return;
             }
-            const roomU = data?.room || null;
-            if (roomU && roomU.room_name) {
-              this.selectedRoomName = String(roomU.room_name);
-            }
+
+            this.selectedRoomName = String(roomRow.room_name || '');
+
+            const totalPrice = Number(
+              opt?.total_price ?? this.params.price_total ?? 0
+            );
+
+            this.charges = {
+              total_base_fare: totalPrice,
+              final_total: totalPrice,
+              service_fee: 0,
+              markup: 0,
+              cgst: 0,
+              sgst: 0,
+              igst: 0,
+              commission: 0,
+              tds_on_commission: 0
+            };
+
+            this.paidChildWithBed = Number(opt?.extra_bed_children || 0);
+            this.freeChildren = Number(opt?.free_children || 0);
+            this.paidChildNoBed = Math.max(
+              0,
+              totalChildren - this.freeChildren - this.paidChildWithBed
+            );
+            this.extraBedAdults = Number(opt?.extra_bed_adults || 0);
+            this.extraBedChildren = this.paidChildWithBed;
 
             const roomsUsed =
-              typeof data?.rooms_used === 'number'
-                ? data.rooms_used
+              typeof opt?.rooms_used === 'number'
+                ? opt.rooms_used
                 : Number(this.params.rooms || 1);
-            const totalChildren = Number(this.params.children || 0);
 
-            const roomPrice = Array.isArray(data?.room_price_breakdown)
-              ? data.room_price_breakdown
+            const adultsPerRoom = Array.isArray(opt?.adults_per_room)
+              ? opt.adults_per_room
               : [];
-            const perRoom: any = {};
-            for (const row of roomPrice) {
-              const idx = Number(row?.room_index || 0);
-              if (!idx) continue;
-              if (!perRoom[idx]) {
-                perRoom[idx] = {
-                  roomIndex: idx,
-                  adults: Number(row?.adults || 0),
-                  basePersons: Number(row?.base_persons || 0),
-                  baseTotal: 0,
-                  extraBeds: 0,
-                  extraBedPrice: Number(row?.extra_bed_price || 0),
-                  extraAmount: 0,
-                  roomTotal: 0
-                };
-              }
-              perRoom[idx].baseTotal += Number(row?.base_price || 0);
-              perRoom[idx].extraBeds += Number(row?.extra_beds || 0);
-              perRoom[idx].extraAmount += Number(row?.extra_bed_amount || 0);
-              perRoom[idx].roomTotal += Number(row?.room_total || 0);
+            const perRoom: any[] = [];
+            for (let i = 0; i < roomsUsed; i++) {
+              const idx = i + 1;
+              perRoom.push({
+                roomIndex: idx,
+                adults: Number(adultsPerRoom[i] || 0),
+                basePersons: 0,
+                baseTotal: 0,
+                extraBeds: 0,
+                extraBedChildren: 0,
+                extraBedPrice: 0,
+                extraAmount: 0,
+                roomTotal: 0
+              });
             }
-            const list = Object.values(perRoom).sort(
-              (a: any, b: any) => a.roomIndex - b.roomIndex
-            );
-            if (roomsUsed > 0 && totalChildren > 0 && list.length) {
+
+            if (roomsUsed > 0 && perRoom.length && this.extraBedAdults > 0) {
+              const base = Math.floor(this.extraBedAdults / roomsUsed);
+              let rem = this.extraBedAdults % roomsUsed;
+              for (const rb of perRoom as any[]) {
+                let x = base;
+                if (rem > 0) {
+                  x++;
+                  rem--;
+                }
+                rb.extraBeds += x;
+              }
+            }
+
+            if (roomsUsed > 0 && perRoom.length && this.extraBedChildren > 0) {
+              const base = Math.floor(this.extraBedChildren / roomsUsed);
+              let rem = this.extraBedChildren % roomsUsed;
+              for (const rb of perRoom as any[]) {
+                let x = base;
+                if (rem > 0) {
+                  x++;
+                  rem--;
+                }
+                rb.extraBedChildren += x;
+              }
+            }
+
+            if (roomsUsed > 0 && totalChildren > 0 && perRoom.length) {
               const baseChildren = Math.floor(totalChildren / roomsUsed);
               let rem = totalChildren % roomsUsed;
-              for (const rb of list as any[]) {
+              for (const rb of perRoom as any[]) {
                 let c = baseChildren;
                 if (rem > 0) {
                   c++;
@@ -280,15 +349,10 @@ export class HotelBookingConfirmationComponent implements OnInit {
                 (rb as any).children = c;
               }
             }
-            this.roomBreakdowns = list as any[];
 
-            const nightsFromCharges =
-              charges && typeof charges.nights === 'number'
-                ? charges.nights
-                : null;
-            this.nights =
-              nightsFromCharges ??
-              this.computeNights(this.params.from, this.params.to);
+            this.roomBreakdowns = perRoom;
+
+            this.nights = this.computeNights(this.params.from, this.params.to);
             this.summaryText = `${this.nights} Nights, ${this.params.adults} Adults${
               this.params.children > 0 ? `, ${this.params.children} Child` : ''
             } • ${this.params.rooms} Room${
@@ -481,7 +545,9 @@ export class HotelBookingConfirmationComponent implements OnInit {
         adults: this.params.adults,
         children: this.params.children,
         inventory_id: this.params.inventory_id,
-        type: 'confirm'
+        type: (this.params as any)?.type || null,
+        childAges: this.params.childAges || null,
+        extraBedFlags: this.params.extraBedFlags || null
       }
     });
   }
@@ -502,11 +568,20 @@ export class HotelBookingConfirmationComponent implements OnInit {
     }
     this.paying = true;
     const v = this.form.value;
+    const extraBedAdults = this.extraBedAdults;
+    const extraBedChildren = this.extraBedChildren;
     const payload = {
       selected_detail_id: detailId,
       rooms: Number(this.params.rooms || 1),
       adults: Number(this.params.adults || 0),
       children: Number(this.params.children || 0),
+      childAges: this.params.childAges,
+      extraBedFlags: this.params.extraBedFlags,
+      free_children: this.freeChildren,
+      extra_children_without_bed: this.paidChildNoBed,
+      extra_bed_adults: extraBedAdults,
+      extra_bed_children: extraBedChildren,
+
       from: String(this.params.from || ''),
       to: String(this.params.to || ''),
       price_total:
@@ -542,7 +617,8 @@ export class HotelBookingConfirmationComponent implements OnInit {
         inventory: this.inventory,
         room_breakdowns: this.roomBreakdowns,
         charges: this.charges
-      }
+      },
+      type: 'confirm'
     };
     this.hotelService.confirmHotelBooking(invId, payload).subscribe({
       next: (res: any) => {
@@ -577,37 +653,95 @@ export class HotelBookingConfirmationComponent implements OnInit {
     if (this.holding) return;
     this.holdError = '';
     this.holdSuccess = '';
+    if (!this.canHoldBooking) {
+      this.holdError = 'Hold booking is not available for this hotel';
+      return;
+    }
     const invId = Number(this.params.inventory_id || 0);
     const detailId = Number(this.params.selected_detail_id || 0);
     if (!invId || !detailId) {
       this.holdError = 'Missing inventory or detail selection';
       return;
     }
-    if (!this.form.valid) {
-      this.holdError = 'Please fill required guest details';
+    const phoneControl = this.form.get('phone');
+    if (!phoneControl || !phoneControl.valid || !phoneControl.value) {
+      if (phoneControl) phoneControl.markAsTouched();
+      this.holdError = 'Please enter contact phone before holding the booking';
       return;
     }
+
+    const totalPrice =
+      this.charges && typeof this.charges.final_total === 'number'
+        ? this.charges.final_total
+        : Number(this.params.price_total || 0);
+
+    const holdType = String(this.inventory?.hold_type || '').toUpperCase();
+    const holdValue = Number(this.inventory?.hold_value || 0);
+
+    let holdAmount = 0;
+    if (holdType === 'F') {
+      const roomsCount = Number(this.params.rooms || 1);
+      holdAmount = holdValue * (roomsCount > 0 ? roomsCount : 1);
+    } else if (holdType === 'P') {
+      holdAmount = (totalPrice * holdValue) / 100;
+    }
+
+    const holdLimitHours = Number(this.inventory?.hold_booking_limit ?? 0);
+    const holdLimitText = this.formatHoldLimitHours(holdLimitHours);
+
+    const holdValidDate = new Date(this.inventory?.hold_booking_date || '');
+    const holdValidText = isNaN(holdValidDate.getTime())
+      ? ''
+      : `${String(holdValidDate.getDate()).padStart(2, '0')}-${String(
+          holdValidDate.getMonth() + 1
+        ).padStart(2, '0')}-${holdValidDate.getFullYear()}`;
+
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        width: '450px',
+        data: {
+          title: 'Hold Booking Confirmation',
+          message: `Do you want to hold this booking for ${holdLimitText}?<br><br>Total Booking Amount: <strong>₹${totalPrice.toFixed(
+            2
+          )}</strong><br><br>Hold Charge: <strong>₹${holdAmount.toFixed(2)}</strong> (${holdType === 'F' ? 'Fixed amount (per room)' : holdValue + '% of total'})<br><br>Hold Valid Until: ${holdValidText}`,
+          warningNote:
+            'Note: If the booking is not completed within this time, the hold amount will not be refundable.',
+          confirmText: 'Confirm Hold',
+          cancelText: 'Cancel',
+          useTextFormat: true
+        }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (result) {
+          this.processHoldBooking(holdAmount);
+        }
+      });
+  }
+
+  private processHoldBooking(holdAmount: number) {
+    if (this.holding) return;
     this.holding = true;
+    const invId = Number(this.params.inventory_id || 0);
+    const detailId = Number(this.params.selected_detail_id || 0);
     const v = this.form.value;
     const finalTotal =
       this.charges && typeof this.charges.final_total === 'number'
         ? this.charges.final_total
         : Number(this.params.price_total || 0);
-    const hv = Number(this.inventory?.hold_value || 0);
-    const ht = String(this.inventory?.hold_type || '').toLowerCase();
-    let holdAmount = 0;
-    if (ht === 'percentage' && hv > 0) {
-      holdAmount = Math.round((finalTotal * hv) / 100);
-    } else if (hv > 0) {
-      holdAmount = hv;
-    } else {
-      holdAmount = 0;
-    }
+    const extraBedAdults = this.extraBedAdults;
+    const extraBedChildren = this.extraBedChildren;
     const payload = {
       selected_detail_id: detailId,
       rooms: Number(this.params.rooms || 1),
       adults: Number(this.params.adults || 0),
       children: Number(this.params.children || 0),
+      childAges: this.params.childAges,
+      extraBedFlags: this.params.extraBedFlags,
+      free_children: this.freeChildren,
+      extra_children_without_bed: this.paidChildNoBed,
+      extra_bed_adults: extraBedAdults,
+      extra_bed_children: extraBedChildren,
       from: String(this.params.from || ''),
       to: String(this.params.to || ''),
       price_total: finalTotal,
@@ -632,12 +766,20 @@ export class HotelBookingConfirmationComponent implements OnInit {
         type: g.type,
         title: g.title || '',
         firstName: g.firstName,
-        lastName: g.lastName
+        lastName: g.lastName,
+        age: g.age
       })),
+      meta: {
+        params: this.params,
+        inventory: this.inventory,
+        room_breakdowns: this.roomBreakdowns,
+        charges: this.charges
+      },
       hold_amount: holdAmount,
-      customer_mobile: this.mobileNumberControl?.value || ''
+      customer_mobile: this.mobileNumberControl?.value || '',
+      type: 'hold'
     };
-    this.hotelService.holdHotelBooking(invId, payload).subscribe({
+    this.hotelService.confirmHotelBooking(invId, payload).subscribe({
       next: (res: any) => {
         const ok = !!(res?.success ?? true);
         if (ok) {
@@ -672,6 +814,24 @@ export class HotelBookingConfirmationComponent implements OnInit {
     });
   }
 
+  private formatHoldLimitHours(hoursRaw: number): string {
+    const hours = Number(hoursRaw || 0);
+    if (!isFinite(hours) || hours <= 0) {
+      return '0 hours';
+    }
+    if (hours <= 24) {
+      const label = hours === 1 ? 'hour' : 'hours';
+      return `${hours} ${label}`;
+    }
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    const dayLabel = days === 1 ? 'day' : 'days';
+    if (remainingHours <= 0) {
+      return `${days} ${dayLabel}`;
+    }
+    const hourLabel = remainingHours === 1 ? 'hour' : 'hours';
+    return `${days} ${dayLabel} and ${remainingHours} ${hourLabel}`;
+  }
   private computeNights(from: string, to: string): number {
     if (!from || !to) return 1;
     const f = new Date(from);

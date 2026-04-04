@@ -1,0 +1,79 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <vex-breadcrumbs [crumbs]="['Masters', 'Settings']"></vex-breadcrumbs>
+    <h2>Settings</h2>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="settings-container" *ngIf="!loading; else loadingTpl">
+      <form [formGroup]="form" class="settings-form">
+        <div class="settings-grid">
+          <div class="settings-item" *ngFor="let s of settings">
+            <ng-container [ngSwitch]="normalizeType(s.type)">
+              <mat-form-field *ngSwitchCase="'text'" appearance="outline">
+                <mat-label>{{ s.description }}</mat-label>
+                <input matInput [formControlName]="s.setting_key" />
+              </mat-form-field>
+
+              <mat-form-field *ngSwitchCase="'number'" appearance="outline">
+                <mat-label>{{ s.description }}</mat-label>
+                <input matInput type="number" [formControlName]="s.setting_key" />
+              </mat-form-field>
+
+              <mat-form-field *ngSwitchCase="'textarea'" appearance="outline">
+                <mat-label>{{ s.description }}</mat-label>
+                <textarea matInput rows="3" [formControlName]="s.setting_key"></textarea>
+              </mat-form-field>
+
+              <mat-checkbox *ngSwitchCase="'checkbox'" [formControlName]="s.setting_key">
+                {{ s.description }}
+              </mat-checkbox>
+
+              <div *ngSwitchCase="'radio'" class="settings-radio-group">
+                <div class="settings-label">{{ s.description }}</div>
+                <mat-radio-group [formControlName]="s.setting_key">
+                  <mat-radio-button value="1">Yes</mat-radio-button>
+                  <mat-radio-button value="0">No</mat-radio-button>
+                </mat-radio-group>
+              </div>
+
+              <div *ngSwitchCase="'file'" class="settings-file">
+                <div class="settings-label">{{ s.description }}</div>
+                <div class="settings-file-current" *ngIf="s.setting_val">
+                  <img
+                    [src]="fullImgUrl(s.setting_val)"
+                    [alt]="s.description"
+                    class="settings-file-image"
+                  />
+                </div>
+                <input type="file" (change)="onFileChange(s.setting_key, $event)" />
+              </div>
+
+              <mat-form-field *ngSwitchDefault appearance="outline">
+                <mat-label>{{ s.description }}</mat-label>
+                <input matInput [formControlName]="s.setting_key" />
+              </mat-form-field>
+            </ng-container>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            (click)="update()"
+            [disabled]="saving"
+          >
+            Update
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <ng-template #loadingTpl>
+      <div class="settings-loading">
+        <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+      </div>
+    </ng-template>
+  </vex-page-layout-content>
+</vex-page-layout>

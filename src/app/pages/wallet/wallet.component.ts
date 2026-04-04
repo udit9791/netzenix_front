@@ -21,6 +21,7 @@ import {
   TransactionPagination,
   PaymentStatus
 } from '../../services/wallet.service';
+import { Router } from '@angular/router';
 
 // Transaction detail interface
 interface TransactionDetail {
@@ -96,6 +97,7 @@ export class WalletComponent implements OnInit {
   });
   walletAmount = 0.0;
   creditBalance = 0.0;
+  creditLimit = 0.0;
   showMore = false;
   referenceNumber = '';
 
@@ -110,19 +112,19 @@ export class WalletComponent implements OnInit {
 
   // Transaction counts
   transactions: TransactionCounts = {
-    topup: 2,
-    air: 8,
-    hotel: 2,
-    commission: 5,
-    couponDiscount: 3
+    topup: 0,
+    air: 0,
+    hotel: 0,
+    commission: 0,
+    couponDiscount: 0
   };
 
   // Transaction summary
   summary: TransactionSummary = {
-    totalSales: 179504.0,
-    totalCommission: 3180.29,
+    totalSales: 0.0,
+    totalCommission: 0.0,
     totalMarkup: 0.0,
-    totalTDS: 64.9,
+    totalTDS: 0.0,
     totalRefund: 0.0,
     totalReconciliation: 0.0,
     creditOutstanding: 0.0
@@ -131,7 +133,10 @@ export class WalletComponent implements OnInit {
   // Sample transaction data
   transactionList: Transaction[] = [];
 
-  constructor(private walletService: WalletService) {}
+  constructor(
+    private walletService: WalletService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
     this.loadWalletBalance();
@@ -140,10 +145,13 @@ export class WalletComponent implements OnInit {
   }
 
   loadWalletBalance() {
+
+    
     this.walletService.getWalletBalance().subscribe({
       next: (response) => {
         this.walletAmount = response.data.balance;
         this.creditBalance = response.data.credit_balance;
+        this.creditLimit = response.data.credit_limit;
       },
       error: (error) => {
         console.error('Error loading wallet balance:', error);
@@ -251,6 +259,27 @@ export class WalletComponent implements OnInit {
   // Toggle transaction details
   toggleTransactionDetails(transaction: Transaction) {
     transaction.expanded = !transaction.expanded;
+  }
+
+  openPaymentConfirmationByReference(ref?: string) {
+    const value = (
+      ref !== undefined && ref !== null ? ref : this.referenceNumber || ''
+    )
+      .toString()
+      .trim();
+    if (!value) {
+      return;
+    }
+    this.router.navigate(['/payment-confirmation', value]);
+  }
+
+  formatPaymentType(value: string | null | undefined): string {
+    const raw = (value || '').toString().trim();
+    if (!raw) {
+      return 'N/A';
+    }
+    const cleaned = raw.replace(/[_-]+/g, ' ').toLowerCase();
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
 
   // Handle page change

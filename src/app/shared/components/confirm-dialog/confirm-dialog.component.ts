@@ -11,6 +11,7 @@ export interface ConfirmDialogData {
   flightDetails?: any;
   travelerType?: string;
   type?: 'internal' | 'external';
+  warningNote?: string;
 }
 
 @Component({

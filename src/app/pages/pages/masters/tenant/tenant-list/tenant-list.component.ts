@@ -22,7 +22,7 @@ import {
   FormGroup,
   Validators
 } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { TenantService } from '../../../../../services/tenant.service';
 import { VexPageLayoutComponent } from '@vex/components/vex-page-layout/vex-page-layout.component';
 import { VexPageLayoutHeaderDirective } from '@vex/components/vex-page-layout/vex-page-layout-header.directive';
@@ -61,6 +61,8 @@ export class TenantListComponent implements OnInit {
     'name',
     'slug',
     'domain',
+    'contact_email',
+    'contact_phone',
     'is_active',
     'actions'
   ];
@@ -85,7 +87,8 @@ export class TenantListComponent implements OnInit {
     private tenantService: TenantService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -93,6 +96,8 @@ export class TenantListComponent implements OnInit {
       name: ['', [Validators.required, Validators.maxLength(255)]],
       slug: ['', [Validators.maxLength(255)]],
       domain: ['', [Validators.required, Validators.maxLength(255)]],
+      contact_email: ['', [Validators.email, Validators.maxLength(255)]],
+      contact_phone: ['', [Validators.maxLength(50)]],
       is_active: [true],
       logo: [null]
     });
@@ -158,6 +163,8 @@ export class TenantListComponent implements OnInit {
       name: '',
       slug: '',
       domain: '',
+      contact_email: '',
+      contact_phone: '',
       is_active: true,
       logo: null
     });
@@ -173,6 +180,8 @@ export class TenantListComponent implements OnInit {
       name: row.name || '',
       slug: row.slug || '',
       domain: row.domain || '',
+      contact_email: row.contact_email || '',
+      contact_phone: row.contact_phone || '',
       is_active: !!row.is_active,
       logo: null
     });
@@ -194,6 +203,12 @@ export class TenantListComponent implements OnInit {
       payload.append('slug', formValue.slug);
     }
     payload.append('domain', formValue.domain);
+    if (formValue.contact_email) {
+      payload.append('contact_email', formValue.contact_email);
+    }
+    if (formValue.contact_phone) {
+      payload.append('contact_phone', formValue.contact_phone);
+    }
     payload.append('is_active', formValue.is_active ? '1' : '0');
     const logoFile: File | null = formValue.logo || null;
     if (logoFile) {
@@ -235,13 +250,30 @@ export class TenantListComponent implements OnInit {
     }
   }
 
+  openTenantPermissions(row: any): void {
+    if (!row || row.id === undefined || row.id === null) {
+      return;
+    }
+
+    const tenantId = Number(row.id);
+
+    if (!Number.isFinite(tenantId)) {
+      return;
+    }
+
+    this.router.navigate(['/masters/tenant-permissions', tenantId]);
+  }
+
   toggleStatus(row: any): void {
     const payload = {
       name: row.name,
       slug: row.slug || null,
       domain: row.domain,
+      contact_email: row.contact_email || null,
+      contact_phone: row.contact_phone || null,
       is_active: !row.is_active
     };
+
     this.tenantService.updateTenant(row.id, payload).subscribe({
       next: () => {
         row.is_active = !row.is_active;

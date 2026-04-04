@@ -65,8 +65,9 @@
             type="password"
             formControlName="confirmPassword"
             placeholder="Confirm new password…"
+            (change)="onConfirmPasswordChange()"
           />
-          <mat-error *ngIf="userForm.hasError('mismatch')">
+          <mat-error *ngIf="userForm.get('confirmPassword')?.hasError('mismatch')">
             Passwords do not match
           </mat-error>
         </mat-form-field>
@@ -120,6 +121,14 @@
             formControlName="pan_no"
             placeholder="Enter PAN number…"
           />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Status</mat-label>
+          <mat-select formControlName="is_active">
+            <mat-option [value]="1">Active</mat-option>
+            <mat-option [value]="0">Inactive</mat-option>
+          </mat-select>
         </mat-form-field>
       </div>
 

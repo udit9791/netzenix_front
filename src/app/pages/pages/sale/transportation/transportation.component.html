@@ -1,0 +1,266 @@
+<div class="page-container">
+  <mat-card class="transportation-card">
+    <mat-card-header>
+      <mat-card-title>Transportation</mat-card-title>
+      <mat-card-subtitle>Manage transportation inventory</mat-card-subtitle>
+      <span class="spacer"></span>
+      <button mat-flat-button color="primary" (click)="openCreateForm()">
+        <mat-icon>add</mat-icon>
+        Add Transportation
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="table-wrapper" *ngIf="items.length; else emptyState">
+        <table mat-table [dataSource]="items" class="full-width">
+          <ng-container matColumnDef="photo">
+            <th mat-header-cell *matHeaderCellDef>Photo</th>
+            <td mat-cell *matCellDef="let row">
+              <img
+                *ngIf="row.photos && row.photos.length"
+                [src]="imgUrl + row.photos[0]"
+                alt="Vehicle photo"
+                width="60"
+                height="40"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="vehicleType">
+            <th mat-header-cell *matHeaderCellDef>Vehicle Type</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.vehicleTypeName || row.vehicleType }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="vehicleName">
+            <th mat-header-cell *matHeaderCellDef>Vehicle Name</th>
+            <td mat-cell *matCellDef="let row">{{ row.vehicleName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="minOccupancy">
+            <th mat-header-cell *matHeaderCellDef>Min Occupancy</th>
+            <td mat-cell *matCellDef="let row">{{ row.minOccupancy }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="maxOccupancy">
+            <th mat-header-cell *matHeaderCellDef>Max Occupancy</th>
+            <td mat-cell *matCellDef="let row">{{ row.maxOccupancy }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="rcBook">
+            <th mat-header-cell *matHeaderCellDef>RC Book</th>
+            <td mat-cell *matCellDef="let row">
+              <a
+                *ngIf="row.rcBookFileName"
+                [href]="imgUrl + row.rcBookFileName"
+                target="_blank"
+                rel="noopener"
+              >
+                <mat-icon>insert_drive_file</mat-icon>
+              </a>
+              <span *ngIf="!row.rcBookFileName">-</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="insurance">
+            <th mat-header-cell *matHeaderCellDef>Insurance</th>
+            <td mat-cell *matCellDef="let row">
+              <a
+                *ngIf="row.insuranceFileName"
+                [href]="imgUrl + row.insuranceFileName"
+                target="_blank"
+                rel="noopener"
+              >
+                <mat-icon>insert_drive_file</mat-icon>
+              </a>
+              <span *ngIf="!row.insuranceFileName">-</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="manufactureYear">
+            <th mat-header-cell *matHeaderCellDef>Manufacture Year</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.manufactureYear || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="serviceCharge">
+            <th mat-header-cell *matHeaderCellDef>Service Charge</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.serviceCharge != null ? row.serviceCharge : '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="toggleStatus(row)"
+                [disabled]="row.is_active === undefined"
+              >
+                <mat-icon>
+                  {{ row.is_active === 1 ? 'toggle_on' : 'toggle_off' }}
+                </mat-icon>
+              </button>
+              <button mat-icon-button color="primary" (click)="openEditForm(row)">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+
+      <ng-template #emptyState>
+        <p>No transportation records found. Click "Add Transportation" to create one.</p>
+      </ng-template>
+
+      <div class="form-wrapper" *ngIf="isFormVisible">
+        <h3>{{ isEditMode ? 'Edit Transportation' : 'Add Transportation' }}</h3>
+        <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Vehicle Type</mat-label>
+            <mat-select formControlName="vehicleType">
+              <mat-option *ngFor="let type of vehicleTypes" [value]="type.id">
+                {{ type.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type">
+              <mat-option value="SIC">SIC</mat-option>
+              <mat-option value="Private">Private</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Vehicle Name</mat-label>
+            <input matInput formControlName="vehicleName" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Min Occupancy</mat-label>
+            <input matInput type="number" formControlName="minOccupancy" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Max Occupancy</mat-label>
+            <input matInput type="number" formControlName="maxOccupancy" />
+          </mat-form-field>
+
+          <mat-form-field
+            appearance="outline"
+            *ngIf="form.get('type')?.value === 'SIC'"
+          >
+            <mat-label>Adult Age Limit</mat-label>
+            <mat-select formControlName="adultAgeLimit">
+              <mat-option *ngFor="let age of adultAgeOptions" [value]="age">
+                {{ age }}
+              </mat-option>
+            </mat-select>
+            <mat-hint align="end">
+              Greater than
+              {{ form.get('adultAgeLimit')?.value || 12 }} years will count as
+              adult.
+            </mat-hint>
+          </mat-form-field>
+
+          <mat-form-field
+            appearance="outline"
+            *ngIf="form.get('type')?.value === 'SIC'"
+          >
+            <mat-label>Free Child Age</mat-label>
+            <mat-select formControlName="freeChildAge">
+              <mat-option
+                *ngFor="let age of freeChildAgeOptions"
+                [value]="age"
+              >
+                {{ age }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Manufacture Year</mat-label>
+            <input matInput type="number" formControlName="manufactureYear" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Single Adult Price</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="singleAdultPrice"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Single Child Price</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="singleChildPrice"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Max Occupancy Price</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="maxOccupancyPrice"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Service Charge</mat-label>
+            <input matInput type="number" formControlName="serviceCharge" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="description-field">
+            <mat-label>Description</mat-label>
+            <textarea matInput rows="3" formControlName="description"></textarea>
+          </mat-form-field>
+
+          <div class="file-field">
+            <label>Photos</label>
+            <input type="file" multiple (change)="onPhotosSelected($event)" />
+            <div class="file-names" *ngIf="selectedPhotos.length">
+              {{ selectedPhotos.join(', ') }}
+            </div>
+          </div>
+
+          <div class="file-field">
+            <label>RC Book File</label>
+            <input type="file" (change)="onRcBookSelected($event)" />
+            <div class="file-names" *ngIf="selectedRcBookFileName">
+              {{ selectedRcBookFileName }}
+            </div>
+          </div>
+
+          <div class="file-field">
+            <label>Insurance File</label>
+            <input type="file" (change)="onInsuranceSelected($event)" />
+            <div class="file-names" *ngIf="selectedInsuranceFileName">
+              {{ selectedInsuranceFileName }}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button mat-button type="button" (click)="cancelForm()">Cancel</button>
+            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">
+              {{ isEditMode ? 'Update' : 'Save' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

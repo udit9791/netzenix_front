@@ -205,15 +205,22 @@ export class ToolbarComponent implements OnInit {
     this.layoutService.openSearch();
   }
 
-  /**
-   * Load wallet balance from API
-   */
   private loadWalletBalance(): void {
     this.walletService.getWalletBalance().subscribe({
       next: (response) => {
         if (response.success && response.data) {
           this.walletAmount = response.data.balance;
           this.walletCreditBalance = response.data.credit_balance;
+          const subscription =
+            (response as any).subscription ??
+            (response.data as any).subscription ??
+            null;
+          if (
+            subscription &&
+            subscription.payment_status === 'subscription_pending'
+          ) {
+            this.router.navigate(['/subscription-pending']);
+          }
         }
       },
       error: (error) => {

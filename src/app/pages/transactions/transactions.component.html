@@ -19,7 +19,7 @@
       </mat-form-field>
 
       <!-- User Autocomplete Filter -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" *ngIf="isAdmin">
         <mat-label>User</mat-label>
         <input matInput 
                [formControl]="userControl"
@@ -58,6 +58,13 @@
         <input matInput [(ngModel)]="search" placeholder="reference, remarks, method...">
       </mat-form-field>
 
+      <mat-checkbox
+        [(ngModel)]="showCreditRequest"
+        [ngModelOptions]="{ standalone: true }"
+        (change)="showCreditRequest = $event.checked ? 1 : 0">
+        Show credit request only
+      </mat-checkbox>
+
       <button mat-flat-button color="primary" (click)="applyFilter()">
         <mat-icon>search</mat-icon>
         Apply
@@ -75,6 +82,21 @@
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>ID</th>
           <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+        </ng-container>
+
+        <!-- Reference ID Column -->
+        <ng-container matColumnDef="reference_id">
+          <th mat-header-cell *matHeaderCellDef>Reference ID</th>
+          <td mat-cell *matCellDef="let row">
+            <button
+              mat-button
+              color="primary"
+              *ngIf="row.reference_id; else noRefId"
+              (click)="goToPaymentConfirmation(row); $event.preventDefault(); $event.stopPropagation()">
+              {{ row.reference_id }}
+            </button>
+            <ng-template #noRefId>-</ng-template>
+          </td>
         </ng-container>
 
         <!-- Type Column -->
@@ -148,14 +170,24 @@
           <td mat-cell *matCellDef="let row">{{ row.created_at | date:'short' }}</td>
         </ng-container>
 
-        <!-- Actions Column -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef>Actions</th>
           <td mat-cell *matCellDef="let row">
-            <button mat-stroked-button color="primary" class="mr-2" (click)="approve(row); $event.preventDefault(); $event.stopPropagation()" *ngIf="isPending(row)">
+            <button
+              mat-stroked-button
+              color="primary"
+              class="mr-2"
+              (click)="approve(row); $event.preventDefault(); $event.stopPropagation()"
+              *ngIf="isPending(row) && hasPermission('edit_transections')"
+            >
               Approve
             </button>
-            <button mat-stroked-button color="warn" (click)="reject(row); $event.preventDefault(); $event.stopPropagation()" *ngIf="isPending(row)">
+            <button
+              mat-stroked-button
+              color="warn"
+              (click)="reject(row); $event.preventDefault(); $event.stopPropagation()"
+              *ngIf="isPending(row) && hasPermission('edit_transections')"
+            >
               Reject
             </button>
           </td>

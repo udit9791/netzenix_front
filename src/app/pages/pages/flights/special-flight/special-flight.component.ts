@@ -10,7 +10,13 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import {
+  MatNativeDateModule,
+  MAT_DATE_FORMATS,
+  MAT_DATE_LOCALE,
+  DateAdapter,
+  NativeDateAdapter
+} from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCardModule } from '@angular/material/card';
@@ -30,6 +36,44 @@ import { SpecialFlightService } from '../../../../services/special-flight.servic
 import { FlightInventoryService } from '../../../../services/flight-inventory.service';
 import { HttpClientModule } from '@angular/common/http';
 
+export class SpecialFlightDateAdapter extends NativeDateAdapter {
+  override parse(value: any): Date | null {
+    if (typeof value === 'string' && value.includes('/')) {
+      const parts = value.split('/');
+      const day = Number(parts[0]);
+      const month = Number(parts[1]) - 1;
+      const year = Number(parts[2]);
+
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        return new Date(year, month, day);
+      }
+    }
+    return super.parse(value);
+  }
+
+  override format(date: Date, displayFormat: any): string {
+    if (displayFormat === 'input') {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    return super.format(date, displayFormat);
+  }
+}
+
+const SPECIAL_FLIGHT_DATE_FORMATS = {
+  parse: {
+    dateInput: 'input'
+  },
+  display: {
+    dateInput: 'input',
+    monthYearLabel: 'MMM yyyy',
+    dateA11yLabel: 'input',
+    monthYearA11yLabel: 'MMMM yyyy'
+  }
+};
+
 @Component({
   selector: 'vex-special-flight',
   templateUrl: './special-flight.component.html',
@@ -41,6 +85,15 @@ import { HttpClientModule } from '@angular/common/http';
       .mat-calendar-body-disabled > .mat-calendar-body-cell-content {
         text-decoration: line-through !important;
         color: rgba(0, 0, 0, 0.38) !important;
+      }
+
+      .mat-calendar-body-cell:not(.mat-calendar-body-disabled):not(
+          .mat-calendar-body-selected
+        )
+        .mat-calendar-body-cell-content {
+        background-color: #2e7d32;
+        color: #ffffff;
+        border-radius: 50%;
       }
 
       .travellers-field {
@@ -103,6 +156,15 @@ import { HttpClientModule } from '@angular/common/http';
         border-top: 1px solid #eee;
       }
     `
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'en-GB' },
+    {
+      provide: DateAdapter,
+      useClass: SpecialFlightDateAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
+    { provide: MAT_DATE_FORMATS, useValue: SPECIAL_FLIGHT_DATE_FORMATS }
   ],
   imports: [
     CommonModule,
@@ -217,6 +279,7 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
   private cityNames: { [code: string]: string } = {};
   originOptions: { code: string; city?: string }[] = [];
   private urlSearchDone = false;
+  private routeParamsReappliedAfterSectorLoad = false;
 
   constructor(
     private router: Router,
@@ -396,175 +459,10 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
       this.checkAndFetchAvailableDates();
     });
 
-    // Get parameters from URL if they exist
+    // Prefill from URL params (for deep links) and auto-search once
+    this.applyQueryParams(this.route.snapshot.queryParams);
     this.route.queryParams.subscribe((params) => {
-      if (Object.keys(params).length > 0) {
-        // Ensure trip type reflects URL first so downstream date logic behaves correctly
-        // Suppress valueChanges to avoid triggering alert on initial load
-        if (params['tripType']) {
-          const tt = (params['tripType'] as string).toLowerCase();
-          this.form
-            .get('tripType')
-            ?.setValue(tt === 'roundtrip' ? 'roundtrip' : 'oneway', {
-              emitEvent: false
-            });
-        }
-        // Track loading of URL parameters
-        let fromLoaded = !params['from'];
-        let toLoaded = !params['to'];
-
-        // Update form with URL parameters
-        if (params['from']) {
-          const fromCodeParam = (params['from'] as string).toUpperCase();
-          const currentFromVal = this.form.get('from')?.value;
-          const currentFromCode =
-            typeof currentFromVal === 'object' && currentFromVal
-              ? (
-                  (currentFromVal as any).code ||
-                  (currentFromVal as any).iata ||
-                  ''
-                ).toUpperCase()
-              : typeof currentFromVal === 'string'
-                ? (currentFromVal as string).toUpperCase()
-                : '';
-
-          if (currentFromCode === fromCodeParam) {
-            fromLoaded = true;
-          } else {
-            this.form.get('from')?.setValue(fromCodeParam);
-            fromLoaded = true;
-            this.checkAndSearchFlights(fromLoaded, toLoaded, params);
-          }
-        }
-
-        if (params['to']) {
-          const toCodeParam = (params['to'] as string).toUpperCase();
-          const currentToVal = this.form.get('to')?.value;
-          const currentToCode =
-            typeof currentToVal === 'object' && currentToVal
-              ? (
-                  (currentToVal as any).code ||
-                  (currentToVal as any).iata ||
-                  ''
-                ).toUpperCase()
-              : typeof currentToVal === 'string'
-                ? (currentToVal as string).toUpperCase()
-                : '';
-
-          if (currentToCode === toCodeParam) {
-            toLoaded = true;
-          } else {
-            this.form.get('to')?.setValue(toCodeParam);
-            toLoaded = true;
-            this.checkAndSearchFlights(fromLoaded, toLoaded, params);
-          }
-        }
-
-        if (params['departDate']) {
-          // Parse the date string and ensure it's properly formatted
-          const dateStr = params['departDate'];
-          console.log('Parsing departDate from URL:', dateStr);
-
-          // Try different date parsing approaches
-          let departDateParam;
-
-          // First try direct Date constructor
-          departDateParam = new Date(dateStr);
-
-          // If that fails, try manual parsing for YYYY-MM-DD format
-          if (isNaN(departDateParam.getTime())) {
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-              // Note: month is 0-indexed in JavaScript Date
-              departDateParam = new Date(
-                parseInt(parts[0], 10),
-                parseInt(parts[1], 10) - 1,
-                parseInt(parts[2], 10)
-              );
-            }
-          }
-
-          console.log('Parsed departDate:', departDateParam);
-
-          if (!isNaN(departDateParam.getTime())) {
-            this.form.get('departDate')?.setValue(departDateParam);
-            console.log('departDate set in form:', departDateParam);
-          } else {
-            console.error('Failed to parse departDate:', dateStr);
-          }
-        }
-
-        if (params['returnDate']) {
-          // Parse the return date string using the same approach as departDate
-          const dateStr = params['returnDate'];
-          console.log('Parsing returnDate from URL:', dateStr);
-
-          // Try different date parsing approaches
-          let returnDateParam;
-
-          // First try direct Date constructor
-          returnDateParam = new Date(dateStr);
-
-          // If that fails, try manual parsing for YYYY-MM-DD format
-          if (isNaN(returnDateParam.getTime())) {
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-              // Note: month is 0-indexed in JavaScript Date
-              returnDateParam = new Date(
-                parseInt(parts[0], 10),
-                parseInt(parts[1], 10) - 1,
-                parseInt(parts[2], 10)
-              );
-            }
-          }
-
-          if (!isNaN(returnDateParam.getTime())) {
-            this.form.get('returnDate')?.setValue(returnDateParam);
-            console.log('returnDate set in form:', returnDateParam);
-          } else {
-            console.error('Failed to parse returnDate:', dateStr);
-          }
-        }
-
-        if (params['travellers'])
-          this.form.get('travellers')?.setValue(params['travellers']);
-
-        // Handle adults, children, and infants parameters
-        if (params['adults']) {
-          const adultsValue = parseInt(params['adults'], 10);
-          if (!isNaN(adultsValue)) {
-            this.form.get('adults')?.setValue(adultsValue);
-          }
-        }
-
-        if (params['children']) {
-          const childrenValue = parseInt(params['children'], 10);
-          if (!isNaN(childrenValue)) {
-            this.form.get('children')?.setValue(childrenValue);
-          }
-        }
-
-        if (params['infants']) {
-          const infantsValue = parseInt(params['infants'], 10);
-          if (!isNaN(infantsValue)) {
-            this.form.get('infants')?.setValue(infantsValue);
-          }
-        }
-
-        if (!this.urlSearchDone) {
-          this.checkAndSearchFlights(fromLoaded, toLoaded, params);
-          if (fromLoaded && toLoaded) {
-            this.urlSearchDone = true;
-          }
-        }
-      } else {
-        // No URL parameters: set default sector AMD-DEL and load dates from cached sectors
-        this.form.get('from')?.setValue('AMD');
-        this.form.get('to')?.setValue('DEL');
-        this.checkAndFetchAvailableDates();
-        this.urlSearchDone = true;
-        this.searchFlights();
-      }
+      this.applyQueryParams(params);
     });
 
     this.ensureSectorAvailableDatesCached();
@@ -572,6 +470,70 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // No interval to clear; method kept for interface compliance
+  }
+
+  private applyQueryParams(params: any): void {
+    if (!params || Object.keys(params).length === 0) {
+      return;
+    }
+
+    if (params['tripType']) {
+      const tt = String(params['tripType']).toLowerCase();
+      this.form
+        .get('tripType')
+        ?.setValue(tt === 'roundtrip' ? 'roundtrip' : 'oneway', {
+          emitEvent: false
+        });
+    }
+
+    if (params['from']) {
+      this.form.get('from')?.setValue(String(params['from']).toUpperCase(), {
+        emitEvent: false
+      });
+    }
+    if (params['to']) {
+      this.form.get('to')?.setValue(String(params['to']).toUpperCase(), {
+        emitEvent: false
+      });
+    }
+
+    if (params['departDate']) {
+      const s = String(params['departDate']);
+      const parts = s.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          this.form.get('departDate')?.setValue(new Date(y, m - 1, d) as any);
+        }
+      }
+    }
+
+    if (params['adults']) {
+      const val = parseInt(String(params['adults']), 10);
+      if (!isNaN(val)) {
+        this.form.get('adults')?.setValue(val);
+      }
+    }
+    if (params['children']) {
+      const val = parseInt(String(params['children']), 10);
+      if (!isNaN(val)) {
+        this.form.get('children')?.setValue(val);
+      }
+    }
+    if (params['infants']) {
+      const val = parseInt(String(params['infants']), 10);
+      if (!isNaN(val)) {
+        this.form.get('infants')?.setValue(val);
+      }
+    }
+
+    if (!this.urlSearchDone) {
+      this.checkAndFetchAvailableDates();
+      this.searchFlights();
+      this.urlSearchDone = true;
+    }
   }
 
   // Check if both from and to are selected, then fetch available dates
@@ -714,6 +676,44 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
         next: (resp) => {
           this.loading = false;
           this.applySectorAvailableDates(resp);
+
+          if (!this.routeParamsReappliedAfterSectorLoad) {
+            const params = this.route.snapshot.queryParams;
+            if (params && Object.keys(params).length > 0) {
+              if (params['to']) {
+                this.form
+                  .get('to')
+                  ?.setValue(String(params['to']).toUpperCase(), {
+                    emitEvent: false
+                  });
+              }
+
+              if (params['departDate']) {
+                const s = String(params['departDate']);
+                const parts = s.split('-');
+                if (parts.length === 3) {
+                  const y = parseInt(parts[0], 10);
+                  const m = parseInt(parts[1], 10);
+                  const d = parseInt(parts[2], 10);
+                  if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                    this.form
+                      .get('departDate')
+                      ?.setValue(new Date(y, m - 1, d) as any, {
+                        emitEvent: false
+                      });
+                  }
+                }
+              }
+
+              if (params['adults']) {
+                const val = parseInt(String(params['adults']), 10);
+                if (!isNaN(val)) {
+                  this.form.get('adults')?.setValue(val);
+                }
+              }
+            }
+            this.routeParamsReappliedAfterSectorLoad = true;
+          }
         },
         error: () => {
           this.loading = false;
@@ -1177,8 +1177,15 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
 
     // Apply limits
     if (type === 'adults' && (newValue < 1 || newValue > 9)) return;
-    if (type === 'children' && (newValue < 0 || newValue > 4)) return;
-    if (type === 'infants' && (newValue < 0 || newValue > 2)) return;
+    if (type === 'children' && (newValue < 0 || newValue > 6)) return;
+    if (type === 'infants') {
+      if (newValue < 0 || newValue > 6) return;
+      const adults = this.form.get('adults')?.value || 0;
+      if (newValue > adults) {
+        alert('Number of infants cannot be more than adults');
+        return;
+      }
+    }
 
     this.form.get(type)?.setValue(newValue);
 
@@ -1235,9 +1242,9 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
     departDate: new Date(2025, 8, 17),
     departTime: '10:00',
     arriveTime: '11:30',
-    duration: '1h 30m',
-    from: 'Ahmedabad',
-    to: 'Mumbai',
+    duration: '',
+    from: '',
+    to: '',
     price: 2500,
     seatsLeft: 1,
     bagAllowances: { checkin: '15 KG', cabin: '7 KG' },
@@ -1322,6 +1329,26 @@ export class SpecialFlightComponent implements OnInit, OnDestroy {
       next: () => alert('Hold initiated successfully'),
       error: () => alert('Failed to hold. Please try again')
     });
+  }
+
+  private normalizeWeight(value: any): { value: string; unit: string } {
+    if (value === null || value === undefined) {
+      return { value: '', unit: '' };
+    }
+    const str = String(value).trim();
+    const lower = str.toLowerCase();
+    if (lower.endsWith('kg')) {
+      return { value: str.slice(0, -2).trim(), unit: 'KG' };
+    }
+    return { value: str, unit: 'KG' };
+  }
+
+  weightValue(value: any): string {
+    return this.normalizeWeight(value).value;
+  }
+
+  weightUnit(value: any): string {
+    return this.normalizeWeight(value).unit;
   }
 
   openDetails(group: any, fare: any) {

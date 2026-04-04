@@ -23,7 +23,7 @@ import {
   FormGroup,
   Validators
 } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { PlanService } from '../../../../../services/plan.service';
 import {
   ConfirmDialogComponent,
@@ -67,7 +67,6 @@ export class TenantPlanListComponent implements OnInit {
   displayedColumns: string[] = [
     'tenant',
     'name',
-    'user_type',
     'price',
     'is_active',
     'actions'
@@ -85,6 +84,8 @@ export class TenantPlanListComponent implements OnInit {
   planForm!: FormGroup;
   dialogMode: 'add' | 'edit' = 'add';
   editingPlan: any | null = null;
+  availableTenants: any[] = [];
+  pricingPlans: any[] = [];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -94,17 +95,22 @@ export class TenantPlanListComponent implements OnInit {
     private planService: PlanService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.planForm = this.fb.group({
-      name: ['', Validators.required],
+      tenant_id: [null, Validators.required],
+      name: [''],
       user_type: ['buyer', Validators.required],
+      pricing_plan_id: [null, Validators.required],
       price: [0, [Validators.required, Validators.min(0)]],
       is_active: [true]
     });
     this.loadPlans();
+    this.loadTenantsWithoutSubscription();
+    this.loadPricingPlans();
   }
 
   loadPlans(): void {
@@ -131,6 +137,37 @@ export class TenantPlanListComponent implements OnInit {
           });
         }
       });
+  }
+
+  loadTenantsWithoutSubscription(): void {
+    this.planService.getTenantsWithoutSubscription().subscribe({
+      next: (res: any) => {
+        this.availableTenants = Array.isArray(res) ? res : res?.data || [];
+      },
+      error: () => {
+        this.availableTenants = [];
+      }
+    });
+  }
+
+  loadPricingPlans(): void {
+    this.planService.getPricingPlans().subscribe({
+      next: (res: any) => {
+        this.pricingPlans = Array.isArray(res) ? res : res?.data || [];
+      },
+      error: () => {
+        this.pricingPlans = [];
+      }
+    });
+  }
+
+  viewPlanDetail(plan: any): void {
+    const id =
+      plan && plan.id !== undefined && plan.id !== null ? Number(plan.id) : NaN;
+    if (!id || Number.isNaN(id)) {
+      return;
+    }
+    this.router.navigate(['/masters/tenant-plans', id]);
   }
 
   onPageChange(event: PageEvent): void {
@@ -168,8 +205,10 @@ export class TenantPlanListComponent implements OnInit {
     this.dialogMode = 'add';
     this.editingPlan = null;
     this.planForm.reset({
+      tenant_id: null,
       name: '',
       user_type: 'buyer',
+      pricing_plan_id: null,
       price: 0,
       is_active: true
     });
@@ -181,9 +220,19 @@ export class TenantPlanListComponent implements OnInit {
   openEditDialog(plan: any): void {
     this.dialogMode = 'edit';
     this.editingPlan = plan;
+    const tenantId = plan.tenant_id || (plan.tenant && plan.tenant.id) || null;
+    if (
+      tenantId &&
+      plan.tenant &&
+      !this.availableTenants.some((t) => t.id === tenantId)
+    ) {
+      this.availableTenants = [...this.availableTenants, plan.tenant];
+    }
     this.planForm.reset({
+      tenant_id: tenantId,
       name: plan.name || '',
       user_type: plan.user_type || 'buyer',
+      pricing_plan_id: plan.pricing_plan_id || null,
       price: plan.price || 0,
       is_active: !!plan.is_active
     });
@@ -202,6 +251,8 @@ export class TenantPlanListComponent implements OnInit {
       name: this.planForm.value.name,
       user_type: this.planForm.value.user_type,
       price: Number(this.planForm.value.price),
+      pricing_plan_id: this.planForm.value.pricing_plan_id,
+      tenant_id: this.planForm.value.tenant_id,
       is_active: !!this.planForm.value.is_active
     };
 
@@ -237,6 +288,28 @@ export class TenantPlanListComponent implements OnInit {
             });
           }
         });
+    }
+  }
+
+  onTenantSelectionChange(tenantId: number): void {
+    const selected =
+      this.availableTenants.find((t) => t.id === tenantId) || null;
+    this.planForm.patchValue({
+      tenant_id: tenantId,
+      name: selected ? selected.name : ''
+    });
+  }
+
+  onPricingPlanSelectionChange(planId: number): void {
+    const selected = this.pricingPlans.find((p) => p.id === planId) || null;
+    if (selected) {
+      this.planForm.patchValue({
+        pricing_plan_id: planId,
+        price:
+          selected.price !== undefined && selected.price !== null
+            ? Number(selected.price)
+            : this.planForm.value.price
+      });
     }
   }
 

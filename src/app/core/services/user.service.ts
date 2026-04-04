@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -11,12 +11,18 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
-  /** ✅ Create User with Role */
   createUserWithRole(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/users/create-with-role`, data);
   }
 
-  /** ✅ Get paginated users */
+  createSubUser(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/sub-users`, data);
+  }
+
+  updateSubUser(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/sub-users/${id}`, data);
+  }
+
   getUsers(
     page: number = 1,
     perPage: number = 10,
@@ -40,7 +46,25 @@ export class UserService {
     return this.http.get(`${this.apiUrl}/users`, { params });
   }
 
-  /** ✅ Get users for autocomplete */
+  getSubUsers(
+    page: number = 1,
+    perPage: number = 10,
+    search: string = ''
+  ): Observable<any> {
+    const params: any = {
+      page,
+      per_page: perPage
+    };
+    if (search) {
+      params.search = search;
+    }
+    return this.http.get(`${this.apiUrl}/sub-users`, { params });
+  }
+
+  getSubUser(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/sub-users/${id}`);
+  }
+
   getUsersForAutocomplete(
     search: string = '',
     role?: string,
@@ -62,17 +86,14 @@ export class UserService {
     return this.http.get(`${this.apiUrl}/users/autocomplete`, { params });
   }
 
-  /** ✅ Delete User */
   deleteUser(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/users/${id}`);
   }
 
-  /** ✅ Update User */
   updateUser(id: number, data: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/users/${id}`, data);
   }
 
-  /** Get User by ID */
   getUser(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/users/${id}`);
   }
@@ -81,7 +102,16 @@ export class UserService {
     return this.http.get(`${this.apiUrl}/users/${id}/detail`);
   }
 
-  // ✅ Get tenants (optionally only active ones)
+  getUserPermissions(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/${id}/permissions`);
+  }
+
+  assignUserPermissions(id: number, permissionIds: number[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/users/${id}/permissions`, {
+      permission_ids: permissionIds
+    });
+  }
+
   getTenants(activeOnly: boolean = false): Observable<any> {
     const params: any = {};
     if (activeOnly) {
@@ -90,7 +120,6 @@ export class UserService {
     return this.http.get(`${this.apiUrl}/tenants`, { params });
   }
 
-  // ✅ Get roles
   getRoles(): Observable<any> {
     return this.http.get(`${this.apiUrl}/roles`);
   }
@@ -103,22 +132,18 @@ export class UserService {
     return this.http.post(`${this.apiUrl}/users/${id}/reject`, {});
   }
 
-  // Get all countries
   getCountries(): Observable<any> {
     return this.http.get(`${this.apiUrl}/countries/list`);
   }
 
-  // Get states by country ID
   getStatesByCountry(countryId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/states/country/${countryId}`);
   }
 
-  // Get cities by state ID
   getCitiesByState(stateId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/cities/state/${stateId}`);
   }
 
-  // Upsert country/state/city by names
   upsertLocation(payload: {
     country_name?: string;
     state_name?: string;

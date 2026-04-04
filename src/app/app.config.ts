@@ -19,6 +19,7 @@ import { provideQuillConfig } from 'ngx-quill';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { TenantInterceptor } from './core/interceptors/tenant.interceptor';
+import { SubscriptionInterceptor } from './core/interceptors/subscription.interceptor';
 import { ToastrModule } from 'ngx-toastr';
 
 export const appConfig: ApplicationConfig = {
@@ -54,6 +55,11 @@ export const appConfig: ApplicationConfig = {
     {
       provide: HTTP_INTERCEPTORS,
       useClass: TenantInterceptor,
+      multi: true
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: SubscriptionInterceptor,
       multi: true
     },
 

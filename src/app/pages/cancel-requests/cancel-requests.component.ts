@@ -34,14 +34,22 @@ import { environment } from 'src/environments/environment';
     MatDatepickerModule,
     MatNativeDateModule,
     FormsModule,
-    MatDialogModule
-    ,RouterLink
+    MatDialogModule,
+    RouterLink
   ],
   templateUrl: './cancel-requests.component.html',
   styleUrl: './cancel-requests.component.scss'
 })
 export class CancelRequestsComponent implements OnInit {
-  displayedColumns: string[] = ['id', 'order_id', 'status', 'type_id', 'final_amount', 'created_at', 'actions'];
+  displayedColumns: string[] = [
+    'id',
+    'order_id',
+    'status',
+    'type_id',
+    'final_amount',
+    'created_at',
+    'actions'
+  ];
   data: any[] = [];
   total = 0;
   per_page = 10;
@@ -50,10 +58,18 @@ export class CancelRequestsComponent implements OnInit {
   orderId: number | null = null;
   fromDate?: Date;
   toDate?: Date;
+  userPermissions: string[] = [];
 
-  constructor(private http: HttpClient, private router: Router, private dialog: MatDialog) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
+    this.userPermissions = JSON.parse(
+      localStorage.getItem('permissions') || '[]'
+    );
     this.fetchCancelRequests();
   }
 
@@ -73,18 +89,20 @@ export class CancelRequestsComponent implements OnInit {
       params = params.set('to_date', this.formatDate(this.toDate));
     }
 
-    this.http.get(`${environment.apiUrl}/cancellation-requests`, { params }).subscribe({
-      next: (res: any) => {
-        this.data = res.data || [];
-        this.total = res.total || this.data.length;
-        this.per_page = res.per_page || this.per_page;
-        this.current_page = res.current_page || page;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      }
-    });
+    this.http
+      .get(`${environment.apiUrl}/cancellation-requests`, { params })
+      .subscribe({
+        next: (res: any) => {
+          this.data = res.data || [];
+          this.total = res.total || this.data.length;
+          this.per_page = res.per_page || this.per_page;
+          this.current_page = res.current_page || page;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+        }
+      });
   }
 
   handlePage(e: PageEvent) {
@@ -109,14 +127,18 @@ export class CancelRequestsComponent implements OnInit {
   }
 
   proceed(row: any) {
-    this.dialog.open(CancelRequestDialogComponent, {
-      width: '800px',
-      maxHeight: '80vh',
-      data: { orderId: row.order_id, request: row }
-    }).afterClosed().subscribe((res) => {
-      if (res && res.success) {
-        this.fetchCancelRequests(this.current_page);
-      }
-    });
+    if (!row || !row.id) {
+      return;
+    }
+    const tree = this.router.createUrlTree([
+      '/transactions/cancel-requests',
+      row.id
+    ]);
+    const url = this.router.serializeUrl(tree);
+    window.open(url, '_blank');
+  }
+
+  hasPermission(perm: string): boolean {
+    return this.userPermissions.includes(perm);
   }
 }

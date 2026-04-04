@@ -73,12 +73,12 @@
         <!-- Deposit Wallet Details -->
         <div *ngIf="selectedPaymentMethod === 'deposit_wallet'" class="wallet-details">
           <div class="wallet-balance-row">
-            <span>Available Balance:</span>
-            <span class="wallet-amount">₹ {{walletBalance | number:'1.2-2'}}</span>
+            <span>Due Balance:</span>
+            <span class="wallet-amount">₹ {{walletAvailableBalance | number:'1.2-2'}}</span>
           </div>
           <div class="wallet-balance-row">
             <span>Credit Limit:</span>
-            <span class="wallet-amount">₹ {{creditBalance}}</span>
+            <span class="wallet-amount">₹ {{creditLimit | number:'1.2-2'}}</span>
           </div>
           <div class="wallet-balance-row total-balance">
             <span>Total Available:</span>
@@ -102,46 +102,52 @@
 
     <div class="summary-section">
       <h3>Payment Summary</h3>
-      <div class="summary-row">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments">
         <span>Total amount</span>
         <span class="amount">INR {{amount | number:'1.2-2'}}</span>
       </div>
 
-      <div class="summary-row total-convenience-fee">
+    <div
+      class="summary-row total-convenience-fee"
+      *ngIf="bookingStatus !== 9 && !allowInstallments && convenienceFee > 0"
+    >
         <span>Total Convenience fee</span>
         <span class="amount">INR {{convenienceFee | number:'1.2-2'}}</span>
       </div>
-      <!-- Show Hold Amount when booking is on hold (status 8 or 9). This is display-only and does not affect totals. -->
-      <div class="summary-row" *ngIf="(bookingStatus === 8 || bookingStatus === 9) && holdAmount > 0">
+    <!-- Show Hold Amount when booking is on hold (status 8 or 9). This is display-only and does not affect totals. -->
+    <div
+      class="summary-row"
+      *ngIf="(bookingStatus === 8 || bookingStatus === 9) && holdAmount > 0 && !allowInstallments"
+    >
         <span>Hold Amount</span>
         <span class="amount">-INR {{holdAmount | number:'1.2-2'}}</span>
       </div>
       <!-- Tax breakdown section -->
-      <div class="summary-row" *ngIf="serviceFeecgst > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && serviceFeecgst > 0">
         <span>CGST</span>
         <span class="amount">INR {{serviceFeecgst | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row" *ngIf="serviceFeesgst > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && serviceFeesgst > 0">
         <span>SGST</span>
         <span class="amount">INR {{serviceFeesgst | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row" *ngIf="serviceFeeigst > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && serviceFeeigst > 0">
         <span>IGST</span>
         <span class="amount">INR {{serviceFeeigst | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row" *ngIf="markup > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && markup > 0">
         <span>Markup</span>
         <span class="amount">INR {{markup | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row" *ngIf="commission > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && commission > 0">
         <span>Commission</span>
         <span class="amount">-INR {{commission | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row" *ngIf="tdsonCommission > 0">
+    <div class="summary-row" *ngIf="bookingStatus !== 9 && !allowInstallments && tdsonCommission > 0">
         <span>TDS on Commission</span>
         <span class="amount">INR {{tdsonCommission | number:'1.2-2'}}</span>
       </div>
-      <div class="summary-row total">
+    <div class="summary-row total" *ngIf="bookingStatus !== 9">
         <span>Total:</span>
         <span class="amount">INR {{totalAmount | number:'1.2-2' || '0.00'}}</span>
       </div>

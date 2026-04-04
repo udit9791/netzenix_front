@@ -4,10 +4,13 @@
       <h2 class="title m-0">Wallet</h2>
       <div class="flex items-center">
         <div class="mr-4">
-          <strong>Available Balance:</strong> ₹{{ walletAmount | number:'1.2-2' }}
+          <strong>Due Balance:</strong> ₹{{ walletAmount | number:'1.2-2' }}
+        </div>
+        <div class="mr-4">
+          <strong>Available Limit:</strong> ₹{{ creditBalance | number:'1.2-2' }}
         </div>
         <div>
-          <strong>Credit Balance:</strong> ₹{{ creditBalance | number:'1.2-2' }}
+          <strong>Credit Limit:</strong> ₹{{ creditLimit | number:'1.2-2' }}
         </div>
       </div>
     </div>
@@ -45,7 +48,18 @@
         <div *ngIf="showMore" class="w-full md:w-2/5">
           <mat-form-field class="w-full">
             <mat-label>Reference number</mat-label>
-            <input matInput placeholder="Enter refernce number" [(ngModel)]="referenceNumber">
+            <input
+              matInput
+              placeholder="Enter refernce number"
+              [(ngModel)]="referenceNumber">
+            <button
+              mat-icon-button
+              matSuffix
+              color="primary"
+              [disabled]="!referenceNumber"
+              (click)="openPaymentConfirmationByReference()">
+              <mat-icon>open_in_new</mat-icon>
+            </button>
           </mat-form-field>
         </div>
         
@@ -156,11 +170,22 @@
                   <div class="grid grid-cols-6 gap-4">
                     <div>
                       <div class="text-gray-500 text-sm">Reference number</div>
-                      <div>{{ transaction.details?.referenceNumber || 'N/A' }}</div>
+                      <div>
+                        <button
+                          mat-button
+                          color="primary"
+                          *ngIf="transaction.details?.referenceNumber; else noRef"
+                          (click)="openPaymentConfirmationByReference(transaction.details?.referenceNumber); $event.preventDefault(); $event.stopPropagation()">
+                          {{ transaction.details?.referenceNumber }}
+                        </button>
+                        <ng-template #noRef>
+                          <span>{{ transaction.details?.referenceNumber || 'N/A' }}</span>
+                        </ng-template>
+                      </div>
                     </div>
                     <div>
                       <div class="text-gray-500 text-sm">Payment Type</div>
-                      <div>{{ transaction.details?.paymentType || 'N/A' }}</div>
+                      <div>{{ formatPaymentType(transaction.details?.paymentType) }}</div>
                     </div>
                     <div>
                       <div class="text-gray-500 text-sm">Invoice number</div>

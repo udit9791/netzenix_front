@@ -16,10 +16,10 @@
     <div [formGroup]="form" class="p-6 flex flex-col gap-4">
       <div class="flex flex-col">
         <mat-form-field class="flex-1">
-          <mat-label>E-Mail</mat-label>
-          <input formControlName="email" matInput required />
-          <mat-error *ngIf="form.controls.email.hasError('required')"
-          >We need an email address to log you in
+          <mat-label>User ID</mat-label>
+          <input formControlName="login_id" matInput required />
+          <mat-error *ngIf="form.controls.login_id.hasError('required')"
+          >User ID is required to log you in
           </mat-error>
         </mat-form-field>
         <mat-form-field class="flex-1">

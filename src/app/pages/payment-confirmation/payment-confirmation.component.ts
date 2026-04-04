@@ -54,6 +54,9 @@ export class PaymentConfirmationComponent implements OnInit {
   holdRemainingText: string = '';
   holdTimerId: any = null;
 
+  currentUserId: number | null = null;
+  isSupplier: boolean = false;
+
   imgBaseUrl: string = environment.imgUrl;
 
   // Passenger update modal state
@@ -64,6 +67,44 @@ export class PaymentConfirmationComponent implements OnInit {
   showCancelModal = false;
   cancelPreview: any = null;
   cancelTarget: { traveler: any; index: number } | null = null;
+
+  itineraryDetail: any = null;
+
+  get hasInstallmentSchedule(): boolean {
+    const d = this.orderDetails;
+    if (!d) {
+      return false;
+    }
+    const allow = (d.allow_installments ?? 0) === 1;
+    const list = Array.isArray(d.installment_payments)
+      ? d.installment_payments
+      : [];
+    return allow && list.length > 0;
+  }
+
+  get installmentSchedule(): any[] {
+    const list = Array.isArray(this.orderDetails?.installment_payments)
+      ? this.orderDetails.installment_payments
+      : [];
+    return list;
+  }
+
+  private formatIst(date: Date): string {
+    try {
+      return date.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    } catch {
+      return date.toISOString();
+    }
+  }
 
   fullImgUrl(path: string | null | undefined): string {
     const fallback = '/storage/hotel/default.jpg';
@@ -89,12 +130,17 @@ export class PaymentConfirmationComponent implements OnInit {
     return rooms.length ? rooms[0] : null;
   }
 
-  // Determine if naming update window is open based on flight_date and naming_cut_off_days
+  isFlightOrder(): boolean {
+    const t = String(this.orderDetails?.type || '').toLowerCase();
+    return t === 'flight' || t === 'external_flight';
+  }
+
   isNamingWindowOpen(): boolean {
     try {
       const inv = this.flightDetails?.inventory ?? this.flightDetails;
       const flightDateStr: string | undefined = inv?.flight_date;
       const namingCutOffDays: number = Number(inv?.naming_cut_off_days ?? 0);
+
       if (!flightDateStr || !namingCutOffDays) {
         return false;
       }
@@ -102,7 +148,56 @@ export class PaymentConfirmationComponent implements OnInit {
       const cutOffDate = new Date(flightDate);
       cutOffDate.setDate(cutOffDate.getDate() - namingCutOffDays);
       const currentDate = new Date();
-      return currentDate <= cutOffDate;
+      cutOffDate.setHours(23, 59, 59, 999);
+      const result = currentDate <= cutOffDate;
+      console.log('isNamingWindowOpen', {
+        flightDateStr,
+        namingCutOffDays,
+        cutOffDateIst: this.formatIst(cutOffDate),
+        currentDateIst: this.formatIst(currentDate),
+        result
+      });
+      return result;
+    } catch {
+      return false;
+    }
+  }
+
+  getTravelerDetailsCutOffDate(): Date | null {
+    try {
+      const inv = this.flightDetails?.inventory ?? this.flightDetails;
+      const flightDateStr: string | undefined = inv?.flight_date;
+      const namingCutOffDays: number = Number(inv?.naming_cut_off_days ?? 0);
+      if (!flightDateStr || !namingCutOffDays) {
+        return null;
+      }
+      const flightDate = new Date(flightDateStr);
+      if (isNaN(flightDate.getTime())) {
+        return null;
+      }
+      const cutOffDate = new Date(flightDate);
+      cutOffDate.setDate(cutOffDate.getDate() - namingCutOffDays);
+      return cutOffDate;
+    } catch {
+      return null;
+    }
+  }
+
+  isTravelerUpdateWindowOpen(): boolean {
+    try {
+      const cutOffDate = this.getTravelerDetailsCutOffDate();
+      if (!cutOffDate) {
+        return false;
+      }
+      const currentDate = new Date();
+      cutOffDate.setHours(23, 59, 59, 999);
+      const result = currentDate <= cutOffDate;
+      console.log('isTravelerUpdateWindowOpen', {
+        cutOffDateIst: this.formatIst(cutOffDate),
+        currentDateIst: this.formatIst(currentDate),
+        result
+      });
+      return result;
     } catch {
       return false;
     }
@@ -117,6 +212,8 @@ export class PaymentConfirmationComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.currentUserId = this.getCurrentUserId();
+    this.isSupplier = this.getIsSupplier();
     // First check for path parameter (for flights/booking-confirmation/:id route)
     this.route.params.subscribe((params) => {
       if (params['id']) {
@@ -138,6 +235,149 @@ export class PaymentConfirmationComponent implements OnInit {
 
     // Load payment statuses to map order status id -> name
     this.fetchPaymentStatuses();
+  }
+
+  private getCurrentUserId(): number | null {
+    try {
+      const raw =
+        localStorage.getItem('user') || localStorage.getItem('userData');
+      if (!raw) {
+        return null;
+      }
+      const u = JSON.parse(raw as string);
+      const id = Number(u?.id ?? u?.user_id ?? 0);
+      return id || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private getIsSupplier(): boolean {
+    try {
+      const rolesRaw =
+        localStorage.getItem('role_names') ||
+        localStorage.getItem('roles') ||
+        '[]';
+      let roles: any = [];
+      try {
+        roles = JSON.parse(rolesRaw);
+      } catch {
+        roles = rolesRaw;
+      }
+      if (Array.isArray(roles)) {
+        return roles.includes('Supplier') || roles.includes('supplier');
+      }
+      if (typeof roles === 'string') {
+        return roles.toLowerCase().includes('supplier');
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  private fetchItineraryDetailForOrder(): void {
+    const t = String(this.orderDetails?.type || '').toLowerCase();
+    if (t !== 'itinerary') {
+      return;
+    }
+    const itineraryId =
+      this.orderDetails?.itinerary_info?.id ||
+      this.orderDetails?.itinerary_order?.itinerary_id ||
+      this.orderDetails?.type_id;
+    if (!itineraryId) {
+      return;
+    }
+
+    const params: any = {};
+    const itOrder: any = this.orderDetails?.itinerary_order || {};
+    if (itOrder.travel_date) {
+      params.date = itOrder.travel_date;
+    }
+    if (itOrder.departure_from) {
+      params.departure = itOrder.departure_from;
+    }
+    if (itOrder.rooms != null) {
+      params.rooms = String(itOrder.rooms);
+    }
+    if (itOrder.adults != null) {
+      params.adults = String(itOrder.adults);
+    }
+    if (itOrder.children != null) {
+      params.children = String(itOrder.children);
+    }
+
+    this.http
+      .get<any>(
+        `${environment.apiUrl}/itineraries/${itineraryId}/selected-detail`,
+        { params }
+      )
+      .subscribe({
+        next: (res: any) => {
+          this.itineraryDetail = res && res.data ? res.data : res;
+        },
+        error: () => {}
+      });
+  }
+
+  private getItineraryVehicleById(id: number): any {
+    const list =
+      this.itineraryDetail && Array.isArray(this.itineraryDetail.vehicles)
+        ? this.itineraryDetail.vehicles
+        : [];
+    return list.find((v: any) => {
+      if (!v) {
+        return false;
+      }
+      const vid = v.id ?? v.vehicle_id;
+      return Number(vid) === Number(id);
+    });
+  }
+
+  getItineraryVehicleName(id: number): string | null {
+    const v = this.getItineraryVehicleById(id);
+    if (!v) {
+      return null;
+    }
+    return v.name || v.vehicle_name || null;
+  }
+
+  getItineraryVehicleType(id: number): string | null {
+    const v = this.getItineraryVehicleById(id);
+    if (!v) {
+      return null;
+    }
+    return v.type || null;
+  }
+
+  getItineraryVehicleImage(id: number): string | null {
+    const v = this.getItineraryVehicleById(id);
+    if (!v || !v.photo) {
+      return null;
+    }
+    return this.fullImgUrl(v.photo);
+  }
+
+  canManageHoldActions(): boolean {
+    const currentId = Number(this.currentUserId ?? 0);
+    const orderUserId = Number(
+      this.orderDetails?.user_id ?? this.orderDetails?.created_by ?? 0
+    );
+    if (!currentId || !orderUserId) {
+      console.log('canManageHoldActions', {
+        currentId,
+        orderUserId,
+        result: false
+      });
+      return false;
+    }
+    const result = currentId === orderUserId;
+    console.log('canManageHoldActions', {
+      currentId,
+      orderUserId,
+      result
+    });
+    return result;
   }
 
   fetchOrderDetails(orderId: string) {
@@ -169,6 +409,8 @@ export class PaymentConfirmationComponent implements OnInit {
             if (this.orderDetails.type_id) {
               this.fetchHotelDetails(this.orderDetails.type_id);
             }
+          } else if (this.orderDetails.type === 'itinerary') {
+            this.fetchItineraryDetailForOrder();
           } else {
             if (this.orderDetails.type_id) {
               this.fetchFlightDetails(this.orderDetails.type_id);
@@ -204,6 +446,8 @@ export class PaymentConfirmationComponent implements OnInit {
             if (this.orderDetails.type_id) {
               this.fetchHotelDetails(this.orderDetails.type_id);
             }
+          } else if (this.orderDetails.type === 'itinerary') {
+            this.fetchItineraryDetailForOrder();
           } else {
             if (this.orderDetails.type_id) {
               this.fetchFlightDetails(this.orderDetails.type_id);
@@ -235,6 +479,7 @@ export class PaymentConfirmationComponent implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.hotelDetails = res?.data ?? res ?? null;
+          // console.log('Hotel details:', this.hotelDetails);
           const limit =
             this.hotelDetails?.hold_booking_limit ??
             this.hotelDetails?.inventory?.hold_booking_limit;
@@ -279,6 +524,16 @@ export class PaymentConfirmationComponent implements OnInit {
       });
   }
 
+  getTitleOptions(index: number): string[] {
+    const type = String(
+      this.orderDetails?.details?.[index]?.passanger_type || ''
+    ).toLowerCase();
+    if (type === 'adult') {
+      return ['Mr', 'Mrs', 'Ms'];
+    }
+    return ['Master', 'Miss'];
+  }
+
   private initPassengerUpdateFormIfNeeded() {
     if (
       this.orderDetails?.update_passengers_detail === 0 &&
@@ -287,10 +542,14 @@ export class PaymentConfirmationComponent implements OnInit {
       this.passengersForm.clear();
       this.orderDetails.details.forEach((d: any) => {
         const isAdult = String(d.passanger_type).toLowerCase() === 'adult';
+        const normalizedTitle = this.normalizeTitleForPassenger(
+          d.title,
+          d.passanger_type
+        );
         this.passengersForm.push(
           this.fb.group({
             id: [d.id, Validators.required],
-            title: [d.title || '', Validators.required],
+            title: [normalizedTitle, Validators.required],
             firstName: [d.first_name || '', Validators.required],
             lastName: [d.last_name || '', Validators.required],
             date_of_birth: [
@@ -300,22 +559,58 @@ export class PaymentConfirmationComponent implements OnInit {
           })
         );
       });
-      // Auto-open modal for TBA updates
-      this.showUpdateModal = true;
-    } else {
-      this.showUpdateModal = false;
     }
   }
 
-  // Removed duplicate constructor
+  private normalizeTitleForPassenger(
+    rawTitle: string | null | undefined,
+    passangerType: any
+  ): string {
+    const t = String(rawTitle || '')
+      .trim()
+      .toLowerCase();
+    const p = String(passangerType || '').toLowerCase();
+
+    if (p === 'adult') {
+      if (t === 'mr' || t === 'mr.') {
+        return 'Mr';
+      }
+      if (t === 'mrs' || t === 'mrs.') {
+        return 'Mrs';
+      }
+      if (t === 'ms' || t === 'ms.') {
+        return 'Ms';
+      }
+      return 'Mr';
+    }
+
+    if (t === 'master' || t === 'master.') {
+      return 'Master';
+    }
+    if (t === 'miss' || t === 'miss.') {
+      return 'Miss';
+    }
+    return 'Master';
+  }
 
   openPassengerUpdateModal() {
-    // Allow opening if TBA update is pending OR naming window is open
-    if (
+    const conditionTravelerWindow = this.isTravelerUpdateWindowOpen();
+    const conditionUpdateFlag =
       this.orderDetails?.update_passengers_detail === 0 ||
-      this.isNamingWindowOpen()
-    ) {
-      // Ensure form is initialized
+      this.isNamingWindowOpen();
+    const conditionAllowTba =
+      this.orderDetails?.allow_tba_user === 1 ||
+      this.orderDetails?.allow_tba_user === '1';
+
+    console.log('openPassengerUpdateModal conditions', {
+      conditionTravelerWindow,
+      conditionUpdateFlag,
+      conditionAllowTba,
+      update_passengers_detail: this.orderDetails?.update_passengers_detail,
+      allow_tba_user: this.orderDetails?.allow_tba_user
+    });
+
+    if (conditionTravelerWindow && conditionUpdateFlag) {
       if (
         !this.passengersForm?.length &&
         Array.isArray(this.orderDetails?.details)
@@ -554,13 +849,80 @@ export class PaymentConfirmationComponent implements OnInit {
       });
   }
 
+  // Release hold via dedicated API with confirmation prompt
+  releaseHold() {
+    if (!this.orderDetails?.id) {
+      alert('Missing order ID');
+      return;
+    }
+
+    const holdAmountRaw =
+      (this.orderDetails as any).hold_amount ??
+      (this.additionalData && (this.additionalData as any).hold_amount);
+    const holdAmount =
+      typeof holdAmountRaw === 'number'
+        ? holdAmountRaw
+        : parseFloat(String(holdAmountRaw || '0')) || 0;
+
+    const holdAmountText =
+      holdAmount > 0 ? `₹${holdAmount.toFixed(2)}` : 'this hold amount';
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Release Hold',
+        message: `Total hold amount: ${holdAmountText}\n\nThis hold amount will not be refundable.\n\nAre you sure you want to release the hold booking?`,
+        confirmText: 'Release Hold',
+        cancelText: 'Cancel'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+
+      this.http
+        .post(`${environment.apiUrl}/flights/hold/release`, {
+          booking_id: this.orderDetails.id
+        })
+        .subscribe({
+          next: (res: any) => {
+            if (res?.success && res?.data) {
+              this.orderDetails = res.data;
+              this.resolveBookingStatusName();
+              this.holdRemainingText = '';
+              alert('Hold released successfully');
+              window.location.reload();
+            } else {
+              alert(res?.message || 'Failed to release hold');
+            }
+          },
+          error: (err) => {
+            console.error('Error releasing hold:', err);
+            alert(err?.error?.message || 'Failed to release hold');
+          }
+        });
+    });
+  }
+
   printAllTicket() {
-    // Navigate to ticket print page
-    this.router.navigate(['/ticket-print', this.orderId]);
+    const id = this.orderId || this.orderDetails?.id;
+    if (!id) {
+      alert('Missing order ID for ticket print');
+      return;
+    }
+    const urlTree = this.router.createUrlTree(['/ticket-print', id]);
+    const url = this.router.serializeUrl(urlTree);
+    window.open(url, '_blank');
   }
 
   goToHome() {
     this.router.navigate(['/']);
+  }
+
+  goBack() {
+    window.history.back();
   }
 
   printAllTickets() {
@@ -694,7 +1056,7 @@ export class PaymentConfirmationComponent implements OnInit {
     );
   }
 
-  private getFareRules(): any[] {
+  getFareRules(): any[] {
     const invRules = this.flightDetails?.inventory?.fare_rules ?? [];
     const topRules = this.flightDetails?.fare_rules ?? [];
     return Array.isArray(topRules) && topRules.length > 0
@@ -702,6 +1064,119 @@ export class PaymentConfirmationComponent implements OnInit {
       : Array.isArray(invRules)
         ? invRules
         : [];
+  }
+
+  private getHotelInventory() {
+    return this.hotelDetails?.inventory ?? this.hotelDetails ?? null;
+  }
+
+  canShowCancelBooking(traveler: any): boolean {
+    const condStatusName = !traveler?.status_name;
+    const condCancelAllowed = this.canCancelTraveler() || this.canCancelHotel();
+    const condTravelerStatusNull = traveler?.status == null;
+    const orderStatus = this.orderDetails?.status;
+    const condStatusNotBlocked =
+      orderStatus !== 2 &&
+      orderStatus !== 3 &&
+      orderStatus !== 4 &&
+      orderStatus !== 5 &&
+      orderStatus !== 8;
+    const condManageHold = this.canManageHoldActions();
+    const result =
+      condStatusName &&
+      condCancelAllowed &&
+      condTravelerStatusNull &&
+      condStatusNotBlocked &&
+      condManageHold;
+
+    console.log('canShowCancelBooking()', {
+      traveler,
+      traveler_status_name: traveler?.status_name,
+      traveler_status: traveler?.status,
+      order_status: orderStatus,
+      condStatusName,
+      condCancelAllowed,
+      condTravelerStatusNull,
+      condStatusNotBlocked,
+      condManageHold,
+      result
+    });
+
+    return result;
+  }
+
+  canShowFlightCancelBooking(traveler: any): boolean {
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType !== 'flight' && orderType !== 'external_flight') {
+      return false;
+    }
+    const condStatusName = !traveler?.status_name;
+    const condCancelAllowed = this.canCancelTraveler();
+    const condTravelerStatusNull = traveler?.status == null;
+    const orderStatus = this.orderDetails?.status;
+    const condStatusNotBlocked =
+      orderStatus !== 2 &&
+      orderStatus !== 3 &&
+      orderStatus !== 4 &&
+      orderStatus !== 5 &&
+      orderStatus !== 8;
+    const condManageHold = this.canManageHoldActions();
+    const result =
+      condStatusName &&
+      condCancelAllowed &&
+      condTravelerStatusNull &&
+      condStatusNotBlocked &&
+      condManageHold;
+
+    console.log('canShowFlightCancelBooking()', {
+      traveler,
+      order_type: orderType,
+      traveler_status_name: traveler?.status_name,
+      traveler_status: traveler?.status,
+      order_status: orderStatus,
+      condStatusName,
+      condCancelAllowed,
+      condTravelerStatusNull,
+      condStatusNotBlocked,
+      condManageHold,
+      result
+    });
+
+    return result;
+  }
+
+  canShowHotelCancelBooking(traveler: any): boolean {
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType !== 'hotel') {
+      return false;
+    }
+    const orderStatus = this.orderDetails?.status;
+    const condStatusNotBlocked =
+      orderStatus !== 2 &&
+      orderStatus !== 3 &&
+      orderStatus !== 4 &&
+      orderStatus !== 5 &&
+      orderStatus !== 8;
+    const condRefundable = this.canCancelHotel();
+    const result = condRefundable && condStatusNotBlocked;
+
+    console.log('canShowHotelCancelBooking()', {
+      traveler,
+      order_type: orderType,
+      order_status: orderStatus,
+      condStatusNotBlocked,
+      condRefundable,
+      result
+    });
+
+    return result;
+  }
+
+  canCancelHotel(): boolean {
+    const inv = this.getHotelInventory();
+    const refundable = Number(inv?.is_refundable ?? 0) === 1;
+    // /alert(refundable);
+    return refundable;
   }
 
   private getDaysUntilDeparture(): number {
@@ -730,6 +1205,7 @@ export class PaymentConfirmationComponent implements OnInit {
 
   canCancelTraveler(): boolean {
     const inv = this.getFlightInventory();
+
     const refundable = Number(inv?.is_refundable ?? 0) === 1;
     const fareRule = this.getApplicableFareRule();
     const allowed = refundable && !!fareRule;
@@ -760,6 +1236,16 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   cancelTraveler(traveler: any, index: number) {
+    const name =
+      `${traveler?.title || ''} ${traveler?.first_name || ''} ${traveler?.last_name || ''}`.trim();
+    const baseMessage = 'Are you sure you want to cancel this booking?';
+    const message = name
+      ? `Are you sure you want to cancel booking for ${name}?`
+      : baseMessage;
+    if (!window.confirm(message)) {
+      return;
+    }
+
     if (!this.canCancelTraveler()) {
       alert('Cancellation not allowed for this booking');
       return;
@@ -767,10 +1253,10 @@ export class PaymentConfirmationComponent implements OnInit {
     const details = Array.isArray(this.orderDetails?.details)
       ? this.orderDetails.details
       : [];
-    if (details.length <= 1) {
-      this.cancelFullOrder();
-      return;
-    }
+    // if (details.length <= 1) {
+    //   this.cancelFullOrder();
+    //   return;
+    // }
     this.cancelTarget = { traveler, index };
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -791,6 +1277,15 @@ export class PaymentConfirmationComponent implements OnInit {
         this.cancelTarget = null;
       }
     });
+  }
+
+  openBookingCancellation() {
+    const id = this.orderDetails?.id || this.orderId;
+    if (!id) {
+      alert('Missing order ID');
+      return;
+    }
+    this.router.navigate(['/flights/booking-cancellation', id]);
   }
 
   private buildTravelersForCalculation(excludeIndex: number): any[] {

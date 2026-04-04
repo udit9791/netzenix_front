@@ -54,17 +54,24 @@
         </mat-form-field>
       </form>
 
-      <!-- Actions -->
+
       <div class="flex items-center gap-2 ml-auto">
+        <button
+          mat-flat-button
+          color="accent"
+          *ngIf="hasUnsavedChanges"
+          (click)="saveChanges()">
+          Save Changes
+        </button>
         <button mat-flat-button color="primary" (click)="showInventory()">
           Show Inventory
         </button>
         <button mat-flat-button color="primary" [routerLink]="['/sale/add-flight-inventory']">
           + New Flight Deal
         </button>
-        <button mat-flat-button color="accent" (click)="openUploadDialog()">
+        <!-- <button mat-flat-button color="accent" (click)="openUploadDialog()">
           ⬆ Upload
-        </button>
+        </button> -->
         <button mat-stroked-button color="primary" (click)="downloadExcel()">
           ⬇ Download
         </button>

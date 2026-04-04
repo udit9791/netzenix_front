@@ -209,4 +209,8 @@ export class FlightInventoryService {
 
     return this.http.get(`${this.apiUrl}/flight_details`, { params });
   }
+
+  getSpecialTags(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/flight_inventory/special-tags`);
+  }
 }

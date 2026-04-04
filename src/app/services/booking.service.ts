@@ -9,13 +9,38 @@ import { environment } from 'src/environments/environment';
 export class BookingService {
   constructor(private http: HttpClient) {}
 
-  getMyBookings(tenantId?: number, supplierId?: number): Observable<any> {
+  getMyBookings(
+    tenantId?: number,
+    supplierId?: number,
+    filters?: {
+      reference?: string;
+      pnr?: string;
+      traveller?: string;
+      travelMode?: string;
+      travelDate?: string;
+    }
+  ): Observable<any> {
     let params = new HttpParams();
     if (tenantId !== undefined) {
       params = params.set('tenant_id', String(tenantId));
     }
     if (supplierId !== undefined) {
       params = params.set('supplier_id', String(supplierId));
+    }
+    if (filters?.reference) {
+      params = params.set('reference_id', filters.reference);
+    }
+    if (filters?.pnr) {
+      params = params.set('pnr', filters.pnr);
+    }
+    if (filters?.traveller) {
+      params = params.set('traveller', filters.traveller);
+    }
+    if (filters?.travelMode) {
+      params = params.set('travel_mode', filters.travelMode);
+    }
+    if (filters?.travelDate) {
+      params = params.set('travel_date', filters.travelDate);
     }
     return this.http.get(`${environment.apiUrl}/bookings/my-bookings`, {
       params

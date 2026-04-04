@@ -69,7 +69,7 @@ import { NotificationService } from '../../../../services/notification.service';
         <div><span class="font-semibold">Sector:</span> {{ data?.sector }}</div>
         <div>
           <span class="font-semibold">Main Flight Date:</span>
-          {{ data?.flight_date }}
+          {{ data?.flight_date | date: 'dd-MM-yy' }}
         </div>
         <div>
           <span class="font-semibold">Seats Allocated:</span>
@@ -104,7 +104,7 @@ import { NotificationService } from '../../../../services/notification.service';
               <td class="p-1">{{ d.type }}</td>
               <td class="p-1">{{ d.from }}</td>
               <td class="p-1">{{ d.to }}</td>
-              <td class="p-1">{{ d.flight_date }}</td>
+              <td class="p-1">{{ d.flight_date | date: 'dd-MM-yy' }}</td>
               <td class="p-1">{{ d.dep_time }}</td>
               <td class="p-1">{{ d.arr_time }}</td>
               <td class="p-1">{{ d.airline }}</td>
@@ -119,7 +119,7 @@ import { NotificationService } from '../../../../services/notification.service';
           <thead>
             <tr class="border-b">
               <th class="text-left p-1">Days Before Departure</th>
-              <th class="text-left p-1">Refundable Amount</th>
+              <th class="text-left p-1">Penalty Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -249,9 +249,23 @@ export class AddFlightInventoryComponent implements OnInit {
     [key: number]: Observable<{ label: string; items: string[] }[]>;
   } = {};
 
+  specialTags: string[] = [];
+
+  loadSpecialTags(): void {
+    this.flightService.getSpecialTags().subscribe({
+      next: (tags) => {
+        this.specialTags = Array.isArray(tags) ? tags : [];
+      },
+      error: () => {
+        this.specialTags = [];
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.generateTimeSlots();
     this.loadAirlines();
+    this.loadSpecialTags();
     this.flightForm = this.fb.group({
       onwardFlights: this.fb.array([this.createFlightGroup()]),
       hasReturn: [false],
@@ -293,7 +307,22 @@ export class AddFlightInventoryComponent implements OnInit {
       ?.get('departureDate')
       ?.valueChanges.subscribe(() => {
         this.revalidateFareRules();
+        const holdBookingCutOffDays = this.flightForm.get(
+          'holdBookingCutOffDays'
+        );
+        const holdBookingLimit = this.flightForm.get('holdBookingLimit');
+        holdBookingCutOffDays?.updateValueAndValidity();
+        holdBookingLimit?.updateValueAndValidity();
       });
+
+    this.flightForm.get('bookingCutOff')?.valueChanges.subscribe(() => {
+      const holdBookingCutOffDays = this.flightForm.get(
+        'holdBookingCutOffDays'
+      );
+      const holdBookingLimit = this.flightForm.get('holdBookingLimit');
+      holdBookingCutOffDays?.updateValueAndValidity();
+      holdBookingLimit?.updateValueAndValidity();
+    });
 
     // Add conditional validation for hold booking fields
     this.flightForm
@@ -314,7 +343,7 @@ export class AddFlightInventoryComponent implements OnInit {
           holdBookingCutOffDays?.setValidators([
             Validators.required,
             Validators.min(1),
-            this.maxHoldBookingDaysValidator(30)
+            this.maxHoldBookingDaysValidator()
           ]);
           holdBookingLimit?.setValidators([
             Validators.required,
@@ -829,16 +858,45 @@ export class AddFlightInventoryComponent implements OnInit {
     });
   }
 
-  // Validator to ensure hold booking days doesn't exceed 30 days from departure date
-  maxHoldBookingDaysValidator(maxDays: number) {
+  // Validator to ensure hold booking cut-off days do not exceed days until departure
+  maxHoldBookingDaysValidator() {
     return (control: AbstractControl): { [key: string]: any } | null => {
       if (!control.value) {
         return null;
       }
 
-      const days = control.value;
-      if (days > maxDays) {
-        return { maxDaysExceeded: { value: control.value, max: maxDays } };
+      const raw = this.onwardFlights.at(0)?.get('departureDate')?.value;
+      if (!raw) return null;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const departure = new Date(raw);
+      if (isNaN(departure.getTime())) return null;
+      departure.setHours(0, 0, 0, 0);
+
+      const diffTime = departure.getTime() - today.getTime();
+      if (diffTime <= 0) {
+        return { maxDaysExceeded: { value: control.value, max: 0 } };
+      }
+
+      const totalDaysUntilDeparture = Math.floor(
+        diffTime / (1000 * 60 * 60 * 24)
+      );
+
+      const bookingCutOffRaw = this.flightForm.get('bookingCutOff')?.value;
+      const bookingCutOffDays = Number(bookingCutOffRaw || 0);
+
+      const maxAllowed =
+        totalDaysUntilDeparture -
+        (isNaN(bookingCutOffDays) ? 0 : bookingCutOffDays);
+
+      const effectiveMax = maxAllowed > 0 ? maxAllowed : 0;
+
+      const days = Number(control.value);
+      if (!isNaN(days) && days > effectiveMax) {
+        return {
+          maxDaysExceeded: { value: control.value, max: effectiveMax }
+        };
       }
 
       return null;

@@ -1,0 +1,252 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <div class="flex items-center justify-between px-4 py-3">
+      <vex-breadcrumbs
+        [crumbs]="['Masters', 'Price Enquiries', 'View']"
+      ></vex-breadcrumbs>
+      <button mat-stroked-button color="primary" (click)="goBack()">
+        Back to list
+      </button>
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="p-4 space-y-4">
+      <div
+        *ngIf="isLoading"
+        class="flex justify-center items-center p-8"
+      >
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+
+      <div *ngIf="!isLoading && enquiry" class="rounded-lg border p-4 mb-2">
+        <div class="flex flex-wrap items-center gap-4">
+          <div>
+            <span class="font-medium mr-2">Status:</span>
+            <span class="px-2 py-1 rounded bg-slate-100 text-xs uppercase">
+              {{ enquiryStatus }}
+            </span>
+          </div>
+          <mat-form-field appearance="outline">
+            <mat-label>Update Status</mat-label>
+            <mat-select
+              [(ngModel)]="enquiryStatus"
+            >
+              <mat-option
+                *ngFor="let s of enquiryStatusOptions"
+                [value]="s"
+              >
+                {{ s }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="flex-1 min-w-[240px]">
+            <mat-label>Status Remark</mat-label>
+            <textarea
+              matInput
+              rows="2"
+              [(ngModel)]="statusRemark"
+              placeholder="Remark to store with this status update"
+            ></textarea>
+          </mat-form-field>
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="updateStatus()"
+            [disabled]="isUpdatingStatus || isLoading"
+          >
+            Update Status
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && enquiry" class="space-y-6">
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border p-4 space-y-2">
+            <h2 class="text-lg font-semibold">Enquiry Details</h2>
+            <div><span class="font-medium">Name:</span> {{ enquiry.name }}</div>
+            <div>
+              <span class="font-medium">Email:</span> {{ enquiry.email }}
+            </div>
+            <div>
+              <span class="font-medium">Phone:</span>
+              {{ enquiry.country_code }} {{ enquiry.phone }}
+            </div>
+            <div>
+              <span class="font-medium">Business Type:</span>
+              {{ enquiry.business_type || '-' }}
+            </div>
+            <div>
+              <span class="font-medium">Message:</span>
+              <span>{{ enquiry.message || '-' }}</span>
+            </div>
+            <div>
+              <span class="font-medium">Created At:</span>
+              {{ enquiry.created_at | date: 'dd-MM-yyyy HH:mm' }}
+            </div>
+          </div>
+
+          <div class="rounded-lg border p-4 space-y-2" *ngIf="plan">
+            <h2 class="text-lg font-semibold">Plan Details</h2>
+            <div>
+              <span class="font-medium">Plan Name:</span>
+              {{ plan.plan_name }}
+            </div>
+            <div>
+              <span class="font-medium">Price:</span>
+              <mat-form-field appearance="outline" class="price-field">
+                <input
+                  matInput
+                  type="number"
+                  [(ngModel)]="quotationPrice"
+                  placeholder="Enter quotation price"
+                />
+              </mat-form-field>
+            </div>
+            <div>
+              <span class="font-medium">Billing Cycle:</span>
+              {{ plan.billing_cycle | titlecase }}
+            </div>
+            <div>
+              <span class="font-medium">Button Text:</span>
+              {{ plan.button_text }}
+            </div>
+            <div>
+              <span class="font-medium">Status:</span>
+              {{ plan.status ? 'Active' : 'Inactive' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-lg border p-4 space-y-4">
+          <h2 class="text-lg font-semibold">Quotation Details</h2>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Note</mat-label>
+            <textarea
+              matInput
+              rows="3"
+              [(ngModel)]="noteText"
+              placeholder="Write a note to include in the email"
+            ></textarea>
+          </mat-form-field>
+
+          <div class="flex items-center gap-4">
+            <label class="font-medium">Attachment:</label>
+            <input type="file" (change)="onFileSelected($event)" />
+            <span *ngIf="attachmentFile">
+              {{ attachmentFile.name }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="sendQuotation()"
+            [disabled]="isSendingQuotation || isLoading"
+          >
+            Send Quotation
+          </button>
+        </div>
+
+        <div class="rounded-lg border p-4 space-y-2" *ngIf="features.length">
+          <h2 class="text-lg font-semibold">Plan Features</h2>
+          <ul class="list-disc list-inside space-y-1">
+            <li *ngFor="let f of features">
+              {{ f.feature_text }}
+            </li>
+          </ul>
+        </div>
+
+        <div class="rounded-lg border p-4 space-y-2" *ngIf="enquiryHistory.length">
+          <h2 class="text-lg font-semibold">History</h2>
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-left p-2">ID</th>
+                <th class="text-left p-2">Note</th>
+                <th class="text-left p-2">File</th>
+                <th class="text-left p-2">Email</th>
+                <th class="text-left p-2">Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let h of enquiryHistory">
+                <td class="p-2 align-top">{{ h.id }}</td>
+                <td class="p-2 align-top">
+                  {{ h.note || '-' }}
+                </td>
+                <td class="p-2 align-top">
+                  <a
+                    *ngIf="h.file"
+                    [href]="h.file"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-primary-500"
+                  >
+                    View
+                  </a>
+                  <span *ngIf="!h.file">-</span>
+                </td>
+                <td class="p-2 align-top">
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    (click)="openMailContent(h)"
+                    matTooltip="View mail content"
+                  >
+                    <mat-icon>email</mat-icon>
+                  </button>
+                </td>
+                <td class="p-2 align-top">
+                  {{ h.created_at | date: 'dd-MM-yyyy HH:mm' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rounded-lg border p-4 space-y-2" *ngIf="statusHistory.length">
+          <h2 class="text-lg font-semibold">Status History</h2>
+          <table class="w-full text-sm">
+            <thead>
+              <tr>
+                <th class="text-left p-2">Status</th>
+                <th class="text-left p-2">Remark</th>
+                <th class="text-left p-2">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of statusHistory">
+                <td class="p-2 align-top">
+                  {{ s.status }}
+                </td>
+                <td class="p-2 align-top">
+                  {{ s.remark || '-' }}
+                </td>
+                <td class="p-2 align-top">
+                  {{ s.time }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && !enquiry" class="p-4 text-center">
+        No price enquiry data found
+      </div>
+    </div>
+  </vex-page-layout-content>
+
+  <ng-template #mailContentDialog>
+    <h2 mat-dialog-title>Mail Content</h2>
+    <mat-dialog-content>
+      <div [innerHTML]="mailContentHtml"></div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Close</button>
+    </mat-dialog-actions>
+  </ng-template>
+</vex-page-layout>

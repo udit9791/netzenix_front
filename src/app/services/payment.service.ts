@@ -49,7 +49,8 @@ export class PaymentService {
     userId?: number,
     fromDate?: string,
     toDate?: string,
-    search?: string
+    search?: string,
+    showCreditRequest?: number
   ): Observable<any> {
     let params = new HttpParams()
       .set('page', page.toString())
@@ -69,6 +70,12 @@ export class PaymentService {
     }
     if (search) {
       params = params.set('search', search);
+    }
+    if (
+      showCreditRequest !== undefined &&
+      showCreditRequest !== null
+    ) {
+      params = params.set('show_credit_request', String(showCreditRequest));
     }
 
     return this.http.get(`${this.apiUrl}/payment-transactions`, { params });

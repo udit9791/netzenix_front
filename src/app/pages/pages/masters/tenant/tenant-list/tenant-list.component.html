@@ -58,6 +58,24 @@
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="contact_email">
+            <th mat-header-cell *matHeaderCellDef>
+              Contact Email
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.contact_email || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="contact_phone">
+            <th mat-header-cell *matHeaderCellDef>
+              Contact Phone
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.contact_phone || '-' }}
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="is_active">
             <th mat-header-cell *matHeaderCellDef>Status</th>
             <td mat-cell *matCellDef="let row">
@@ -78,6 +96,14 @@
                 (click)="openEditDialog(row)"
               >
                 <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                color="accent"
+                (click)="openTenantPermissions(row)"
+                matTooltip="Assign Permissions"
+              >
+                <mat-icon>admin_panel_settings</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -132,6 +158,16 @@
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Domain</mat-label>
               <input matInput formControlName="domain" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Contact Email</mat-label>
+              <input matInput formControlName="contact_email" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Contact Phone</mat-label>
+              <input matInput formControlName="contact_phone" />
             </mat-form-field>
 
             <div class="flex items-center">

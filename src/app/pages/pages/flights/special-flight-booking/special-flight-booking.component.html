@@ -13,6 +13,10 @@
 
   <div class="content-container">
     <div class="traveler-details-container">
+      <button mat-button color="primary" class="back-button" (click)="goBackToSearch()">
+        <mat-icon>arrow_back</mat-icon>
+        Back
+      </button>
       <h2>Traveler Details</h2>
       <p class="instruction">Please enter names as per valid id proof and contact information for guests traveling on this trip.</p>
       
@@ -65,6 +69,14 @@
             <mat-form-field appearance="outline" class="date-field">
               <mat-label>DATE OF BIRTH</mat-label>
               <input matInput formControlName="dateOfBirth" type="date">
+              <mat-error *ngIf="travelerForms[i].get('dateOfBirth')?.hasError('maxAgeExceeded')">
+                <ng-container *ngIf="traveler.type === 'Child'">
+                  Child date of birth cannot make age more than 12 years
+                </ng-container>
+                <ng-container *ngIf="traveler.type === 'Infant'">
+                  Infant date of birth cannot make age more than 2 years
+                </ng-container>
+              </mat-error>
             </mat-form-field>
           </div>
 
@@ -126,6 +138,9 @@
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Contact Phone</mat-label>
                 <input matInput formControlName="phone" type="tel" placeholder="Enter phone number">
+                <mat-error *ngIf="contactForm.get('phone')?.hasError('required') && contactForm.get('phone')?.touched">
+                  Contact phone is required
+                </mat-error>
               </mat-form-field>
             </div>
           </div>
@@ -138,11 +153,11 @@
             </mat-form-field>
           </div>
         </form>
-      </div>Discount
-
+      </div>
+<br/>
       <div class="important-notes">
-        <mat-icon color="warn">info</mat-icon>
         <div>
+          
           <h3>Important Notes</h3>
           <ul>
             <li>You have got an exclusive deal on this flight! These special fares are subject to specific terms and conditions whereby the names on the PNR reflect only within 24-72 hours before departure.</li>
@@ -152,7 +167,7 @@
 
 
 
-      <div class="coupon-section">
+      <!-- <div class="coupon-section">
         <h3>Coupon</h3>
         <div class="coupon-form">
           <mat-form-field appearance="outline">
@@ -161,13 +176,16 @@
           </mat-form-field>
           <button mat-raised-button color="primary" (click)="applyDiscount()">Apply Discount</button>
         </div>
-      </div>
+      </div> -->
 
       <div class="terms-section">
         <p>By proceeding to make payment, you agree to the <a href="#">terms and conditions</a>.</p>
         <div class="button-container" style="display: flex; gap: 10px; margin-top: 15px;">
           <button mat-raised-button color="primary" class="payment-button" [disabled]="!isBookingAllowed()" (click)="openVerificationModal()">Proceed to payment</button>
           <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" (click)="holdBooking()">Hold Booking</button>
+        </div>
+        <div *ngIf="freezeCountdownDisplay" style="margin-top: 10px; font-weight: 500;">
+          Seat hold time remaining: {{ freezeCountdownDisplay }}
         </div>
       </div>
     </div>
@@ -204,9 +222,51 @@
               <div class="contact-value">{{ contactForm.get('phone')?.value }}</div>
             </div>
           </div>
+
+          <div class="modal-flight-summary" *ngIf="booking.flights && booking.flights.length > 0">
+            <h3>FLIGHT DETAILS</h3>
+            <div class="flight-segment" *ngFor="let flight of booking.flights; let i = index">
+              <div class="flight-type-header" *ngIf="booking.flights.length > 1">
+                <h4>{{ flight.type }} Flight</h4>
+              </div>
+
+              <div class="airline">
+                <img [src]="flight.logo || 'assets/img/plane.png'" alt="{{ flight.airline }}" class="airline-logo">
+                <div class="airline-details">
+                  <div class="airline-name">{{ flight.airline }}</div>
+                  <div class="flight-number">{{ flight.flightNo }}</div>
+                </div>
+              </div>
+
+              <div class="route">
+                <div class="origin">
+                  <div class="city-code">{{ flight.from }}</div>
+                  <div class="city-name">{{ flight.fromCity }}</div>
+                  <div class="time">{{ flight.departTime | slice:0:5 }}</div>
+                </div>
+                <div class="flight-duration">
+                  <div class="duration-line"></div>
+                  <div class="duration-time">{{ flight.duration }}</div>
+                </div>
+                <div class="destination">
+                  <div class="city-code">{{ flight.to }}</div>
+                  <div class="city-name">{{ flight.toCity }}</div>
+                  <div class="time">{{ flight.arriveTime | slice:0:5 }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-price-summary">
+            <h3>PRICE SUMMARY</h3>
+            <div class="fare-row total">
+              <span>Total Amount</span>
+              <span>₹ {{ calculateTotalPrice() | number }}</span>
+            </div>
+          </div>
           
           <div class="modal-actions" style="display: flex; gap: 10px; justify-content: center;">
-            <button mat-raised-button color="primary" class="proceed-button" [disabled]="isLoading || !isBookingAllowed()" (click)="proceedToPayment()">PROCEED TO PAYMENT</button>
+            <button mat-raised-button color="primary" class="proceed-button" [disabled]="isProceedDisabled()" (click)="proceedToPayment()">PROCEED TO PAYMENT</button>
             <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" [disabled]="isLoading" (click)="holdBooking()">HOLD BOOKING</button>
           </div>
         </div>
@@ -317,7 +377,7 @@
           <!-- Adult fare -->
           <div class="fare-row" *ngIf="booking.adults > 0">
             <span>Base Fare Adult</span>
-            <span>₹ {{ booking.flightInventoryData?.sell_price || baseFareAdult | number }} x {{ booking.adults }}</span>
+            <span>₹ {{ booking.flightInventoryData?.adult_price || baseFareAdult | number }} x {{ booking.adults }}</span>
           </div>
           
           <!-- Children fare -->

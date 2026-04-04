@@ -1,0 +1,802 @@
+<mat-card class="itinerary-builder">
+  <mat-card-header>
+    <mat-card-title>Itinerary</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="save()" class="itinerary-form">
+      <div class="full-width">
+        <label>Banner Image</label>
+        <input type="file" (change)="onBannerFileChange($event)" />
+        <div *ngIf="bannerFileName" class="text-sm mt-1">
+          Selected: {{ bannerFileName }}
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Itinerary Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea matInput rows="3" formControlName="description"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Depart From</mat-label>
+        <input
+          matInput
+          [formControl]="departFromCtrl"
+          placeholder="Add departure city e.g. Delhi, Haridwar, Mumbai"
+          (keyup.enter)="addDepartFrom()"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="addDepartFrom()"
+          aria-label="Add depart from"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <div *ngIf="departFromList.length" class="flex flex-wrap gap-2">
+        <div
+          class="px-2 py-1 border rounded flex items-center gap-1 text-sm"
+          *ngFor="let d of departFromList; let i = index"
+        >
+          <span>{{ d }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            (click)="removeDepartFrom(i)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nights</mat-label>
+        <input matInput type="number" formControlName="nights" min="1" />
+      </mat-form-field>
+
+      <div class="travel-type">
+        <label class="travel-type-label">Type</label>
+        <mat-radio-group formControlName="travelType" class="travel-type-group">
+          <mat-radio-button value="fit">fit</mat-radio-button>
+          <mat-radio-button value="group">Group</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Max Seats</mat-label>
+        <input matInput type="number" formControlName="maxSeats" min="1" />
+      </mat-form-field>
+
+      <div *ngIf="form.get('travelType')?.value === 'fit'" class="fit-range">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Travel Date Range</mat-label>
+          <mat-date-range-input [rangePicker]="fitPicker">
+            <input matStartDate formControlName="fitStart" placeholder="Start date" />
+            <input matEndDate formControlName="fitEnd" placeholder="End date" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="fitPicker"></mat-datepicker-toggle>
+          <mat-date-range-picker #fitPicker></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+
+
+      <div *ngIf="form.get('travelType')?.value === 'group'" class="group-dates">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Select Date</mat-label>
+          <input
+            matInput
+            [matDatepicker]="groupPicker"
+            (dateChange)="onGroupDateSelected($event)"
+          />
+          <mat-datepicker-toggle matSuffix [for]="groupPicker"></mat-datepicker-toggle>
+          <mat-datepicker #groupPicker></mat-datepicker>
+        </mat-form-field>
+
+        <div class="group-dates-list" *ngIf="groupDates.controls.length">
+          <div
+            class="group-date-item"
+            *ngFor="let ctrl of groupDates.controls; let i = index"
+          >
+            <span>{{ ctrl.value | date: 'mediumDate' }}</span>
+            <button
+              mat-icon-button
+              type="button"
+              color="warn"
+              (click)="removeGroupDate(i)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="days-header">
+        <h3>Days</h3>
+      </div>
+
+      <mat-tab-group formArrayName="days">
+        <mat-tab
+          *ngFor="let dayCtrl of days.controls; let i = index; let last = last"
+          [label]="'Day ' + (i + 1)"
+        >
+          <div class="day-item" [formGroupName]="i">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Title</mat-label>
+              <input matInput formControlName="title" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Description</mat-label>
+              <textarea
+                matInput
+                rows="3"
+                formControlName="description"
+              ></textarea>
+            </mat-form-field>
+
+            <div class="full-width mt-2">
+              <label>Day Images</label>
+              <input
+                type="file"
+                multiple
+                (change)="onDayImagesChange(i, $event)"
+              />
+              <div *ngIf="dayImages[i]?.length" class="text-sm mt-1">
+                Selected:
+                <span *ngFor="let img of dayImages[i]; let idx = index">
+                  {{ img
+                  }}<span *ngIf="idx < dayImages[i].length - 1">, </span>
+                </span>
+              </div>
+            </div>
+            <br>
+            <hr/>
+
+            <mat-form-field appearance="outline" class="full-width" *ngIf="!last">
+              <mat-label>Country</mat-label>
+              <mat-select
+                formControlName="country_id"
+                (selectionChange)="onDayCountryChange(i, $event.value)"
+              >
+                <mat-option>
+                  <input
+                    matInput
+                    placeholder="Search Country"
+                    (click)="$event.stopPropagation()"
+                    (keyup)="dayCountryFilterTexts[i] = $any($event.target).value"
+                  />
+                </mat-option>
+                <mat-option [value]="null">Select Country</mat-option>
+                <mat-option
+                  *ngFor="let c of getFilteredCountries(i)"
+                  [value]="c.id"
+                >
+                  {{ c.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width" *ngIf="!last">
+              <mat-label>State</mat-label>
+              <mat-select
+                formControlName="state_id"
+                (selectionChange)="onDayStateChange(i, $event.value)"
+              >
+                <mat-option>
+                  <input
+                    matInput
+                    placeholder="Search State"
+                    (click)="$event.stopPropagation()"
+                    (keyup)="dayStateFilterTexts[i] = $any($event.target).value"
+                  />
+                </mat-option>
+                <mat-option [value]="null">Select State</mat-option>
+                <mat-option
+                  *ngFor="let s of getFilteredDayStates(i)"
+                  [value]="s.id"
+                >
+                  {{ s.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width" *ngIf="!last">
+              <mat-label>City</mat-label>
+              <mat-select
+                formControlName="city_id"
+                (selectionChange)="onDayCityChange(i, $event.value)"
+              >
+                <mat-option>
+                  <input
+                    matInput
+                    placeholder="Search City"
+                    (click)="$event.stopPropagation()"
+                    (keyup)="dayCityFilterTexts[i] = $any($event.target).value"
+                  />
+                </mat-option>
+                <mat-option [value]="null">Select City</mat-option>
+                <mat-option
+                  *ngFor="let c of getFilteredDayCities(i)"
+                  [value]="c.id"
+                >
+                  {{ c.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width" *ngIf="!last">
+              <mat-label>Hotels</mat-label>
+              <input
+                matInput
+                [formControl]="dayHotelQueryCtrls[i]"
+                [matAutocomplete]="dayHotelAuto"
+                [disabled]="!(dayCities[i] && dayCities[i].length && dayCtrl.get('city_id')?.value)"
+                placeholder="Search and add hotels"
+              />
+              <mat-autocomplete
+                #dayHotelAuto="matAutocomplete"
+                [displayWith]="displayHotel"
+                (optionSelected)="addDayHotel(i, $event.option.value)"
+              >
+                <mat-option
+                  *ngFor="let h of dayFilteredHotels$[i] | async"
+                  [value]="h"
+                >
+                  {{ h.name }}
+                </mat-option>
+              </mat-autocomplete>
+              <mat-hint
+                *ngIf="!dayCtrl.get('city_id')?.value"
+              >
+                Select City to enable hotel search
+              </mat-hint>
+            </mat-form-field>
+
+            <div *ngIf="!last && daySelectedHotels[i]?.length">
+              <div class="flex flex-col gap-3 mt-2">
+                <div
+                  class="px-2 py-2 border rounded flex flex-col gap-2"
+                  *ngFor="let h of daySelectedHotels[i]"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">
+                      {{ h.name }}
+                      <span *ngIf="dayDefaultHotelIds[i] === h.id">
+                        (Default)
+                      </span>
+                    </span>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      (click)="setDefaultDayHotel(i, h.id)"
+                      [disabled]="dayDefaultHotelIds[i] === h.id"
+                    >
+                      <mat-icon>
+                        {{ dayDefaultHotelIds[i] === h.id ? 'star' : 'star_border' }}
+                      </mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      color="warn"
+                      (click)="removeDayHotel(i, h.id)"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                  <mat-form-field
+                    *ngIf="h.rooms?.length"
+                    appearance="outline"
+                    class="full-width"
+                  >
+                    <mat-label>Default Room</mat-label>
+                    <mat-select
+                      [value]="getDefaultHotelRoomId(h)"
+                      (selectionChange)="setDefaultHotelRoom(i, h.id, $event.value)"
+                    >
+                      <mat-option
+                        *ngFor="let r of h.rooms"
+                        [value]="r.id"
+                      >
+                        {{ r.name }}
+                        <span *ngIf="getDefaultHotelRoomId(h) === r.id">
+                          (Default)
+                        </span>
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field
+                    *ngIf="h.mealPlans?.length"
+                    appearance="outline"
+                    class="full-width"
+                  >
+                    <mat-label>Meal Plans</mat-label>
+                    <mat-select
+                      multiple
+                      [value]="h.selectedMealPlanIds || []"
+                      (selectionChange)="onHotelMealPlansChange(i, h.id, $event.value)"
+                    >
+                      <mat-option
+                        *ngFor="let mp of h.mealPlans"
+                        [value]="mp.id"
+                      >
+                        {{ mp.name }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field
+                    *ngIf="h.mealPlans?.length && h.selectedMealPlanIds?.length"
+                    appearance="outline"
+                    class="full-width"
+                  >
+                    <mat-label>Default Meal Plan</mat-label>
+                    <mat-select
+                      [value]="getDefaultHotelMealPlanId(h)"
+                      (selectionChange)="setDefaultHotelMealPlan(i, h.id, $event.value)"
+                    >
+                      <mat-option
+                        *ngFor="let mp of h.mealPlans"
+                        [value]="mp.id"
+                        [disabled]="!(h.selectedMealPlanIds || []).includes(mp.id)"
+                      >
+                        {{ mp.name }}
+                        <span *ngIf="getDefaultHotelMealPlanId(h) === mp.id">
+                          (Default)
+                        </span>
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+
+      <div class="days-header">
+        <h3>Vehicles</h3>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>SIC Vehicles</mat-label>
+        <mat-select
+          multiple
+          formControlName="sicVehicles"
+        >
+          <mat-option
+            *ngFor="let v of sicVehiclesList"
+            [value]="v.id"
+          >
+            {{ v.vehicle_name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Private Vehicles</mat-label>
+        <mat-select
+          multiple
+          formControlName="privateVehicles"
+        >
+          <mat-option
+            *ngFor="let v of privateVehiclesList"
+            [value]="v.id"
+          >
+            {{ v.vehicle_name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Markup</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          formControlName="markup"
+          placeholder="Enter markup amount"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Inclusions</mat-label>
+        <textarea
+          matInput
+          rows="3"
+          formControlName="inclusions"
+          placeholder="Enter package inclusions"
+        ></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Exclusions</mat-label>
+        <textarea
+          matInput
+          rows="3"
+          formControlName="exclusions"
+          placeholder="Enter package exclusions"
+        ></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Terms &amp; Conditions</mat-label>
+        <textarea
+          matInput
+          rows="3"
+          formControlName="terms"
+          placeholder="Enter terms and conditions"
+        ></textarea>
+      </mat-form-field>
+
+        <div
+          *ngIf="departFromList.length && (form.get('vehicles')?.value || []).length"
+          class="full-width mt-4"
+        >
+        <h3>Departure Wise Vehicle Price</h3>
+        <div
+          class="border rounded p-2 mb-3"
+          *ngFor="let d of departFromList"
+        >
+          <h4 class="mb-2">{{ d }}</h4>
+
+          <h5 class="mb-1">SIC Vehicles</h5>
+          <table class="full-width mb-3">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Default</th>
+                <th>Single Adult Price</th>
+                <th>Single Child Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of selectedSicVehicles">
+                <td>{{ v.vehicle_name }}</td>
+                <td>
+                  <input
+                    type="radio"
+                    name="sicDefault"
+                    [value]="v.id"
+                    [checked]="defaultSicVehicleId === v.id"
+                    (change)="setDefaultSic(v.id)"
+                  />
+                </td>
+                <td>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input
+                      matInput
+                      type="number"
+                      [value]="
+                        getDepartureVehiclePrice(d, v.id)?.single_adult_price ??
+                        ''
+                      "
+                      (input)="
+                        onDepartureVehiclePriceChange(
+                          d,
+                          v.id,
+                          'single_adult_price',
+                          $any($event.target).value
+                        )
+                      "
+                    />
+                  </mat-form-field>
+                </td>
+                <td>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input
+                      matInput
+                      type="number"
+                      [value]="
+                        getDepartureVehiclePrice(d, v.id)?.single_child_price ??
+                        ''
+                      "
+                      (input)="
+                        onDepartureVehiclePriceChange(
+                          d,
+                          v.id,
+                          'single_child_price',
+                          $any($event.target).value
+                        )
+                      "
+                    />
+                  </mat-form-field>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h5 class="mb-1">Private Vehicles</h5>
+          <table class="full-width">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Default</th>
+                <th>Max Occupancy Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of selectedPrivateVehicles">
+                <td>{{ v.vehicle_name }}</td>
+                <td>
+                  <input
+                    type="radio"
+                    name="privateDefault"
+                    [value]="v.id"
+                    [checked]="defaultPrivateVehicleId === v.id"
+                    (change)="setDefaultPrivate(v.id)"
+                  />
+                </td>
+                <td>
+                  <mat-form-field appearance="outline" class="full-width">
+                    <input
+                      matInput
+                      type="number"
+                      [value]="
+                        getDepartureVehiclePrice(d, v.id)?.max_occupancy_price ??
+                        ''
+                      "
+                      (input)="
+                        onDepartureVehiclePriceChange(
+                          d,
+                          v.id,
+                          'max_occupancy_price',
+                          $any($event.target).value
+                        )
+                      "
+                    />
+                  </mat-form-field>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="full-width mt-4">
+          <h3>Installments</h3>
+
+          <div class="mb-2">
+            <mat-checkbox formControlName="allowInstallmentPayment">
+              Allow installment payment
+            </mat-checkbox>
+          </div>
+
+          <div
+            class="mb-2"
+            *ngIf="form.get('allowInstallmentPayment')?.value"
+          >
+            <mat-form-field appearance="outline" class="w-40">
+              <mat-label>Number of installments</mat-label>
+              <input
+                matInput
+                type="number"
+                min="1"
+                [value]="installments?.length || 1"
+                (input)="onInstallmentCountInput($any($event.target).value)"
+              />
+            </mat-form-field>
+          </div>
+
+          <div
+            *ngIf="form.get('allowInstallmentPayment')?.value && installments?.length"
+            formArrayName="installments"
+          >
+            <table class="full-width">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Days after previous</th>
+                  <th>
+                    Percentage (%)
+                    <span
+                      *ngIf="form.get('allowInstallmentPayment')?.value"
+                      class="text-[11px] text-gray-600 ml-1"
+                    >
+                      (Used: {{ getInstallmentsTotalPercentage() }}%)
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let inst of installments.controls; let i = index"
+                  [formGroupName]="i"
+                >
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <span *ngIf="i === 0">0 (on booking)</span>
+                    <mat-form-field
+                      *ngIf="i > 0"
+                      appearance="outline"
+                      class="full-width"
+                    >
+                      <input
+                        matInput
+                        type="number"
+                        min="1"
+                        formControlName="daysAfterPrevious"
+                      />
+                    </mat-form-field>
+                  </td>
+                  <td>
+                    <mat-form-field appearance="outline" class="full-width">
+                      <input
+                        matInput
+                        type="number"
+                        min="1"
+                        max="100"
+                        formControlName="percentage"
+                      />
+                    </mat-form-field>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-[11px] text-gray-700 mt-1">
+              Total installment percentage must be exactly 100%. Total days
+              between first and last installment cannot be more than the
+              itinerary duration (max {{ getMaxInstallmentDays() }} days).
+            </div>
+            <div
+              class="text-[11px] text-red-600 mt-1"
+              *ngIf="
+                form.get('allowInstallmentPayment')?.value &&
+                getInstallmentsTotalPercentage() !== 100
+              "
+            >
+              Total installment percentage
+              {{ getInstallmentsTotalPercentage() }}% must be exactly 100%.
+            </div>
+          </div>
+        </div>
+
+        <div class="full-width mt-4">
+          <h3>Hold Booking</h3>
+
+          <div class="mb-2">
+            <mat-checkbox formControlName="allowHoldBooking">
+              Allow hold booking
+            </mat-checkbox>
+          </div>
+
+          <div
+            class="grid grid-cols-1 md:grid-cols-3 gap-4"
+            *ngIf="form.get('allowHoldBooking')?.value"
+          >
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Amount type</mat-label>
+              <mat-select formControlName="holdAmountType" [disabled]="true">
+                <mat-option value="percentage">PERCENTAGE</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Hold booking percentage</mat-label>
+              <input
+                matInput
+                type="number"
+                min="1"
+                max="100"
+                formControlName="holdPercentage"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Hold booking cut-off (days)</mat-label>
+              <input
+                matInput
+                type="number"
+                min="1"
+                formControlName="holdCutoffDays"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Hold booking limit (hours)</mat-label>
+              <input
+                matInput
+                type="number"
+                min="1"
+                formControlName="holdLimitHours"
+              />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="full-width mt-4">
+          <h3>Refund Policy</h3>
+
+          <div class="mb-3">
+            <mat-radio-group
+              formControlName="refundPolicyType"
+              class="flex gap-6"
+            >
+              <mat-radio-button value="refundable">
+                Refundable
+              </mat-radio-button>
+              <mat-radio-button value="non_refundable">
+                Non-Refundable
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <div
+            *ngIf="form.get('refundPolicyType')?.value === 'refundable'"
+            formArrayName="refundRules"
+          >
+            <h4 class="text-sm font-medium mb-2">Fare rules</h4>
+            <div
+              *ngFor="let rule of refundRules.controls; let i = index"
+              [formGroupName]="i"
+              class="bg-gray-50 p-3 rounded mb-2"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Days before departure</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    min="0"
+                    formControlName="daysBeforeDeparture"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Penalty percentage (%)</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    min="0"
+                    formControlName="penaltyAmount"
+                  />
+                </mat-form-field>
+
+                <div class="flex items-center justify-end">
+                  <button
+                    type="button"
+                    mat-icon-button
+                    color="warn"
+                    (click)="removeRefundRule(i)"
+                    *ngIf="refundRules.length > 1"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              mat-stroked-button
+              color="primary"
+              (click)="addRefundRule()"
+            >
+              + Add Refund Rule
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="saving || !isInstallmentsTotalValid()"
+        >
+          Save Itinerary
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

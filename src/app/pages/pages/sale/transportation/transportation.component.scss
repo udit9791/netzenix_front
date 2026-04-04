@@ -1,0 +1,62 @@
+:host {
+  display: block;
+  padding: 16px 24px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.transportation-card {
+  margin-bottom: 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.table-wrapper {
+  margin-top: 16px;
+  overflow: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-wrapper {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.description-field {
+  grid-column: 1 / -1;
+}
+
+.file-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-names {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+

@@ -6,6 +6,7 @@
 
   <mat-tab-group class="tabs">
     <mat-tab label="Flight Detail">
+      <div class="tab-scroll">
       <div class="summary-bar">
         <div class="depart">
           <div class="label">DEPART</div>
@@ -93,14 +94,42 @@
           </div>
         </div>
       </div>
+      </div>
     </mat-tab>
 
     <mat-tab label="Fare Summary & Rules">
+      <div class="tab-scroll">
       <div class="fare-summary-rules">
         <div class="fare-details-card">
           <div class="fare-breakup">
             <div class="fb-title">Fare Breakup for {{ originCode }}-{{ destinationCode }}</div>
-            <div class="fb-row"><span>Base Fare Adult</span><span>₹ {{ (fareCalculationData?.base_fare_adult || 0) | number:'1.0-0' }} x {{ fareCalculationData?.adult_count || (data.adults || 1) }}</span></div>
+            <div class="fb-row">
+              <span>Base Fare Adult</span>
+              <span>
+                ₹ {{ (fareCalculationData?.base_fare_adult || 0) | number:'1.0-0' }}
+                x {{ fareCalculationData?.adult_count || (data.adults || 1) }}
+              </span>
+            </div>
+            <div
+              class="fb-row"
+              *ngIf="(fareCalculationData?.child_count || data.children || 0) > 0"
+            >
+              <span>Base Fare Child</span>
+              <span>
+                ₹ {{ (fareCalculationData?.base_fare_child || 0) | number:'1.0-0' }}
+                x {{ fareCalculationData?.child_count || data.children }}
+              </span>
+            </div>
+            <div
+              class="fb-row"
+              *ngIf="(fareCalculationData?.infant_count || data.infants || 0) > 0"
+            >
+              <span>Base Fare Infant</span>
+              <span>
+                ₹ {{ (fareCalculationData?.base_fare_infant || 0) | number:'1.0-0' }}
+                x {{ fareCalculationData?.infant_count || data.infants }}
+              </span>
+            </div>
             <div class="fb-row"><span>Service Fee</span><span>₹ {{ (fareCalculationData?.service_fee || 0) | number:'1.0-2' }}</span></div>
             <ng-container *ngIf="fareCalculationData?.is_same_state === false">
               <div class="fb-row"><span>Service Fee IGST</span><span>₹ {{ (fareCalculationData?.igst || 0) | number:'1.0-2' }}</span></div>
@@ -147,6 +176,7 @@
           </div> -->
         </div>
       </div>
+      </div>
     </mat-tab>
 
     <mat-tab label="Baggage & Inclusions">
@@ -160,10 +190,14 @@
         </div>
       </div>
       <div class="inclusions">
-        <!-- <div class="row"><span>Baggage</span><strong>{{ checkinWeight }}</strong></div> -->
-        <!-- <div class="row"><span>Meal</span><strong>{{ data.fare?.flight_inventory?.meal_option || 'N/A' }}</strong></div>
-        <div class="row"><span>Seat</span><strong>{{ data.fare?.flight_inventory?.seat_option || 'N/A' }}</strong></div>
-        <div class="row" *ngIf="data.fare?.infant_price !== undefined"><span>Infant Price</span><strong>₹{{ (data.fare?.infant_price || 0) | number:'1.0-0' }}</strong></div> -->
+        <div class="row">
+          <span>Meal</span>
+          <strong>{{ data.fare?.flight_inventory?.meal_option || 'N/A' }}</strong>
+        </div>
+        <div class="row">
+          <span>Seat</span>
+          <strong>{{ data.fare?.flight_inventory?.seat_option || 'N/A' }}</strong>
+        </div>
       </div>
     </mat-tab>
   </mat-tab-group>

@@ -1,0 +1,239 @@
+<div class="dialog-wrapper" *ngIf="!loading; else loadingTpl">
+  <div class="dialog-header">
+    <h2>Proceed Cancellation</h2>
+    <div class="sub">Order ID: <strong>{{ orderId }}</strong></div>
+  </div>
+
+  <div class="dialog-body">
+    <div class="section">
+      <div class="section-title">Price Summary</div>
+      <div class="charges">
+        <div class="row">
+          <span>Total Amount</span
+          ><strong>{{ format(order?.total_amount) }}</strong>
+        </div>
+        <div class="row">
+          <span>Service Fee</span
+          ><strong>{{ format(order?.service_fee) }}</strong>
+        </div>
+        <div class="row">
+          <span>Commission</span
+          ><strong>{{ format(order?.commission) }}</strong>
+        </div>
+        <div class="row" *ngIf="!hasIGST()">
+          <span>SGST</span><strong>{{ format(order?.sgst) }}</strong>
+        </div>
+        <div class="row" *ngIf="!hasIGST()">
+          <span>CGST</span><strong>{{ format(order?.cgst) }}</strong>
+        </div>
+        <div class="row" *ngIf="hasIGST()">
+          <span>IGST</span><strong>{{ format(order?.igst) }}</strong>
+        </div>
+        <div class="row">
+          <span>TDS on Commission</span
+          ><strong>{{ format(order?.tds_on_commission) }}</strong>
+        </div>
+        <div class="row total">
+          <span>Final Total</span
+          ><strong>{{ format(order?.final_total) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section p-2">
+      <div class="section-title">Traveler Details</div>
+      <div class="table-wrapper" *ngIf="orderDetails?.length; else noDetails">
+        <table mat-table [dataSource]="orderDetails" class="mat-elevation-z1">
+          <ng-container matColumnDef="traveler">
+            <th mat-header-cell *matHeaderCellDef>Traveler</th>
+            <td mat-cell *matCellDef="let d">
+              {{ (d.first_name || '') + ' ' + (d.last_name || '') }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let d">{{ getStatusName(d.status) }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+
+      <ng-template #noDetails>
+        <div class="empty">No order details found</div>
+      </ng-template>
+    </div>
+
+    <div class="section p-2" *ngIf="(order?.type || '').toLowerCase() === 'hotel' && order?.hotel_info">
+      <div class="section-title">Hotel Information</div>
+      <div class="charges">
+        <div class="row">
+          <span>Hotel</span><strong>{{ order.hotel_info.hotel_name }}</strong>
+        </div>
+        <div class="row">
+          <span>City</span><strong>{{ order.hotel_info.city_name }}</strong>
+        </div>
+        <div class="row">
+          <span>Check-In Time</span><strong>{{ order.hotel_info.check_in_time }}</strong>
+        </div>
+        <div class="row">
+          <span>Check-Out Time</span><strong>{{ order.hotel_info.check_out_time }}</strong>
+        </div>
+        <div class="row">
+          <span>Hold Type</span><strong>{{ order.hotel_info.hold_type }}</strong>
+        </div>
+        <div class="row">
+          <span>Hold Value</span><strong>{{ order.hotel_info.hold_value }}</strong>
+        </div>
+        <div class="row">
+          <span>Hold Booking Days</span><strong>{{ order.hotel_info.hold_booking_days }}</strong>
+        </div>
+        <div class="row">
+          <span>Hold Booking Date</span><strong>{{ order.hotel_info.hold_booking_date }}</strong>
+        </div>
+        <div class="row">
+          <span>Hold Limit</span><strong>{{ order.hotel_info.hold_booking_limit }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <mat-divider *ngIf="requestDetailsView?.length"></mat-divider>
+
+    <div class="section p-2" *ngIf="requestDetailsView?.length">
+      <div class="section-title">
+        Cancellation Request Details
+      </div>
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="requestDetailsView" class="mat-elevation-z1">
+          <ng-container matColumnDef="hotel">
+            <th mat-header-cell *matHeaderCellDef>Hotel</th>
+            <td mat-cell *matCellDef="let r">{{ r.hotel }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="city">
+            <th mat-header-cell *matHeaderCellDef>City</th>
+            <td mat-cell *matCellDef="let r">{{ r.city }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="checkin">
+            <th mat-header-cell *matHeaderCellDef>Check-In</th>
+            <td mat-cell *matCellDef="let r">{{ r.checkin }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="checkout">
+            <th mat-header-cell *matHeaderCellDef>Check-Out</th>
+            <td mat-cell *matCellDef="let r">{{ r.checkout }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="room">
+            <th mat-header-cell *matHeaderCellDef>Room</th>
+            <td mat-cell *matCellDef="let r">{{ r.room }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="flight">
+            <th mat-header-cell *matHeaderCellDef>Flight</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.flight }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="from">
+            <th mat-header-cell *matHeaderCellDef>From</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.from }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="to">
+            <th mat-header-cell *matHeaderCellDef>To</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.to }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.date }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="segment">
+            <th mat-header-cell *matHeaderCellDef>Segment ID</th>
+            <td mat-cell *matCellDef="let r">{{ r.segmentId }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="traveler">
+            <th mat-header-cell *matHeaderCellDef>Traveler</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.traveler }}
+              <span *ngIf="r.travelerType">
+                ({{ r.travelerType }})
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let r">{{ r.status }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="penalty">
+            <th mat-header-cell *matHeaderCellDef>Penalty Amount</th>
+            <td mat-cell *matCellDef="let r">
+              <input
+                matInput
+                class="penalty-input"
+                type="number"
+                [(ngModel)]="r.penaltyAmount"
+                (ngModelChange)="onPenaltyChange(r)"
+              />
+              <div class="final-amount" *ngIf="request?.final_amount">
+                Base Amount: {{ format(r.baseAmount) }}
+                <br />
+                Final Amount: {{ format(r.finalAmount) }}
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="requestColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: requestColumns"></tr>
+        </table>
+        <div class="section-total" *ngIf="amount !== null">
+          Total Cancellation Amount: {{ format(amount) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="section p-2">
+      <div class="section-title">Note</div>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Note</mat-label>
+        <textarea matInput rows="3" [(ngModel)]="rejectNote"></textarea>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-stroked-button color="primary" (click)="confirm()">
+      Confirm
+    </button>
+    <button mat-stroked-button color="warn" (click)="reject()">
+      Reject
+    </button>
+    <button mat-stroked-button color="accent" (click)="viewDetails()">
+      View Detail
+    </button>
+    <button mat-stroked-button (click)="cancel()">Close</button>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+</ng-template>

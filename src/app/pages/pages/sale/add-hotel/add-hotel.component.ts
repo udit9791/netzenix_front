@@ -84,7 +84,7 @@ export class AddHotelComponent {
   photoFiles: File[] = [];
   videoFiles: File[] = [];
   photoTypes: number[] = [];
-  photoTypeOptions: { id: number; name: string }[] = [];
+  photoTypeOptions: { id: number; name: string; width?: number; height?: number }[] = [];
   currentUploadTypeId: number | null = null;
   categorySelectedNames: { [id: number]: string[] } = {};
   roomPhotoFiles: { [roomId: number]: File[] } = {};
@@ -825,15 +825,66 @@ export class AddHotelComponent {
     }
   }
 
-  onCategoryPhotosSelected(typeId: number, event: Event): void {
+  private getPhotoTypeById(typeId: number): { id: number; name: string; width?: number; height?: number } | null {
+    const tid = Number(typeId);
+    const found = (this.photoTypeOptions || []).find((t) => Number(t.id) === tid);
+    return found || null;
+  }
+
+  private async validatePhotosForType(typeId: number, photos: File[]): Promise<{ accepted: File[]; rejected: File[] }> {
+    const t = this.getPhotoTypeById(typeId);
+    if (!t || !t.width || !t.height) {
+      return { accepted: photos, rejected: [] };
+    }
+    const targetW = Number(t.width);
+    const targetH = Number(t.height);
+    const accepted: File[] = [];
+    const rejected: File[] = [];
+    const loadDim = (file: File) =>
+      new Promise<{ w: number; h: number }>((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          URL.revokeObjectURL(url);
+          resolve({ w, h });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve({ w: 0, h: 0 });
+        };
+        img.src = url;
+      });
+    for (const f of photos) {
+      const { w, h } = await loadDim(f);
+      if (w === targetW && h === targetH) {
+        accepted.push(f);
+      } else {
+        rejected.push(f);
+      }
+    }
+    if (rejected.length > 0) {
+      const lbl = t.name || 'Photo';
+      const msg =
+        rejected.length === 1
+          ? `${rejected[0].name} for ${lbl} must be ${targetW}x${targetH}px`
+          : `${rejected.length} ${lbl.toLowerCase()} file(s) must be ${targetW}x${targetH}px`;
+      this.snackBar.open(msg, 'Close', { duration: 4000 });
+    }
+    return { accepted, rejected };
+  }
+
+  async onCategoryPhotosSelected(typeId: number, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files || []);
     const photos = files.filter((f) => f.type.startsWith('image/'));
-    photos.forEach((f) => {
+    const { accepted } = await this.validatePhotosForType(typeId, photos);
+    accepted.forEach((f) => {
       this.photoFiles.push(f);
       this.photoTypes.push(Number(typeId));
     });
-    this.categorySelectedNames[Number(typeId)] = photos.map((f) => f.name);
+    this.categorySelectedNames[Number(typeId)] = accepted.map((f) => f.name);
   }
 
   get selectedUploadFiles(): File[] {
@@ -880,16 +931,17 @@ export class AddHotelComponent {
     return list.filter((p) => Number(p?.category_id ?? 9) === tid);
   }
 
-  onCategoryDrop(typeId: number, event: DragEvent): void {
+  async onCategoryDrop(typeId: number, event: DragEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
     const files = Array.from(event.dataTransfer?.files || []);
     const photos = files.filter((f) => f.type.startsWith('image/'));
-    photos.forEach((f) => {
+    const { accepted } = await this.validatePhotosForType(typeId, photos);
+    accepted.forEach((f) => {
       this.photoFiles.push(f);
       this.photoTypes.push(Number(typeId));
     });
-    this.categorySelectedNames[Number(typeId)] = photos.map((f) => f.name);
+    this.categorySelectedNames[Number(typeId)] = accepted.map((f) => f.name);
   }
 
   getRoomId(index: number): number | null {

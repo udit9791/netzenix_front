@@ -312,7 +312,7 @@
               <div class="font-medium mb-2">Upload by Category</div>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div *ngFor="let t of photoTypeOptions" class="flex flex-col gap-2">
-                  <label class="font-medium">{{ t.name }}</label>
+                  <label class="font-medium">{{ t.name }} <span *ngIf="t.width && t.height">({{ t.width }}x{{ t.height }}px)</span></label>
                   <div
                     class="border-2 border-dashed rounded p-6 text-center"
                     (dragover)="preventDefault($event)"

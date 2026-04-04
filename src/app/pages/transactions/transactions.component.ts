@@ -12,13 +12,21 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PaymentService } from '../../services/payment.service';
 import { UserService } from '../../core/services/user.service';
 import { NotificationService } from '../../services/notification.service';
 import { FormControl } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { map, startWith, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  map,
+  startWith,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap
+} from 'rxjs/operators';
+import { Router } from '@angular/router';
 import { CreditLimitModalComponent } from '../../shared/components/credit-limit-modal/credit-limit-modal.component';
 import { RejectionModalComponent } from '../../shared/components/rejection-modal/rejection-modal.component';
 
@@ -39,6 +47,7 @@ import { RejectionModalComponent } from '../../shared/components/rejection-modal
     MatNativeDateModule,
     MatAutocompleteModule,
     MatDialogModule,
+    MatCheckboxModule,
     FormsModule,
     ReactiveFormsModule,
     CreditLimitModalComponent,
@@ -48,7 +57,19 @@ import { RejectionModalComponent } from '../../shared/components/rejection-modal
   styleUrl: './transactions.component.scss'
 })
 export class TransactionsComponent implements OnInit {
-  displayedColumns: string[] = ['id', 'user', 'type', 'amount', 'payment_method', 'status', 'balance_after', 'attachment', 'created_at', 'actions'];
+  displayedColumns: string[] = [
+    'id',
+    'reference_id',
+    'user',
+    'type',
+    'amount',
+    'payment_method',
+    'status',
+    'balance_after',
+    'attachment',
+    'created_at',
+    'actions'
+  ];
   data: any[] = [];
   total = 0;
   per_page = 10;
@@ -61,18 +82,28 @@ export class TransactionsComponent implements OnInit {
   fromDate?: Date;
   toDate?: Date;
 
+  userPermissions: string[] = [];
+  isAdmin: boolean = false;
+  showCreditRequest: number | null = null;
+
   // User filter properties
   userControl = new FormControl();
   filteredUsers: Observable<any[]>;
   selectedUserId: number | null = null;
 
-  constructor(private paymentService: PaymentService, private userService: UserService, private dialog: MatDialog, private notificationService: NotificationService) {
+  constructor(
+    private paymentService: PaymentService,
+    private userService: UserService,
+    private dialog: MatDialog,
+    private notificationService: NotificationService,
+    private router: Router
+  ) {
     // Initialize user autocomplete
     this.filteredUsers = this.userControl.valueChanges.pipe(
       startWith(''),
       debounceTime(300),
       distinctUntilChanged(),
-      switchMap(value => {
+      switchMap((value) => {
         const searchTerm = typeof value === 'string' ? value : '';
         return this.userService.getUsersForAutocomplete(searchTerm);
       })
@@ -80,35 +111,51 @@ export class TransactionsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.userPermissions = JSON.parse(
+      localStorage.getItem('permissions') || '[]'
+    );
+    const rolesRaw = localStorage.getItem('roles') || '[]';
+    const roles: string[] = JSON.parse(rolesRaw);
+    this.isAdmin = roles.includes('Super Admin') || roles.includes('Admin');
     this.loadStatuses();
     this.fetchTransactions();
   }
 
+  hasPermission(perm: string): boolean {
+    return this.userPermissions.includes(perm);
+  }
+
   fetchTransactions(page: number = this.current_page): void {
     this.loading = true;
-    const fromDateStr = this.fromDate ? this.formatDate(this.fromDate) : undefined;
+    const fromDateStr = this.fromDate
+      ? this.formatDate(this.fromDate)
+      : undefined;
     const toDateStr = this.toDate ? this.formatDate(this.toDate) : undefined;
-    this.paymentService.listTransactions(
-      page, 
-      this.per_page, 
-      this.statusFilter || undefined, 
-      this.selectedUserId || undefined, 
-      fromDateStr, 
-      toDateStr, 
-      this.search
-    ).subscribe({
-      next: (res: any) => {
-        // Expecting Laravel paginator style response
-        this.data = res.data || [];
-        this.total = res.total || this.data.length;
-        this.per_page = res.per_page || this.per_page;
-        this.current_page = res.current_page || page;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      }
-    });
+    const showCredit = this.showCreditRequest;
+    this.paymentService
+      .listTransactions(
+        page,
+        this.per_page,
+        this.statusFilter || undefined,
+        this.selectedUserId || undefined,
+        fromDateStr,
+        toDateStr,
+        this.search,
+        showCredit !== null ? showCredit : undefined
+      )
+      .subscribe({
+        next: (res: any) => {
+          // Expecting Laravel paginator style response
+          this.data = res.data || [];
+          this.total = res.total || this.data.length;
+          this.per_page = res.per_page || this.per_page;
+          this.current_page = res.current_page || page;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+        }
+      });
   }
 
   loadStatuses(): void {
@@ -156,7 +203,9 @@ export class TransactionsComponent implements OnInit {
       const found = this.statuses.find((s: any) => s.id === id);
       if (found) {
         // Payment statuses payload provides name; do not access non-existent code
-        const txt = String((found as { name?: string }).name || '').toLowerCase();
+        const txt = String(
+          (found as { name?: string }).name || ''
+        ).toLowerCase();
         if (txt) return txt === 'pending';
       }
     }
@@ -184,7 +233,7 @@ export class TransactionsComponent implements OnInit {
         data: { transaction: row }
       });
 
-      dialogRef.afterClosed().subscribe(result => {
+      dialogRef.afterClosed().subscribe((result) => {
         console.log('Modal closed with result:', result);
         if (result && result.success) {
           // Transaction was approved with credit limit
@@ -212,22 +261,32 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  goToPaymentConfirmation(row: any) {
+    const ref = row?.reference_id;
+    if (!ref) {
+      return;
+    }
+    this.router.navigate(['/payment-confirmation', ref]);
+  }
+
   reject(row: any) {
     if (!row?.id) return;
-    
+
     // Open the rejection modal
     const dialogRef = this.dialog.open(RejectionModalComponent, {
       width: '500px',
       data: { transaction: row }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result && result.reason) {
         // User provided a reason, proceed with rejection
         this.loading = true;
         this.paymentService.rejectTransaction(row.id, result.reason).subscribe({
           next: () => {
-            this.notificationService.success('Transaction rejected successfully');
+            this.notificationService.success(
+              'Transaction rejected successfully'
+            );
             this.applyFilter();
           },
           error: (error) => {
@@ -246,7 +305,7 @@ export class TransactionsComponent implements OnInit {
    */
   openAttachment(attachmentPath: string, event: Event): void {
     event.stopPropagation(); // Prevent row click events
-    
+
     if (!attachmentPath) {
       console.warn('No attachment path provided');
       return;
@@ -255,7 +314,7 @@ export class TransactionsComponent implements OnInit {
     // Construct the full URL to the attachment
     const baseUrl = 'http://localhost:8000/storage/';
     const fullUrl = baseUrl + attachmentPath;
-    
+
     // Open in new tab
     window.open(fullUrl, '_blank');
   }

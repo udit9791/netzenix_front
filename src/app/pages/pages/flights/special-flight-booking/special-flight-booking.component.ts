@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -8,7 +8,8 @@ import {
   Validators,
   FormBuilder,
   FormArray,
-  ValidatorFn
+  ValidatorFn,
+  AbstractControl
 } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
@@ -54,7 +55,7 @@ import { TravelerDetailsDialog } from './traveler-details-dialog';
   templateUrl: './special-flight-booking.component.html',
   styleUrls: ['./special-flight-booking.component.scss']
 })
-export class SpecialFlightBookingComponent implements OnInit {
+export class SpecialFlightBookingComponent implements OnInit, OnDestroy {
   // Form controls
   mobileNumberControl = new FormControl('');
   travelerForms: FormGroup[] = [];
@@ -127,6 +128,11 @@ export class SpecialFlightBookingComponent implements OnInit {
     flightInventoryData: null as any // Store the complete API response
   };
 
+  freezeCountdownDisplay = '';
+  freezeSecondsRemaining = 0;
+  freezeExpired = false;
+  private freezeTimer: any = null;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -141,6 +147,53 @@ export class SpecialFlightBookingComponent implements OnInit {
     private orderService: OrderService,
     private toastr: ToastrService
   ) {}
+
+  goBackToSearch() {
+    const queryParams: any = {};
+
+    if (this.booking.flights && this.booking.flights.length > 0) {
+      const first = this.booking.flights[0] as any;
+      const last = this.booking.flights[this.booking.flights.length - 1] as any;
+
+      if (first?.from) {
+        queryParams.from = first.from;
+      }
+      if (last?.to) {
+        queryParams.to = last.to;
+      }
+    }
+
+    if (this.booking.travelDate) {
+      queryParams.departDate = this.formatDate(this.booking.travelDate);
+    }
+
+    const hasReturnSegment =
+      this.booking.flights &&
+      this.booking.flights.some(
+        (f: any) => String(f.type || '').toLowerCase() === 'return'
+      );
+    queryParams.tripType = hasReturnSegment ? 'roundtrip' : 'oneway';
+
+    if (this.booking.adults) {
+      queryParams.adults = this.booking.adults;
+    }
+    if (this.booking.children) {
+      queryParams.children = this.booking.children;
+    }
+    if (this.booking.infants) {
+      queryParams.infants = this.booking.infants;
+    }
+
+    this.router.navigate(['/flights/special'], { queryParams });
+  }
+
+  private formatDate(date: Date): string {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   ngOnInit() {
     this.userService.getPublicCountries().subscribe({
@@ -172,6 +225,7 @@ export class SpecialFlightBookingComponent implements OnInit {
     let adults = 1;
     let children = 0;
     let infants = 0;
+    let freezeInventoryId: number | null = null;
 
     // Get the current logged-in user ID and then fetch commission data
     this.getCurrentUserId().then(() => {
@@ -208,6 +262,10 @@ export class SpecialFlightBookingComponent implements OnInit {
                 : [];
           this.externalUkey = ukey || null;
           this.externalRmkey = rmkeyArr;
+        }
+        const freezeData = bookingData.freeze || null;
+        if (freezeData && freezeData.inventoryId) {
+          freezeInventoryId = Number(freezeData.inventoryId) || null;
         }
         farePrice =
           typeof bookingData.farePrice === 'number'
@@ -277,7 +335,15 @@ export class SpecialFlightBookingComponent implements OnInit {
           .subscribe({
             next: (resp) => {
               console.log('External availability:', resp);
-              const flightData = resp?.data ?? resp ?? null;
+              const raw: any = resp?.data ?? resp ?? null;
+              const flightData: any =
+                raw && raw.flight && Array.isArray(raw.flight.details)
+                  ? {
+                      ...raw.flight,
+                      airline_logo:
+                        raw.airline_logo ?? raw.flight.airline_logo ?? null
+                    }
+                  : raw;
               if (flightData) {
                 this.updateInternationalFlagFromInventory(flightData);
                 // Store normalized inventory and build flights using processFlightDetail
@@ -300,7 +366,6 @@ export class SpecialFlightBookingComponent implements OnInit {
                     this.booking.flights.push(flight);
                   });
                 }
-                // Update travel date and baggage
                 this.booking.travelDate = new Date(
                   flightData.flight_date || this.booking.travelDate
                 );
@@ -308,17 +373,7 @@ export class SpecialFlightBookingComponent implements OnInit {
                   flightData.details && flightData.details[0]
                     ? `${flightData.details[0].baggage_weight || '15'} KG`
                     : this.booking.checkin;
-                // Update base fares for adult/infant
-                if (flightData.sell_price) {
-                  this.baseFareAdult = parseFloat(flightData.sell_price);
-                  this.baseFareChild = parseFloat(flightData.sell_price);
-                }
-                if (flightData.infant_price) {
-                  this.baseFareInfant = parseFloat(
-                    String(flightData.infant_price)
-                  );
-                }
-                // Recalculate total
+                this.updateBaseFaresFromFlightData(flightData);
                 this.booking.totalPrice = this.calculateTotalPrice();
               }
             },
@@ -375,6 +430,10 @@ export class SpecialFlightBookingComponent implements OnInit {
       console.log('No fareId available, loading sample data instead');
       this.loadSampleFlightData();
     }
+
+    if (freezeInventoryId) {
+      this.fetchFreezeExpiry(freezeInventoryId);
+    }
   }
 
   // Load sample flight data for demonstration when no API data is available
@@ -386,90 +445,83 @@ export class SpecialFlightBookingComponent implements OnInit {
       infant: this.baseFareInfant
     });
 
-    // Ensure loading is false from the start for sample data
     this.isLoading = false;
+  }
 
-    // Sample flight data based on the real API response structure
-    const sampleFlightData = {
-      id: 25,
-      flight_date: '2025-10-30',
-      sector: 'AMD-DEL',
-      amount: '5000.00',
-      sell_price: '5000.00',
-      infant_price: 1000,
-      meal_option: 'complimentary',
-      seat_option: 'complimentary',
-      is_refundable: 0,
-      pnr_status: 'onTime',
-      details: [
-        {
-          id: 82,
-          flight_inventory_id: 25,
-          flight_date: '2025-10-30',
-          baggage_weight: '20',
-          cabin_baggage: '15',
-          airline_id: 18,
-          airline: 'Indigo',
-          flight_number: '6E9999',
-          type: 'Onward',
-          from: 'AMD',
-          from_id: 11,
-          to: 'DEL',
-          to_id: 15,
-          terminal: 'T4',
-          dep_time: '17:31:00',
-          arr_time: '23:16:00',
-          is_active: 1
-        }
-      ],
-      fare_rules: []
-    };
-
-    // Store the sample data
-    this.booking.flightInventoryData = sampleFlightData;
-    this.updateInternationalFlagFromInventory(sampleFlightData);
-
-    // Process the sample flights
-    this.booking.flights = [];
-    console.log('Processing sample flights...');
-
-    if (sampleFlightData.details && sampleFlightData.details.length > 0) {
-      sampleFlightData.details.forEach((flightDetail: any) => {
-        const flight = this.processFlightDetail(flightDetail, sampleFlightData);
-        this.booking.flights.push(flight);
-        console.log('Added flight:', flight);
+  private fetchFreezeExpiry(inventoryId: number) {
+    const id = Number(inventoryId) || 0;
+    if (!id) {
+      return;
+    }
+    this.http
+      .get<any>(
+        `${environment.apiUrl}/flight_inventory/${id}/freeze-seats/expiry`
+      )
+      .subscribe({
+        next: (res) => {
+          const data = res?.data ?? res ?? null;
+          if (!data) {
+            return;
+          }
+          const expiresAt = data.expires_at || data.expiresAt || null;
+          const seconds =
+            typeof data.seconds_remaining === 'number'
+              ? data.seconds_remaining
+              : null;
+          if (!expiresAt || seconds === null) {
+            return;
+          }
+          this.startFreezeCountdown(seconds, expiresAt);
+        },
+        error: () => {}
       });
+  }
+
+  private startFreezeCountdown(seconds: number, expiresAt: string) {
+    if (this.freezeTimer) {
+      clearInterval(this.freezeTimer);
+      this.freezeTimer = null;
     }
-
-    console.log('Final booking.flights:', this.booking.flights);
-    console.log('booking.flights.length:', this.booking.flights.length);
-
-    // Update booking data with sample response while preserving flights array
-    this.booking.travelDate = new Date(sampleFlightData.flight_date);
-    this.booking.checkin =
-      sampleFlightData.details && sampleFlightData.details[0]
-        ? `${sampleFlightData.details[0].baggage_weight || '15'} KG`
-        : this.booking.checkin;
-
-    // Update price information from sample data
-    if (sampleFlightData.sell_price) {
-      this.baseFareAdult = parseFloat(sampleFlightData.sell_price);
-      this.baseFareChild = parseFloat(sampleFlightData.sell_price);
-      console.log('Sample data: Set baseFareAdult to:', this.baseFareAdult);
+    let remaining = Number(seconds || 0);
+    if (!isFinite(remaining) || remaining < 0) {
+      remaining = 0;
     }
-
-    if (sampleFlightData.infant_price) {
-      this.baseFareInfant = sampleFlightData.infant_price;
-      console.log('Sample data: Set baseFareInfant to:', this.baseFareInfant);
+    this.freezeSecondsRemaining = remaining;
+    this.freezeExpired = remaining <= 0;
+    this.updateFreezeCountdownDisplay();
+    if (this.freezeExpired) {
+      return;
     }
+    this.freezeTimer = setInterval(() => {
+      if (this.freezeSecondsRemaining > 0) {
+        this.freezeSecondsRemaining -= 1;
+        this.updateFreezeCountdownDisplay();
+      } else {
+        this.freezeExpired = true;
+        this.updateFreezeCountdownDisplay();
+        if (this.freezeTimer) {
+          clearInterval(this.freezeTimer);
+          this.freezeTimer = null;
+        }
+      }
+    }, 1000);
+  }
 
-    // Recalculate total price
-    this.booking.totalPrice = this.calculateTotalPrice();
-
-    // Set loading to false to display the flight details
-    this.isLoading = false;
-
-    console.log('Sample flight data loaded:', this.booking);
+  private updateFreezeCountdownDisplay() {
+    if (this.freezeSecondsRemaining <= 0) {
+      this.freezeCountdownDisplay = 'Expired';
+      return;
+    }
+    const total = this.freezeSecondsRemaining;
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    if (minutes > 0) {
+      this.freezeCountdownDisplay = `${minutes}m ${seconds
+        .toString()
+        .padStart(2, '0')}s`;
+    } else {
+      this.freezeCountdownDisplay = `${seconds}s`;
+    }
   }
 
   loadFlightDetails() {
@@ -490,19 +542,23 @@ export class SpecialFlightBookingComponent implements OnInit {
       next: (response) => {
         console.log('Flight details loaded from API:', response);
         if (response) {
-          const flightData = response;
+          const raw: any = response;
+          const flightData: any =
+            raw.flight && Array.isArray(raw.flight.details)
+              ? {
+                  ...raw.flight,
+                  airline_logo:
+                    raw.airline_logo ?? raw.flight.airline_logo ?? null
+                }
+              : raw;
 
-          // Store the complete API response
           this.booking.flightInventoryData = flightData;
           this.updateInternationalFlagFromInventory(flightData);
-          // Regenerate traveler forms to reflect allow_tba_user correctly
           this.generateTravelerForms(
             this.booking.adults,
             this.booking.children,
             this.booking.infants
           );
-          //console.log(this.booking.flightInventoryData);
-          // Process multiple flights from details array
           this.booking.flights = [];
 
           if (flightData.details && flightData.details.length > 0) {
@@ -512,7 +568,6 @@ export class SpecialFlightBookingComponent implements OnInit {
             });
           }
 
-          // Update booking data with API response - directly update properties to preserve flights array
           this.booking.travelDate = new Date(
             flightData.flight_date || this.booking.travelDate
           );
@@ -521,19 +576,7 @@ export class SpecialFlightBookingComponent implements OnInit {
               ? `${flightData.details[0].baggage_weight || '15'} KG`
               : this.booking.checkin;
 
-          // Update price information from API
-          if (flightData.sell_price) {
-            this.baseFareAdult = parseFloat(flightData.sell_price);
-            this.baseFareChild = parseFloat(flightData.sell_price); // Use same price for child, can be adjusted
-            console.log('Set baseFareAdult to:', this.baseFareAdult);
-          }
-
-          if (flightData.infant_price) {
-            this.baseFareInfant = parseFloat(flightData.infant_price);
-            console.log('Set baseFareInfant to:', this.baseFareInfant);
-          }
-
-          // Force change detection to update the view
+          this.updateBaseFaresFromFlightData(flightData);
           setTimeout(() => {
             console.log('Current base fares:', {
               adult: this.baseFareAdult,
@@ -560,6 +603,13 @@ export class SpecialFlightBookingComponent implements OnInit {
     });
   }
 
+  ngOnDestroy() {
+    if (this.freezeTimer) {
+      clearInterval(this.freezeTimer);
+      this.freezeTimer = null;
+    }
+  }
+
   // Helper method to process individual flight details
   private processFlightDetail(flightDetail: any, flightData: any): any {
     // Calculate duration from departure and arrival times
@@ -578,6 +628,31 @@ export class SpecialFlightBookingComponent implements OnInit {
       return `${hours}h ${minutes}m`;
     };
 
+    let logoPath: string | null =
+      flightDetail.airline_logo ||
+      (flightData && flightData.airline_logo) ||
+      this.booking.flightInventoryData?.airline_logo ||
+      null;
+    let logo: string;
+    if (logoPath) {
+      if (/^https?:\/\//i.test(logoPath)) {
+        logo = logoPath;
+      } else {
+        const base = environment.imgUrl;
+        const b = base.endsWith('/') ? base.slice(0, -1) : base;
+        const p = logoPath.startsWith('/') ? logoPath.slice(1) : logoPath;
+        logo = `${b}/${p}`;
+      }
+    } else {
+      logo = this.getAirlineLogo(flightDetail.airline);
+    }
+
+    const isRefundableFlag =
+      flightDetail.is_refundable !== undefined &&
+      flightDetail.is_refundable !== null
+        ? flightDetail.is_refundable
+        : flightData?.is_refundable;
+
     return {
       id: flightDetail.id,
       type: flightDetail.type, // 'Onward' or 'Return'
@@ -591,10 +666,14 @@ export class SpecialFlightBookingComponent implements OnInit {
       arriveTime: flightDetail.arr_time,
       date: new Date(flightDetail.flight_date || flightData.flight_date),
       duration: calculateDuration(flightDetail.dep_time, flightDetail.arr_time),
-      logo: this.getAirlineLogo(flightDetail.airline),
+      logo: logo,
       terminal: flightDetail.terminal,
       baggageWeight: flightDetail.baggage_weight,
-      cabinBaggage: flightDetail.cabin_baggage
+      cabinBaggage: flightDetail.cabin_baggage,
+      isRefundable:
+        isRefundableFlag === 1 ||
+        isRefundableFlag === '1' ||
+        isRefundableFlag === true
     };
   }
 
@@ -621,6 +700,73 @@ export class SpecialFlightBookingComponent implements OnInit {
     }
   }
 
+  private updateBaseFaresFromFlightData(flightData: any) {
+    if (!flightData) {
+      return;
+    }
+
+    ///alert(flightData.adult_price);
+
+    const adultPriceRaw =
+      flightData.adult_price !== undefined && flightData.adult_price !== null
+        ? flightData.adult_price
+        : flightData.sell_price;
+    const childPriceRaw =
+      flightData.child_price !== undefined && flightData.child_price !== null
+        ? flightData.child_price
+        : adultPriceRaw ?? flightData.sell_price;
+
+    const adultPrice =
+      adultPriceRaw !== undefined &&
+      adultPriceRaw !== null &&
+      adultPriceRaw !== ''
+        ? parseFloat(String(adultPriceRaw))
+        : 0;
+    const childPrice =
+      childPriceRaw !== undefined &&
+      childPriceRaw !== null &&
+      childPriceRaw !== ''
+        ? parseFloat(String(childPriceRaw))
+        : 0;
+
+    let infantPrice: number | null = null;
+
+    const sellRaw = flightData.sell_price;
+    const sell =
+      sellRaw !== undefined && sellRaw !== null && sellRaw !== ''
+        ? parseFloat(String(sellRaw))
+        : 0;
+    const adultsCount = this.booking.adults || 0;
+    const childrenCount = this.booking.children || 0;
+    const infantsCount = this.booking.infants || 0;
+
+    if (sell > 0 && infantsCount > 0) {
+      const usedAdults = adultPrice * adultsCount;
+      const usedChildren = childPrice * childrenCount;
+      const remaining = sell - usedAdults - usedChildren;
+      const perInfant = remaining / infantsCount;
+      infantPrice = perInfant > 0 ? perInfant : 0;
+    } else if (
+      flightData.infant_price !== undefined &&
+      flightData.infant_price !== null &&
+      flightData.infant_price !== ''
+    ) {
+      infantPrice = parseFloat(String(flightData.infant_price));
+    }
+
+    if (adultPrice > 0) {
+      this.baseFareAdult = adultPrice;
+    }
+    if (childPrice > 0) {
+      this.baseFareChild = childPrice;
+    }
+    if (infantPrice !== null) {
+      this.baseFareInfant = infantPrice;
+    }
+
+    this.calculateFareCharges();
+  }
+
   createTravelerForm(type: string): FormGroup {
     const defaultTitle =
       type === 'Adult' ? 'Mr' : type === 'Child' ? 'Master' : 'Infant';
@@ -644,7 +790,10 @@ export class SpecialFlightBookingComponent implements OnInit {
         [Validators.required, this.tbaNotAllowedValidator(isTbaAllowed)]
       ],
       mobile: [''],
-      dateOfBirth: type !== 'Adult' ? ['', Validators.required] : [''],
+      dateOfBirth:
+        type !== 'Adult'
+          ? ['', [Validators.required, this.ageLimitValidator(type)]]
+          : [''],
       passport: ['', this.isInternational ? Validators.required : []],
       passportExpiry: ['', this.isInternational ? Validators.required : []],
       passportIssueDate: ['', this.isInternational ? Validators.required : []],
@@ -663,6 +812,61 @@ export class SpecialFlightBookingComponent implements OnInit {
     }
 
     return form;
+  }
+
+  private ageLimitValidator(type: string): ValidatorFn {
+    return (control: AbstractControl) => {
+      if (!control.value) {
+        return null;
+      }
+
+      const birthDate = new Date(control.value);
+      if (isNaN(birthDate.getTime())) {
+        return null;
+      }
+
+      let referenceDate: Date | null = null;
+      const flightData = (this as any).booking?.flightInventoryData;
+
+      if (flightData && flightData.flight_date) {
+        const fd = new Date(flightData.flight_date);
+        if (!isNaN(fd.getTime())) {
+          referenceDate = fd;
+        }
+      }
+
+      if (!referenceDate) {
+        referenceDate = new Date();
+      }
+
+      birthDate.setHours(0, 0, 0, 0);
+      referenceDate.setHours(0, 0, 0, 0);
+
+      const diffTime = referenceDate.getTime() - birthDate.getTime();
+      if (diffTime < 0) {
+        return null;
+      }
+
+      const ageYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+
+      let maxAge: number | null = null;
+      if (type === 'Child') {
+        maxAge = 12;
+      } else if (type === 'Infant') {
+        maxAge = 2;
+      }
+
+      if (maxAge !== null && ageYears > maxAge) {
+        return {
+          maxAgeExceeded: {
+            max: maxAge,
+            actual: ageYears
+          }
+        };
+      }
+
+      return null;
+    };
   }
 
   private updateInternationalFlagFromInventory(flightData: any) {
@@ -837,7 +1041,23 @@ export class SpecialFlightBookingComponent implements OnInit {
   }
 
   openVerificationModal() {
-    // Validate all traveler forms and contact form before showing modal
+    const flightData = this.booking.flightInventoryData;
+    const isTbaAllowed =
+      flightData &&
+      (flightData.allow_tba_user === 1 || flightData.allow_tba_user === '1');
+
+    const phoneControl = this.contactForm.get('phone');
+
+    if (isTbaAllowed) {
+      if (phoneControl && phoneControl.valid && phoneControl.value) {
+        this.showVerificationModal = true;
+      } else {
+        if (phoneControl) {
+          phoneControl.markAsTouched();
+        }
+      }
+      return;
+    }
 
     const allTravelerFormsValid = this.travelerForms.every(
       (form) => form.valid
@@ -846,7 +1066,6 @@ export class SpecialFlightBookingComponent implements OnInit {
     if (allTravelerFormsValid && this.contactForm.valid) {
       this.showVerificationModal = true;
     } else {
-      // Mark all fields as touched to trigger validation messages
       this.travelerForms.forEach((form) => this.markFormGroupTouched(form));
       this.markFormGroupTouched(this.contactForm);
     }
@@ -857,15 +1076,39 @@ export class SpecialFlightBookingComponent implements OnInit {
   }
 
   proceedToPayment() {
-    // Close modal and proceed with payment
     this.showVerificationModal = false;
 
-    // Validate all traveler forms and contact form
+    if (!this.validateInfantDob()) {
+      return;
+    }
+
+    const flightData = this.booking.flightInventoryData;
+    const isTbaAllowed =
+      flightData &&
+      (flightData.allow_tba_user === 1 || flightData.allow_tba_user === '1');
+
+    const phoneControl = this.contactForm.get('phone');
+
+    if (isTbaAllowed) {
+      if (!phoneControl || !phoneControl.valid || !phoneControl.value) {
+        if (phoneControl) {
+          phoneControl.markAsTouched();
+        }
+        return;
+      }
+    }
+
     const allTravelerFormsValid = this.travelerForms.every(
       (form) => form.valid
     );
 
-    if (allTravelerFormsValid && this.contactForm.valid) {
+    if (
+      (isTbaAllowed &&
+        phoneControl &&
+        phoneControl.valid &&
+        phoneControl.value) ||
+      (!isTbaAllowed && allTravelerFormsValid && this.contactForm.valid)
+    ) {
       const bookingData: any = {
         booking_id: 25,
         travelers: this.travelerForms.map((form) => {
@@ -942,6 +1185,41 @@ export class SpecialFlightBookingComponent implements OnInit {
     });
   }
 
+  private validateInfantDob(): boolean {
+    if (!this.travelers || !this.travelers.length) {
+      return true;
+    }
+    const today = new Date();
+    const maxAgeDate = new Date(
+      today.getFullYear() - 2,
+      today.getMonth(),
+      today.getDate()
+    );
+    for (let i = 0; i < this.travelers.length; i++) {
+      const traveler = this.travelers[i];
+      if (traveler && traveler.type === 'Infant') {
+        const form = this.travelerForms[i];
+        const control = form?.get('dateOfBirth');
+        const value = control?.value;
+        if (!value) {
+          continue;
+        }
+        const dob = new Date(value);
+        if (!isFinite(dob.getTime())) {
+          alert('Please enter a valid date of birth for infant');
+          return false;
+        }
+        if (dob < maxAgeDate || dob > today) {
+          alert(
+            'Infant date of birth must not be more than 2 years from today'
+          );
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   // Fare calculation data from API
   fareCalculationData: any = null;
 
@@ -1002,6 +1280,10 @@ export class SpecialFlightBookingComponent implements OnInit {
       } else {
         payload.type = 'external_flight';
         payload.price = farePrice ?? this.booking.totalPrice;
+        const fd = this.booking.flightInventoryData || {};
+        payload.adult_price = this.baseFareAdult;
+        payload.child_price = this.baseFareChild;
+        payload.infant_price = this.baseFareInfant;
       }
 
       console.log('Calculating fare charges with payload:', payload);
@@ -1015,24 +1297,47 @@ export class SpecialFlightBookingComponent implements OnInit {
               console.log('Fare calculation successful:', response.data);
               this.fareCalculationData = response.data;
 
-              // Update component properties with API response
-              this.baseFareAdult = parseFloat(
-                this.fareCalculationData.base_fare_adult
-              );
-              this.baseFareChild = parseFloat(
-                this.fareCalculationData.base_fare_child
-              );
-              this.baseFareInfant = parseFloat(
-                this.fareCalculationData.base_fare_infant
-              );
+              if (type === 'flight' && this.fareCalculationData) {
+                if (
+                  this.fareCalculationData.base_fare_adult !== undefined &&
+                  this.fareCalculationData.base_fare_adult !== null
+                ) {
+                  this.baseFareAdult = parseFloat(
+                    String(this.fareCalculationData.base_fare_adult)
+                  );
+                }
+                if (
+                  this.fareCalculationData.base_fare_child !== undefined &&
+                  this.fareCalculationData.base_fare_child !== null
+                ) {
+                  this.baseFareChild = parseFloat(
+                    String(this.fareCalculationData.base_fare_child)
+                  );
+                }
+                if (
+                  this.fareCalculationData.base_fare_infant !== undefined &&
+                  this.fareCalculationData.base_fare_infant !== null
+                ) {
+                  this.baseFareInfant = parseFloat(
+                    String(this.fareCalculationData.base_fare_infant)
+                  );
+                }
+              }
+
               this.serviceFee = this.fareCalculationData.service_fee;
-              this.serviceFeecgst = this.fareCalculationData.cgst;
-              this.serviceFeesgst = this.fareCalculationData.sgst;
+
+              const igst = this.fareCalculationData.igst;
+              if (igst !== undefined && igst !== null && Number(igst) !== 0) {
+                this.serviceFeecgst = Number(igst);
+                this.serviceFeesgst = 0;
+              } else {
+                this.serviceFeecgst = this.fareCalculationData.cgst;
+                this.serviceFeesgst = this.fareCalculationData.sgst;
+              }
               this.commission = this.fareCalculationData.commission;
               this.tdsonCommission = this.fareCalculationData.tds_on_commission;
               this.isSameState = this.fareCalculationData.is_same_state;
 
-              // Update booking total price
               this.booking.totalPrice = this.fareCalculationData.final_total;
 
               // Trigger change detection to update the view
@@ -1100,20 +1405,14 @@ export class SpecialFlightBookingComponent implements OnInit {
   }
 
   calculateSubtotal(): number {
-    return this.fareCalculationData
-      ? parseFloat(this.fareCalculationData.total_base_fare)
-      : this.calculateAdultPrice() +
-          this.calculateChildPrice() +
-          this.calculateInfantPrice();
+    return (
+      this.calculateAdultPrice() +
+      this.calculateChildPrice() +
+      this.calculateInfantPrice()
+    );
   }
 
   calculateTotalPrice(): number {
-    // Use API data if available, otherwise fall back to local calculation
-    if (this.fareCalculationData) {
-      return parseFloat(this.fareCalculationData.final_total);
-    }
-
-    // Fallback to local calculation
     return (
       this.calculateSubtotal() +
       this.serviceFee +
@@ -1146,30 +1445,59 @@ export class SpecialFlightBookingComponent implements OnInit {
     }
   }
 
-  // Check if booking is allowed based on cut-off days
   isBookingAllowed(): boolean {
     if (!this.booking.flightInventoryData) {
-      return true; // Default to allowed if no data
+      return true;
     }
 
     const flightData = this.booking.flightInventoryData;
-    const flightDate = new Date(flightData.flight_date);
-    const cutOffDays = flightData.booking_cut_off_days || 0;
+    const isTbaAllowed =
+      flightData.allow_tba_user === 1 || flightData.allow_tba_user === '1';
 
-    // Calculate cut-off date by subtracting cut-off days from flight date
+    if (isTbaAllowed) {
+      return true;
+    }
+
+    if (!flightData.flight_date) {
+      return true;
+    }
+
+    const flightDate = new Date(flightData.flight_date);
+    if (isNaN(flightDate.getTime())) {
+      console.warn(
+        'Invalid flight_date in flightInventoryData',
+        flightData.flight_date
+      );
+      return true;
+    }
+
+    const cutOffDays = Number(flightData.booking_cut_off_days ?? 0) || 0;
+
     const cutOffDate = new Date(flightDate);
     cutOffDate.setDate(cutOffDate.getDate() - cutOffDays);
 
-    // Compare current date with cut-off date
     const currentDate = new Date();
 
-    // Format dates for logging
+    cutOffDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+
     console.log('Flight date:', flightDate.toISOString().split('T')[0]);
     console.log('Cut-off date:', cutOffDate.toISOString().split('T')[0]);
     console.log('Current date:', currentDate.toISOString().split('T')[0]);
 
-    // Return true if current date is before or equal to cut-off date
     return currentDate <= cutOffDate;
+  }
+
+  isProceedDisabled(): boolean {
+    const loading = this.isLoading;
+    const bookingAllowed = this.isBookingAllowed();
+    const disabled = loading || !bookingAllowed;
+    console.log('Proceed to Payment disabled state:', {
+      isLoading: loading,
+      bookingAllowed,
+      disabled
+    });
+    return disabled;
   }
 
   // Check if hold booking is allowed
@@ -1202,6 +1530,10 @@ export class SpecialFlightBookingComponent implements OnInit {
 
   // Handle hold booking process
   holdBooking() {
+    if (!this.validateInfantDob()) {
+      return;
+    }
+
     if (!this.isHoldBookingAllowed()) {
       this.snackBar.open(
         'Hold booking is not available for this flight',
@@ -1212,6 +1544,20 @@ export class SpecialFlightBookingComponent implements OnInit {
     }
 
     const flightData = this.booking.flightInventoryData;
+
+    const phoneControl = this.contactForm.get('phone');
+    if (!phoneControl || !phoneControl.valid || !phoneControl.value) {
+      if (phoneControl) {
+        phoneControl.markAsTouched();
+      }
+      this.snackBar.open(
+        'Please enter contact phone before holding the booking',
+        'Close',
+        { duration: 3000 }
+      );
+      return;
+    }
+
     const holdType = flightData.hold_type;
     const holdValue = flightData.hold_value;
     const totalPrice = this.calculateTotalPrice();
@@ -1219,26 +1565,66 @@ export class SpecialFlightBookingComponent implements OnInit {
     let holdAmount = 0;
     let holdAmountText = '';
 
+    const adultsCount = this.booking.adults || 0;
+    const childrenCount = this.booking.children || 0;
+    const infantsCount = this.booking.infants || 0;
+
     if (holdType === 'F') {
-      // Fixed amount
-      holdAmount = holdValue;
-      holdAmountText = `₹${holdAmount} (Fixed amount)`;
+      const perPassengerHold = holdValue;
+
+      let infantUnitPrice = 0;
+      if (
+        this.fareCalculationData &&
+        this.fareCalculationData.total_infant_fare &&
+        infantsCount > 0
+      ) {
+        infantUnitPrice =
+          parseFloat(this.fareCalculationData.total_infant_fare) / infantsCount;
+      } else if (this.baseFareInfant && infantsCount > 0) {
+        infantUnitPrice = this.baseFareInfant;
+      }
+
+      const effectiveInfantHold =
+        infantsCount > 0 && infantUnitPrice > 0
+          ? Math.min(perPassengerHold, infantUnitPrice)
+          : perPassengerHold;
+
+      holdAmount =
+        perPassengerHold * (adultsCount + childrenCount) +
+        effectiveInfantHold * infantsCount;
+
+      holdAmountText = `₹${holdAmount.toFixed(2)}`;
     } else if (holdType === 'P') {
-      // Percentage of total price
       holdAmount = (totalPrice * holdValue) / 100;
       holdAmountText = `₹${holdAmount.toFixed(2)} (${holdValue}% of ₹${totalPrice.toFixed(2)})`;
     }
 
-    // Close verification modal if open
     this.closeVerificationModal();
 
-    // Show confirmation dialog with exact format as in screenshot
+    const holdLimitHours = Number(flightData.hold_booking_limit ?? 0);
+    const holdLimitText = this.formatHoldLimitHours(holdLimitHours);
+
+    const holdValidDate = new Date(flightData.hold_booking_date);
+    const holdValidText = isNaN(holdValidDate.getTime())
+      ? ''
+      : `${String(holdValidDate.getDate()).padStart(2, '0')}-${String(
+          holdValidDate.getMonth() + 1
+        ).padStart(2, '0')}-${holdValidDate.getFullYear()}`;
+
     this.dialog
       .open(ConfirmDialogComponent, {
         width: '450px',
         data: {
           title: 'Hold Booking Confirmation',
-          message: `Do you want to hold this booking for ${flightData.hold_booking_limit} days?\n\nTotal Booking Amount: ₹${totalPrice.toFixed(2)}\n\nHold Charge: ₹${holdType === 'F' ? holdValue : holdAmount.toFixed(2)} (${holdType === 'F' ? 'Fixed amount' : holdValue + '% of total'})\n\nHold Valid Until: ${new Date(flightData.hold_booking_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}`,
+          message: `Do you want to hold this booking for ${holdLimitText}?<br><br>Total Booking Amount: <strong>₹${totalPrice.toFixed(
+            2
+          )}</strong><br><br>Hold Charge: <strong>₹${holdAmount.toFixed(2)}</strong> (${
+            holdType === 'F'
+              ? 'Fixed amount (passenger-wise)'
+              : holdValue + '% of total'
+          })<br><br>Hold Valid Until: ${holdValidText}`,
+          warningNote:
+            'Note: If the booking is not completed within this time, the hold amount will not be refundable.',
           confirmText: 'Confirm Hold',
           cancelText: 'Cancel',
           useTextFormat: true
@@ -1251,6 +1637,25 @@ export class SpecialFlightBookingComponent implements OnInit {
           this.processHoldBooking(holdAmount);
         }
       });
+  }
+
+  private formatHoldLimitHours(hoursRaw: number): string {
+    const hours = Number(hoursRaw || 0);
+    if (!isFinite(hours) || hours <= 0) {
+      return '0 hours';
+    }
+    if (hours <= 24) {
+      const label = hours === 1 ? 'hour' : 'hours';
+      return `${hours} ${label}`;
+    }
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    const dayLabel = days === 1 ? 'day' : 'days';
+    if (remainingHours <= 0) {
+      return `${days} ${dayLabel}`;
+    }
+    const hourLabel = remainingHours === 1 ? 'hour' : 'hours';
+    return `${days} ${dayLabel} and ${remainingHours} ${hourLabel}`;
   }
 
   // Get hold order ID from localStorage
@@ -1383,10 +1788,10 @@ export class SpecialFlightBookingComponent implements OnInit {
           this.isLoading = false;
           if (response.success) {
             // Show success message
-            this.snackBar.open('Booking held successfully!', 'Close', {
-              duration: 3000,
-              panelClass: ['success-snackbar']
-            });
+            // this.snackBar.open('Booking held successfully!', 'Close', {
+            //   duration: 3000,
+            //   panelClass: ['success-snackbar']
+            // });
 
             // Store the order ID for later confirmation
             localStorage.setItem(

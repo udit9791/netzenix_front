@@ -34,7 +34,18 @@
             </mat-form-field>
             <mat-form-field>
               <mat-label>Mobile Number *</mat-label>
-              <input matInput formControlName="mobile" />
+              <input matInput type="tel" formControlName="mobile" maxlength="15" />
+              <mat-error *ngIf="form.get('signatory.mobile')?.hasError('required')">
+                Mobile number is required
+              </mat-error>
+              <mat-error
+                *ngIf="
+                  form.get('signatory.mobile')?.hasError('minlength') ||
+                  form.get('signatory.mobile')?.hasError('pattern')
+                "
+              >
+                Enter valid mobile (min 10 digits, no + or 0)
+              </mat-error>
             </mat-form-field>
             <mat-form-field>
               <mat-label>Whatsapp Number</mat-label>

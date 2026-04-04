@@ -129,7 +129,7 @@
         </button>
       </div>
       
-      <div class="px-1" *ngIf="isWalletRoute && hasPermission('create_wallet')">
+      <div class="px-1" *ngIf="hasPermission('create_wallet')">
         <button mat-flat-button color="primary" type="button" (click)="openAddMoneyDialog()">
           <mat-icon svgIcon="mat:add"></mat-icon>
           <span>Add Money</span>

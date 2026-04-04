@@ -61,7 +61,14 @@ export class RegisterComponent implements AfterViewInit {
       userType: ['', Validators.required],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
-      mobile: ['', Validators.required],
+      mobile: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(10),
+          Validators.pattern(/^[1-9][0-9]{9,}$/)
+        ]
+      ],
       whatsapp: [''],
       alternate: [''],
       email: ['', [Validators.required, Validators.email]],

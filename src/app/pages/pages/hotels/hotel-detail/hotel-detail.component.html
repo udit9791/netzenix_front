@@ -45,7 +45,7 @@
           class="px-2 py-1 bg-blue-50 text-blue-700 rounded"
           *ngFor="let d of confirmAvailableDates"
         >
-          {{ d.date }}
+          {{ d.date | date:'dd-MM-yyyy' }}
           <span class="text-xs text-blue-600 ml-1"
             >(Rooms: {{ d.total }})</span
           >
@@ -186,7 +186,7 @@
                       Room {{ isRefundable === 1 ? 'With Free Cancellation' : 'Without Cancellation' }}
                     </div>
                     <div class="text-gray-500" *ngIf="opt.meal_type_name || opt.meal_type">|</div>
-                    <div class="font-medium" *ngIf="opt.meal_type_name || opt.meal_type">{{ opt.meal_type_name ?? 'Room only'  }}</div>
+                    <div class="font-medium" *ngIf="opt.meal_type_name || opt.meal_type">{{ opt.meal ?? ''  }}</div>
                     <span *ngIf="(opt.meal_type_name || '').toLowerCase().includes('super')" class="ml-2 text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700">Super Package</span>
                   </div>
                   <ul class="mt-2 text-sm text-gray-700 space-y-1">
@@ -194,9 +194,17 @@
                     <!-- <li *ngIf="isBreakfast(opt)">Breakfast included</li> -->
                     <li *ngIf="opt.rooms_used">
                       Included for {{ opt.rooms_used }} room{{ opt.rooms_used > 1 ? 's' : '' }}
-                      <span *ngIf="opt.extra_beds_used" class="ml-1">
-                        • {{ opt.extra_beds_used }} extra bed{{ opt.extra_beds_used > 1 ? 's' : '' }} at
-                        ₹ {{ opt.extra_bed_price | number:'1.0-0' }} each
+                      <span *ngIf="opt.extra_bed_adults || opt.extra_bed_children" class="ml-1">
+                        •
+                        <ng-container *ngIf="opt.extra_bed_adults">
+                          {{ opt.extra_bed_adults }}
+                          extra bed{{ opt.extra_bed_adults > 1 ? 's' : '' }} added for adult
+                          <ng-container *ngIf="opt.extra_bed_children"> and </ng-container>
+                        </ng-container>
+                        <ng-container *ngIf="opt.extra_bed_children">
+                          {{ opt.extra_bed_children }}
+                          extra bed{{ opt.extra_bed_children > 1 ? 's' : '' }} added for child
+                        </ng-container>
                       </span>
                     </li>
                     <li>
@@ -414,12 +422,27 @@
         <div class="mt-2" *ngIf="room.children > 0">
           <div class="text-sm text-gray-700 mb-1">Child Ages</div>
           <div class="flex flex-wrap gap-2">
-            <mat-form-field appearance="outline" class="w-32" *ngFor="let age of room.childAges; let j = index">
-              <mat-label>Child {{ j + 1 }}</mat-label>
-              <mat-select [value]="age" (selectionChange)="setChildAge(i, j, $event.value)">
-                <mat-option *ngFor="let a of childAgeOptions" [value]="a">{{ a }}</mat-option>
-              </mat-select>
-            </mat-form-field>
+            <div
+              class="flex flex-col gap-1"
+              *ngFor="let age of room.childAges; let j = index"
+            >
+              <mat-form-field appearance="outline" class="w-32">
+                <mat-label>Child {{ j + 1 }}</mat-label>
+                <mat-select [(value)]="room.childAges[j]">
+                  <mat-option *ngFor="let a of childAgeOptions" [value]="a">
+                    {{ a }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <div class="mt-1">
+                <mat-checkbox
+                  [checked]="room.extraBedFlags[j] || false"
+                  (change)="toggleExtraBed(i, j, $event.checked)"
+                >
+                  Extra bed
+                </mat-checkbox>
+              </div>
+            </div>
           </div>
         </div>
       </div>

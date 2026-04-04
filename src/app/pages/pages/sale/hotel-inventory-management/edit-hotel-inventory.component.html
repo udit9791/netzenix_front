@@ -458,6 +458,34 @@
         </div>
       </div>
 
+      <div class="md:col-span-2 mt-6" [formGroup]="form">
+        <div class="border rounded p-3">
+          <div class="font-medium mb-3">Markup</div>
+          <div class="grid md:grid-cols-2 gap-3">
+            <mat-form-field appearance="outline">
+              <mat-label>Markup Type</mat-label>
+              <mat-select formControlName="markupType">
+                <mat-option [value]="null">None</mat-option>
+                <mat-option value="flat">Flat</mat-option>
+                <mat-option value="percentage">Percentage</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Markup Value</mat-label>
+              <input
+                matInput
+                type="number"
+                formControlName="markupValue"
+                min="0"
+              />
+              <mat-hint *ngIf="form.get('markupType')?.value === 'percentage'">
+                Value in %
+              </mat-hint>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+
       <div class="md:col-span-2 mt-6 flex justify-end gap-2" [formGroup]="form">
         <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
         <button mat-flat-button color="primary" type="button" [disabled]="saving" (click)="save()">Save Inventory</button>

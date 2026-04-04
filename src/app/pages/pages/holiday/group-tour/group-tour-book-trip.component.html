@@ -1,0 +1,560 @@
+<div class="p-4 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 space-y-4">
+    <mat-card class="p-3">
+      <mat-card-title>Traveler Details</mat-card-title>
+      <mat-card-content class="p-4">
+        <div class="text-sm mb-4">
+          Please enter names as per valid ID proof and contact information for
+          guests traveling on this trip:
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="flex-1">
+              <div class="text-xs font-semibold mb-1">
+                MOBILE NUMBER
+              </div>
+              <input
+                type="text"
+                #mobileInput
+                class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+                placeholder="Enter mobile number"
+              />
+            </div>
+            <button
+              mat-raised-button
+              color="primary"
+              class="mt-4"
+              (click)="fetchDetailsByMobile(mobileInput.value)"
+            >
+              Fetch Details
+            </button>
+          </div>
+
+          <div
+            class="border rounded-lg p-4"
+            *ngFor="let t of travelersModel; let i = index"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="text-xs font-semibold text-gray-500">
+                  Traveler {{ i + 1 }} ({{ t.type }})
+                </div>
+              </div>
+             
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              <div>
+                <div class="text-xs font-semibold mb-1">
+                  TITLE<span class="text-red-500">*</span>
+                </div>
+                <select
+                  class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+                  [ngClass]="{
+                    'border-red-500':
+                      submitAttempted && !travelersModel[i].title
+                  }"
+                  [(ngModel)]="travelersModel[i].title"
+                  name="trav{{ i }}Title"
+                >
+                  <option value="">Title</option>
+                  <option>Mr</option>
+                  <option>Ms</option>
+                  <option>Mrs</option>
+                  <option>Dr</option>
+                </select>
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1">
+                  FIRST NAME / GIVEN NAME<span class="text-red-500">*</span>
+                </div>
+                <input
+                  type="text"
+                  class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+                  [ngClass]="{
+                    'border-red-500':
+                      submitAttempted && !travelersModel[i].firstName
+                  }"
+                  [(ngModel)]="travelersModel[i].firstName"
+                  name="trav{{ i }}FirstName"
+                />
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1">
+                  LAST NAME / SURNAME<span class="text-red-500">*</span>
+                </div>
+                <input
+                  type="text"
+                  class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+                  [ngClass]="{
+                    'border-red-500':
+                      submitAttempted && !travelersModel[i].lastName
+                  }"
+                  [(ngModel)]="travelersModel[i].lastName"
+                  name="trav{{ i }}LastName"
+                />
+              </div>
+            </div>
+
+            <div
+              class="grid grid-cols-1 md:grid-cols-3 gap-3"
+              *ngIf="t.type === 'Child'"
+            >
+              <div>
+                <div class="text-xs font-semibold mb-1">
+                  Date of Birth<span class="text-red-500">*</span>
+                </div>
+                <input
+                  type="date"
+                  class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+                  [ngClass]="{
+                    'border-red-500':
+                      submitAttempted && !travelersModel[i].birthdate
+                  }"
+                  [(ngModel)]="travelersModel[i].birthdate"
+                  name="trav{{ i }}Birthdate"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs">
+            <label class="flex items-start gap-2">
+              <input
+                type="checkbox"
+                class="mt-1"
+              />
+              <span>
+                I have verified that names being entered are as per valid
+                identity proof. I confirm that the above details are correct and
+                I am ready to bear any additional costs arising out of
+                discrepancy in the above details.
+              </span>
+            </label>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="p-3">
+      <mat-card-title>Contact Information</mat-card-title>
+      <mat-card-content class="p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <div class="text-xs font-semibold mb-1">Client Profile</div>
+            <input
+              type="text"
+              class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+              [(ngModel)]="contact.profile"
+              name="contactProfile"
+            />
+            <div class="text-[11px] text-gray-500 mt-1">
+              Optional. Example: Celebrity, MP, CEO, VP, etc
+            </div>
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold mb-1">
+              Email Address<span class="text-red-500">*</span>
+            </div>
+            <input
+              type="email"
+              class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+              [ngClass]="{
+                'border-red-500': submitAttempted && !contact.email
+              }"
+              [(ngModel)]="contact.email"
+              name="contactEmail"
+            />
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold mb-1">
+              Contact Phone<span class="text-red-500">*</span>
+            </div>
+            <input
+              type="tel"
+              class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+              [ngClass]="{
+                'border-red-500': submitAttempted && !contact.phone
+              }"
+              [(ngModel)]="contact.phone"
+              name="contactPhone"
+            />
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold mb-1">
+              City of Residence<span class="text-red-500">*</span>
+            </div>
+            <input
+              type="text"
+              class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+              [ngClass]="{
+                'border-red-500': submitAttempted && !contact.city
+              }"
+              [(ngModel)]="contact.city"
+              name="contactCity"
+            />
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold mb-1">Agent Reference</div>
+            <input
+              type="text"
+              class="w-full border rounded px-2 py-1 text-sm focus:outline-none"
+              [(ngModel)]="contact.agentReference"
+              name="contactAgentRef"
+            />
+            <div class="text-[11px] text-gray-500 mt-1">
+              Any internal reference you want to give to this booking (optional)
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="p-3">
+      <mat-card-title>Important information about your booking</mat-card-title>
+      <mat-card-content class="p-4">
+        <div class="text-sm font-semibold mb-2">
+          Sumi Shangrila Deorali Gangtok
+        </div>
+        <div class="border rounded p-3 max-h-64 overflow-y-auto text-sm space-y-2">
+          <p>
+            If you are planning to arrive after 8:00 PM please contact the
+            property in advance using the information on the booking
+            confirmation. For any questions, please contact the property using
+            the information on the booking confirmation.
+          </p>
+          <p>
+            Visitors who are not citizens of India must obtain an Inner Line
+            Permit (ILP) to enter Sikkim. Each guest must have photocopies of
+            their passport and Indian visa along with the original documents and
+            2 recent passport-sized photos to receive the permit.
+          </p>
+          <p>
+            Policies:
+            <br />
+            • Only registered guests are allowed in the guestrooms.
+          </p>
+          <p>
+            Extra-person charges may apply and vary depending on property
+            policy. Government-issued photo identification and a credit card,
+            debit card, or cash deposit may be required at check-in for
+            incidental charges.
+          </p>
+          <p>
+            Special requests are subject to availability upon check-in and may
+            incur additional charges; special requests cannot be guaranteed. This
+            property accepts credit cards, debit cards, and cash.
+          </p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="space-y-4">
+    <mat-card class="p-3">
+      <mat-card-title>Your Price Summary</mat-card-title>
+      <mat-card-content *ngIf="detail?.pricing?.breakdown as b">
+        <div class="flex justify-between text-sm py-1">
+          <span>Base Price</span>
+          <span>₹ {{ (b.total_base_fare ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm py-1"
+          *ngIf="(b.markup ?? 0) > 0"
+        >
+          <span>Markup</span>
+          <span>₹ {{ (b.markup ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm py-1"
+          *ngIf="b && b.ct !== 'included'"
+        >
+          <span>Service Fee</span>
+          <span>₹ {{ (b.service_fee ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm py-1"
+          *ngIf="b?.is_same_state && b?.ct !== 'included'"
+        >
+          <span>CGST</span>
+          <span>₹ {{ (b.cgst ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm py-1"
+          *ngIf="b?.is_same_state && b?.ct !== 'included'"
+        >
+          <span>SGST</span>
+          <span>₹ {{ (b.sgst ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm py-1"
+          *ngIf="b && !b.is_same_state && b.ct !== 'included'"
+        >
+          <span>IGST</span>
+          <span>₹ {{ (b.igst ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div class="flex justify-between text-sm py-1">
+          <span>Commission</span>
+          <span>- ₹ {{ (b.commission ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <div class="flex justify-between text-sm py-1">
+          <span>TDS on Commission</span>
+          <span>₹ {{ (b.tds_on_commission ?? 0) | number : '1.2-2' }}</span>
+        </div>
+        <mat-divider class="my-2"></mat-divider>
+        <div class="flex justify-between font-semibold text-sm py-1">
+          <span>Total Amount to be paid</span>
+          <span>
+            ₹
+            {{ (b.final_total ?? selection?.price_total ?? 0) | number : '1.2-2' }}
+          </span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="p-3">
+      <mat-card-content>
+        <div class="text-sm font-semibold mb-1">
+          {{ detail?.name || selection?.tour_name || 'Tour Name' }}
+        </div>
+        <div class="text-xs text-gray-600 mb-1">
+          {{ selection?.departure || 'Departure City' }}
+          <span *ngIf="selection?.date"> • {{ selection?.date }}</span>
+        </div>
+        <div class="text-xs text-gray-600 mb-3">
+          {{ selection?.rooms || 1 }} room,
+          {{ selection?.adults || 2 }} adults
+          <span *ngIf="selection?.children">
+            , {{ selection?.children }} child
+          </span>
+        </div>
+        <mat-divider class="my-2"></mat-divider>
+        <div
+          class="space-y-3 max-h-[420px] overflow-y-auto"
+          *ngIf="detail?.days?.length"
+        >
+          <div
+            class="border rounded p-2 text-xs"
+            *ngFor="let day of detail.days; let i = index"
+          >
+            <div class="font-semibold mb-1">
+              Day {{ i + 1 }}:
+              {{ day.title || ('Day ' + (i + 1)) }}
+            </div>
+            <div
+              class="text-[11px] text-gray-700 mb-1"
+              *ngIf="
+                day.no_of_rooms || day.extra_adults || day.children_with_bed
+              "
+            >
+              Included for
+              {{ day.no_of_rooms || 0 }}
+              room<span *ngIf="(day.no_of_rooms || 0) > 1">s</span>
+              <span *ngIf="day.extra_adults || day.children_with_bed">
+                •
+              </span>
+              <span *ngIf="day.extra_adults">
+                {{ day.extra_adults }} extra bed<span
+                  *ngIf="day.extra_adults > 1"
+                >s</span>
+                added for adult<span *ngIf="day.extra_adults > 1">s</span>
+                <span *ngIf="day.children_with_bed">
+                  and
+                </span>
+              </span>
+              <span *ngIf="day.children_with_bed">
+                {{ day.children_with_bed }} extra bed<span
+                  *ngIf="day.children_with_bed > 1"
+                >s</span>
+                added for child
+              </span>
+            </div>
+            <div
+              class="text-[11px] text-gray-700 mb-1 whitespace-pre-line"
+              *ngIf="day.description"
+            >
+              {{ day.description }}
+            </div>
+            <div *ngIf="getDefaultHotel(day) as hotel">
+              <div
+                class="text-[11px] text-gray-700 mb-1"
+                *ngIf="
+                  getDefaultRoomNameForDay(day) ||
+                  getDefaultMealPlanNameForDay(day)
+                "
+              >
+                <span *ngIf="getDefaultRoomNameForDay(day)">
+                  Room: {{ getDefaultRoomNameForDay(day) }}
+                </span>
+                <span *ngIf="getDefaultMealPlanNameForDay(day)">
+                  , Meal plan: {{ getDefaultMealPlanNameForDay(day) }}
+                </span>
+              </div>
+              <div class="font-semibold">
+                Stay: {{ hotel.name }}
+              </div>
+              <div
+                class="text-[11px] text-gray-600"
+                *ngIf="hotel.address"
+              >
+                {{ hotel.address }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ng-container
+          *ngIf="detail?.pricing?.vehicles_selected?.length"
+        >
+          <mat-divider class="my-2"></mat-divider>
+          <div class="text-sm font-semibold mb-2">
+            Transportation
+          </div>
+          <div class="space-y-2">
+            <div
+              class="flex items-center border rounded p-2 text-xs"
+              *ngFor="
+                let vs of detail.pricing.vehicles_selected
+              "
+            >
+              <div class="mr-3" *ngIf="getVehicleImage(vs.vehicle_id) as img">
+                <img
+                  [src]="img"
+                  [alt]="getVehicleName(vs.vehicle_id) || 'Vehicle'"
+                  width="60"
+                  height="40"
+                />
+              </div>
+              <div class="flex-1">
+                <div class="font-semibold">
+                  {{ getVehicleName(vs.vehicle_id) || ('Vehicle ' + vs.vehicle_id) }}
+                </div>
+                <div class="text-[11px] text-gray-600">
+                  Type:
+                  {{ getVehicleType(vs.vehicle_id) || 'N/A' }}
+                  • Qty: {{ vs.qty }}
+                  • Max {{ vs.max_occupancy }} passengers
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </mat-card-content>
+    </mat-card>
+
+    <div
+      *ngIf="
+        detail?.allowInstallmentPayment &&
+        detail?.installments?.length &&
+        detail?.pricing
+      "
+      class="border rounded p-2 mb-2 text-xs bg-blue-50"
+    >
+      <div class="font-semibold mb-1">
+        Installment payment available
+      </div>
+      <div class="mb-1" *ngIf="getFirstInstallmentAmount() as firstAmount">
+        First installment:
+        <span class="font-semibold">
+          {{ firstAmount | currency: 'INR':'symbol' }}
+        </span>
+        ({{ detail.installments[0].percentage }}% of total)
+      </div>
+      <button
+        mat-stroked-button
+        color="accent"
+        class="w-full"
+        (click)="openInstallmentsDialog()"
+      >
+        Pay installment schedule
+      </button>
+    </div>
+
+    <button
+      mat-raised-button
+      color="accent"
+      class="w-full mb-2"
+      (click)="onPayNow()"
+    >
+      Pay Now
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      class="w-full"
+      (click)="goBackToDetail()"
+    >
+      Back to package
+    </button>
+  </div>
+</div>
+
+<ng-template #installmentsDialog let-data>
+  <h2 mat-dialog-title>Installment Payment Schedule</h2>
+  <mat-dialog-content class="text-sm">
+    <div class="mb-2">
+      Total package amount:
+      <span class="font-semibold">
+        {{ data.totalPrice | currency: 'INR':'symbol' }}
+      </span>
+    </div>
+
+    <table class="w-full text-xs border-collapse mb-2">
+      <thead>
+        <tr class="border-b">
+          <th class="text-left py-1 pr-2">
+            Installment
+          </th>
+          <th class="text-right py-1 pr-2">
+            Percentage
+          </th>
+          <th class="text-right py-1 pr-2">
+            Amount
+          </th>
+          <th class="text-right py-1">
+            Due date
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let inst of data.installments"
+          class="border-b"
+        >
+          <td class="py-1 pr-2">
+            {{ inst.number }}
+          </td>
+          <td class="py-1 pr-2 text-right">
+            {{ inst.percentage }}%
+          </td>
+          <td class="py-1 pr-2 text-right">
+            {{ inst.amount | currency: 'INR':'symbol' }}
+          </td>
+          <td class="py-1 text-right">
+            {{ inst.dueDate | date: 'mediumDate' }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="text-[11px] text-red-600">
+      Note: If any installment payment is missed, the booking will be cancelled.
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button
+      mat-raised-button
+      color="accent"
+      (click)="onPayNow(true)"
+    >
+      Pay Now
+    </button>
+    <button mat-button mat-dialog-close>
+      Close
+    </button>
+  </mat-dialog-actions>
+</ng-template>

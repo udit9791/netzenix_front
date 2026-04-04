@@ -63,6 +63,7 @@ export class EditUserComponent implements OnInit {
         state_id: [''],
         state_name: [''],
         pan_no: [''],
+        is_active: [1, Validators.required],
         password: [
           '',
           [
@@ -189,6 +190,13 @@ export class EditUserComponent implements OnInit {
         console.log('User data state field:', user.state);
         console.log('User data state_id field:', user.state_id);
 
+        const isActive =
+          user.is_active !== undefined && user.is_active !== null
+            ? Number(user.is_active)
+            : 0;
+        const panNumber =
+          (user.detail && user.detail.pan_number) || user.pan_no || '';
+
         // Wait for countries to load before setting the form value
         this.userService.getCountries().subscribe({
           next: (response) => {
@@ -207,7 +215,8 @@ export class EditUserComponent implements OnInit {
               country_id: countryId,
               state_id: stateId,
               state_name: user.state_name || '',
-              pan_no: user.pan_no || ''
+              pan_no: panNumber,
+              is_active: isActive
             });
 
             console.log('Countries loaded:', this.countries);
@@ -350,12 +359,42 @@ export class EditUserComponent implements OnInit {
   }
 
   passwordMatchValidator(form: FormGroup) {
-    const password = form.get('password')?.value;
-    const confirm = form.get('confirmPassword')?.value;
+    const passwordCtrl = form.get('password');
+    const confirmCtrl = form.get('confirmPassword');
+    const password = passwordCtrl?.value;
+    const confirm = confirmCtrl?.value;
     if (!password && !confirm) {
+      if (confirmCtrl?.hasError('mismatch')) {
+        const errors = { ...(confirmCtrl.errors || {}) };
+        delete errors['mismatch'];
+        confirmCtrl.setErrors(Object.keys(errors).length ? errors : null);
+      }
       return null;
     }
-    return password === confirm ? null : { mismatch: true };
+    if (password === confirm) {
+      if (confirmCtrl?.hasError('mismatch')) {
+        const errors = { ...(confirmCtrl.errors || {}) };
+        delete errors['mismatch'];
+        confirmCtrl.setErrors(Object.keys(errors).length ? errors : null);
+      }
+      return null;
+    }
+    if (confirmCtrl) {
+      const errors = { ...(confirmCtrl.errors || {}) };
+      errors['mismatch'] = true;
+      confirmCtrl.setErrors(errors);
+    }
+    return { mismatch: true };
+  }
+
+  onConfirmPasswordChange() {
+    const password = this.userForm.get('password')?.value;
+    const confirm = this.userForm.get('confirmPassword')?.value;
+    if (password && confirm && password !== confirm) {
+      this.snackbar.open('Passwords do not match', 'OK', {
+        duration: 3000
+      });
+    }
   }
 
   cancel() {

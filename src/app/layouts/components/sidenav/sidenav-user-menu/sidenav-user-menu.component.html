@@ -23,6 +23,34 @@
     <div class="vex-user-menu-item__label">Change Password</div>
   </a>
 
+  <a
+   
+    (click)="closePopover()"
+    [routerLink]="['/sub-users']"
+    class="vex-user-menu-item"
+    matRipple
+    matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+    <mat-icon
+      class="vex-user-menu-item__icon icon-sm"
+      svgIcon="mat:group"
+    ></mat-icon>
+    <div class="vex-user-menu-item__label">Sub Users</div>
+  </a>
+
+  <a
+    *ngIf="hasPermission('create_users')"
+    (click)="closePopover()"
+    [routerLink]="['/sub-users/create']"
+    class="vex-user-menu-item"
+    matRipple
+    matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+    <mat-icon
+      class="vex-user-menu-item__icon icon-sm"
+      svgIcon="mat:person_add"
+    ></mat-icon>
+    <div class="vex-user-menu-item__label">Add Sub User</div>
+  </a>
+
   <!-- Always visible: Sign Out -->
   <a
     (click)="logout()"

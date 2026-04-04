@@ -23,6 +23,7 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { fadeInUp400ms } from '@vex/animations/fade-in-up.animation';
 import { stagger40ms } from '@vex/animations/stagger.animation';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
 
 // Angular
 import { NgFor, NgIf, NgClass, CommonModule } from '@angular/common';
@@ -42,7 +43,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import {
+  MatNativeDateModule,
+  MAT_DATE_FORMATS,
+  MAT_DATE_LOCALE,
+  DateAdapter,
+  NativeDateAdapter
+} from '@angular/material/core';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { FlightDetailsDialogComponent } from './flight-details-dialog/flight-details-dialog.component';
@@ -52,6 +59,30 @@ import { FlightUploadDialogComponent } from './flight-upload-dialog/flight-uploa
 import { FlightInventoryService } from 'src/app/services/flight-inventory.service';
 import { NotificationService } from 'src/app/services/notification.service';
 import { UserService } from 'src/app/core/services/user.service';
+
+export class ManageFlightSeriesDateAdapter extends NativeDateAdapter {
+  override format(date: Date, displayFormat: any): string {
+    if (displayFormat === 'input') {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}-${month}-${year}`;
+    }
+    return super.format(date, displayFormat);
+  }
+}
+
+export const MANAGE_FLIGHT_SERIES_DATE_FORMATS = {
+  parse: {
+    dateInput: 'input'
+  },
+  display: {
+    dateInput: 'input',
+    monthYearLabel: 'MMM yyyy',
+    dateA11yLabel: 'input',
+    monthYearA11yLabel: 'MMMM yyyy'
+  }
+};
 
 export interface Flight {
   id: number;
@@ -70,6 +101,9 @@ export interface Flight {
   sell_price: number;
   onwardTime?: string;
   returnTime?: string;
+  originalSeatAllocated?: number;
+  originalSeatsBlocked?: number;
+  originalMarkup?: number;
 }
 
 @Component({
@@ -102,6 +136,14 @@ export interface Flight {
     MatTableModule,
     MatSortModule,
     RouterModule
+  ],
+  providers: [
+    {
+      provide: DateAdapter,
+      useClass: ManageFlightSeriesDateAdapter,
+      deps: [MAT_DATE_LOCALE]
+    },
+    { provide: MAT_DATE_FORMATS, useValue: MANAGE_FLIGHT_SERIES_DATE_FORMATS }
   ]
 })
 export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
@@ -239,6 +281,7 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     const today = new Date();
+    today.setDate(today.getDate() - 30);
     const next30Days = new Date();
     next30Days.setDate(today.getDate() + 30);
 
@@ -314,108 +357,46 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
   }
 
   markAsChanged(row: any, field: string, value: any) {
-    // Validate that seatsBlocked doesn't exceed seat_allocated
     if (field === 'seatsBlocked') {
-      // Check if seatsBlocked exceeds seat_allocated
       if (value > row.seat_allocated) {
-        // Reset to previous value or set to max allowed
         value = row.seat_allocated;
-        // Show notification to user
         this.notificationService.error(
           'Seats Blocked cannot exceed Seats Allocated'
         );
       }
 
-      // Check if seatsBlocked exceeds available seats (seat_allocated - seat_booked)
       const availableSeats = row.seat_allocated - row.seat_booked;
       if (value > availableSeats) {
-        // Reset to previous value or set to max allowed
         value = availableSeats;
-        // Show notification to user
         this.notificationService.error(
           `Seats Blocked cannot exceed available seats (Seats Allocated - Seats Booked = ${availableSeats})`
         );
       }
 
-      // Update the row with the validated value
       row.seat_blocked = value;
-
-      // Call the API to update seat_blocked
-      // Log current time for debugging
-      console.log('Updating seat_blocked at:', new Date().toLocaleString());
-      this.flightService
-        .updateSeatBlocked({ id: row.id, seat_blocked: value })
-        .subscribe(
-          (response) => {
-            console.log(
-              'Seat_blocked updated successfully at:',
-              new Date().toLocaleString()
-            );
-            this.notificationService.success(
-              'Seats Blocked updated successfully'
-            );
-          },
-          (error) => {
-            this.notificationService.error(
-              'Failed to update Seats Blocked: ' +
-                (error.error?.message || error.message || 'Unknown error')
-            );
-            // Revert to the previous value if API call fails
-            this.loadFlights();
-          }
-        );
     }
 
-    // Validate that seat_allocated is not less than seat_booked
     if (field === 'seat_allocated') {
-      // First check if seat_allocated is less than seat_booked
       if (value < row.seat_booked) {
-        // Reset to previous value or set to minimum required
         value = row.seat_booked;
-        // Show notification to user
         this.notificationService.error(
           `Seats Allocated cannot be less than Seats Booked (${row.seat_booked})`
         );
       }
 
-      // Then check if seat_allocated is less than seat_booked + seat_blocked
       const minimumRequired = row.seat_booked + row.seat_blocked;
       if (value < minimumRequired) {
-        // Reset to previous value or set to minimum required
         value = minimumRequired;
-        // Show notification to user
         this.notificationService.error(
           `Seats Allocated cannot be less than Seats Booked + Seats Blocked (${minimumRequired})`
         );
       }
 
-      // Update the row with the validated value
       row.seat_allocated = value;
-
-      // Call the API to update seat_allocated
-      this.flightService
-        .updateSeatAllocated({ id: row.id, seat_allocated: value })
-        .subscribe(
-          (response) => {
-            this.notificationService.success(
-              'Seats Allocated updated successfully'
-            );
-          },
-          (error) => {
-            this.notificationService.error(
-              'Failed to update Seats Allocated: ' +
-                (error.error?.message || error.message || 'Unknown error')
-            );
-            // Revert to the previous value if API call fails
-            this.loadFlights();
-          }
-        );
     }
 
-    // Handle other fields if needed
     if (field === 'markup') {
       row.markup = value;
-      // Add API call for markup if needed
     }
 
     row[field] = value;
@@ -423,23 +404,51 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
   }
 
   saveChanges() {
-    const payload = this.dataSource.data.map((row) => ({
-      id: row.id,
-      pnr: row.pnr,
-      seat_allocated: row.seat_allocated,
-      seatsBlocked: row.seatsBlocked,
-      markup: row.markup
-    }));
+    const requests: any[] = [];
 
-    // this.flightService.updateFlights(payload).subscribe({
-    //   next: (res) => {
-    //     console.log('✅ Flights updated', res);
-    //     this.hasUnsavedChanges = false; // ✅ hide button again
-    //   },
-    //   error: (err) => {
-    //     console.error('❌ Failed to save changes', err);
-    //   }
-    // });
+    this.dataSource.data.forEach((row) => {
+      if (
+        row.originalSeatAllocated !== undefined &&
+        row.seat_allocated !== row.originalSeatAllocated
+      ) {
+        requests.push(
+          this.flightService.updateSeatAllocated({
+            id: row.id,
+            seat_allocated: row.seat_allocated
+          })
+        );
+      }
+
+      if (
+        row.originalSeatsBlocked !== undefined &&
+        row.seatsBlocked !== row.originalSeatsBlocked
+      ) {
+        requests.push(
+          this.flightService.updateSeatBlocked({
+            id: row.id,
+            seat_blocked: row.seatsBlocked
+          })
+        );
+      }
+    });
+
+    if (requests.length === 0) {
+      this.hasUnsavedChanges = false;
+      return;
+    }
+
+    forkJoin(requests).subscribe({
+      next: () => {
+        this.notificationService.success('Changes saved successfully');
+        this.hasUnsavedChanges = false;
+        this.loadFlights();
+      },
+      error: (error) => {
+        this.notificationService.error(
+          error?.error?.message || error?.message || 'Failed to save changes'
+        );
+      }
+    });
   }
 
   loadFlights() {
@@ -487,13 +496,16 @@ export class ManageFlightSeriesComponent implements OnInit, AfterViewInit {
     this.flightService.getInventories(filters).subscribe((res: any) => {
       this.flights = res.data;
 
-      // Set seatsBlocked from seat_blocked for each flight
       this.flights.forEach((flight) => {
         flight.seatsBlocked = flight.seat_blocked;
+        flight.originalSeatAllocated = flight.seat_allocated;
+        flight.originalSeatsBlocked = flight.seatsBlocked;
+        flight.originalMarkup = flight.markup;
       });
 
       this.dataSource.data = this.flights;
       this.totalFlights = res.total;
+      this.hasUnsavedChanges = false;
     });
   }
 

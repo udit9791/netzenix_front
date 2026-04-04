@@ -7,6 +7,50 @@
     <form [formGroup]="form">
       <div *ngFor="let roomCtrl of roomsFormArray().controls; let i = index" class="mb-6">
         <div class="font-medium mb-2">Room {{ asFormGroup(roomCtrl).get('room_name')?.value }}</div>
+        <div class="mb-2" [formGroup]="asFormGroup(roomCtrl)">
+          <div class="flex items-center gap-2 flex-wrap">
+            <mat-date-range-input [rangePicker]="picker">
+              <input
+                matStartDate
+                matInput
+                [readonly]="true"
+                formControlName="rangeStart"
+                (dateInput)="onRangeSelected(i, picker)"
+                (dateChange)="onRangeSelected(i, picker)"
+                [style.position]="'absolute'"
+                [style.left.px]="-10000"
+                [style.width.px]="1"
+                [style.height.px]="1"
+                [style.padding.px]="0"
+                [style.border]="'0'"
+                [style.clip]="'rect(0 0 0 0)'"
+                [style.clipPath]="'inset(50%)'"
+                [style.overflow]="'hidden'"
+              />
+              <input
+                matEndDate
+                matInput
+                [readonly]="true"
+                formControlName="rangeEnd"
+                (dateInput)="onRangeSelected(i, picker)"
+                (dateChange)="onRangeSelected(i, picker)"
+                [style.position]="'absolute'"
+                [style.left.px]="-10000"
+                [style.width.px]="1"
+                [style.height.px]="1"
+                [style.padding.px]="0"
+                [style.border]="'0'"
+                [style.clip]="'rect(0 0 0 0)'"
+                [style.clipPath]="'inset(50%)'"
+                [style.overflow]="'hidden'"
+              />
+            </mat-date-range-input>
+            <mat-date-range-picker #picker></mat-date-range-picker>
+            <button mat-stroked-button type="button" (click)="picker.open()">
+              Select Dates
+            </button>
+          </div>
+        </div>
         <table class="border w-full">
           <thead>
             <tr>

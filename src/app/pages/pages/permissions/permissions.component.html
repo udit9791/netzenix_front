@@ -22,14 +22,50 @@
       </div>
 
       <!-- Permissions List -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <mat-checkbox
-        *ngFor="let perm of permissions"
-        [checked]="selectedPermissions.has(perm.name || perm)"
-        (change)="togglePermission(perm.name || perm, $event.checked)">
-        {{ perm.name || perm }}
-      </mat-checkbox>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          *ngFor="let group of groupedPermissions"
+          class="border rounded p-3 flex flex-col gap-2"
+        >
+          <div class="font-medium">{{ group.groupLabel }}</div>
+          <div class="border-b border-gray-200 my-1"></div>
+          <div class="flex flex-col gap-2">
+            <div
+              *ngFor="let module of group.modules"
+              class="flex flex-col gap-2"
+            >
+              <div class="text-sm font-medium text-indigo-600">
+                {{ module.moduleLabel }}
+              </div>
+              <div class="h-px w-full bg-indigo-200 mb-1"></div>
+              <div class="flex flex-wrap gap-3">
+                <mat-checkbox
+                  *ngFor="let act of module.actions"
+                  [checked]="selectedPermissions.has(act.name)"
+                  (change)="togglePermission(act.name, $event.checked)"
+                >
+                  {{ act.label }}
+                </mat-checkbox>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <div
+          *ngIf="otherPermissions.length"
+          class="border rounded p-3 flex flex-col gap-2"
+        >
+          <div class="font-medium">Other</div>
+          <div class="flex flex-col gap-1">
+            <mat-checkbox
+              *ngFor="let perm of otherPermissions"
+              [checked]="selectedPermissions.has(perm.name || perm)"
+              (change)="togglePermission(perm.name || perm, $event.checked)"
+            >
+              {{ formatPermissionLabel(perm.name || perm) }}
+            </mat-checkbox>
+          </div>
+        </div>
       </div>
 
       <!-- Save Button -->

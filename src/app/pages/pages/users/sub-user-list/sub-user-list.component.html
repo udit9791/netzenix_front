@@ -1,0 +1,58 @@
+<div class="p-6 container">
+  <div class="card flex-auto">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h2 class="title m-0">Sub Users</h2>
+      <button mat-flat-button color="primary" (click)="openCreateDialog()">
+        <mat-icon svgIcon="mat:add" class="mr-2"></mat-icon>
+        Add Sub User
+      </button>
+    </div>
+
+    <div class="px-6 py-4">
+      <div *ngIf="loading" class="py-8 text-center">
+        Loading…
+      </div>
+
+      <table
+        *ngIf="!loading && subUsers.length"
+        mat-table
+        [dataSource]="subUsers"
+        class="w-full"
+      >
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef> ID </th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.id }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef> Email </th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.email }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row" class="text-right">
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="openEditDialog(row)"
+            >
+              <mat-icon svgIcon="mat:edit"></mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <div *ngIf="!loading && !subUsers.length" class="py-8 text-center">
+        No sub users found.
+      </div>
+    </div>
+  </div>
+</div>

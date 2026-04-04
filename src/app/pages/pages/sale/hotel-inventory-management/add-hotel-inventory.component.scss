@@ -110,3 +110,9 @@
 .pricing-table tbody tr.occ-group-alt .category-col {
   background: #f3f4f6;
 }
+
+.mat-calendar-body-cell.existing-inventory-date
+  .mat-calendar-body-cell-content {
+  background-color: rgba(220, 38, 38, 0.2);
+  border-radius: 50%;
+}

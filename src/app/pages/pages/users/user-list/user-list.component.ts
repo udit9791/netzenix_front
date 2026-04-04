@@ -48,11 +48,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { UserService } from 'src/app/core/services/user.service';
 import { Router } from '@angular/router';
 import { UserDetailDialogComponent } from './user-detail-dialog.component';
+import { UserCommissionDialogComponent } from './user-commission-dialog.component';
+import { SpecialFlightService } from 'src/app/services/special-flight.service';
 
 export interface User {
   id: number;
   imageSrc?: string;
   name: string;
+  username?: string;
   email: string;
   role_names?: string[];
   is_active?: number;
@@ -119,6 +122,13 @@ export class UserListComponent implements OnInit, AfterViewInit {
       cssClasses: ['font-medium']
     },
     {
+      label: 'Username',
+      property: 'username',
+      type: 'text',
+      visible: true,
+      cssClasses: ['text-secondary']
+    },
+    {
       label: 'Email',
       property: 'email',
       type: 'text',
@@ -159,7 +169,8 @@ export class UserListComponent implements OnInit, AfterViewInit {
   constructor(
     private dialog: MatDialog,
     private userService: UserService,
-    private router: Router
+    private router: Router,
+    private specialFlightService: SpecialFlightService
   ) {}
 
   get visibleColumns() {
@@ -302,6 +313,38 @@ export class UserListComponent implements OnInit, AfterViewInit {
           );
         }
       });
+  }
+
+  openCommissionDialog(user: User) {
+    this.specialFlightService.getCommissionByUserId(user.id).subscribe({
+      next: (commission) => {
+        const data = commission || {};
+        this.dialog.open(UserCommissionDialogComponent, {
+          width: '500px',
+          data: {
+            user_id: user.id,
+            discount_type: data.discount_type || 'F',
+            discount: data.discount ?? 0,
+            commission_type: data.commission_type || 'included',
+            markup_type: data.markup_type || 'F',
+            markup: data.markup ?? 0
+          }
+        });
+      },
+      error: () => {
+        this.dialog.open(UserCommissionDialogComponent, {
+          width: '500px',
+          data: {
+            user_id: user.id,
+            discount_type: 'F',
+            discount: 0,
+            commission_type: 'included',
+            markup_type: 'F',
+            markup: 0
+          }
+        });
+      }
+    });
   }
 
   loadTenants(): void {

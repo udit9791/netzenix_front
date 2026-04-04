@@ -44,14 +44,26 @@
 
       <mat-form-field appearance="outline" class="field date-field date-field-compact">
         <mat-label>{{ formLabels.departDate }}</mat-label>
-        <input matInput [matDatepicker]="departPicker" formControlName="departDate" [matDatepickerFilter]="dateFilter" placeholder="Select after choosing from/to" />
+        <input
+          matInput
+          [matDatepicker]="departPicker"
+          formControlName="departDate"
+          [matDatepickerFilter]="dateFilter"
+          placeholder="DD/MM/YYYY"
+        />
         <mat-datepicker-toggle matSuffix [for]="departPicker"></mat-datepicker-toggle>
         <mat-datepicker #departPicker></mat-datepicker>
       </mat-form-field>
 
       <mat-form-field *ngIf="form.value.tripType === 'roundtrip'" appearance="outline" class="field date-field date-field-compact">
         <mat-label>{{ formLabels.returnDate }}</mat-label>
-        <input matInput [matDatepicker]="returnPicker" formControlName="returnDate" [matDatepickerFilter]="returnDateFilter" placeholder="Select after choosing from/to" />
+        <input
+          matInput
+          [matDatepicker]="returnPicker"
+          formControlName="returnDate"
+          [matDatepickerFilter]="returnDateFilter"
+          placeholder="DD/MM/YYYY"
+        />
         <mat-datepicker-toggle matSuffix [for]="returnPicker"></mat-datepicker-toggle>
         <mat-datepicker #returnPicker></mat-datepicker>
       </mat-form-field>
@@ -92,7 +104,7 @@
                 <mat-icon>remove</mat-icon>
               </button>
               <span class="traveller-count">{{ childrenCount }}</span>
-              <button mat-icon-button type="button" [disabled]="childrenCount >= 4" (click)="updateTravellers('children', 1)">
+              <button mat-icon-button type="button" [disabled]="childrenCount >= 6" (click)="updateTravellers('children', 1)">
                 <mat-icon>add</mat-icon>
               </button>
             </div>
@@ -107,7 +119,7 @@
                 <mat-icon>remove</mat-icon>
               </button>
               <span class="traveller-count">{{ infantsCount }}</span>
-              <button mat-icon-button type="button" [disabled]="infantsCount >= 2" (click)="updateTravellers('infants', 1)">
+              <button mat-icon-button type="button" [disabled]="infantsCount >= 6" (click)="updateTravellers('infants', 1)">
                 <mat-icon>add</mat-icon>
               </button>
             </div>
@@ -322,7 +334,13 @@
     <div class="fare-options">
       <div class="fare-option" *ngFor="let fare of group.fareOptions; let i = index">
         <div class="fare-type">
-          <div class="fare-name">{{ (fare?.flight_inventory?.special_tag) || 'Special' }}</div>
+          <div class="fare-name">
+            {{
+              (group?.type === 'external' || fare?.flight_inventory?.special_tag === 'BNT Special')
+                ? 'Marketplace'
+                : (fare?.flight_inventory?.special_tag || 'Special')
+            }}
+          </div>
           <!-- <div class="fare-code">({{ fare.code }})</div> -->
         </div>
 
@@ -340,7 +358,25 @@
             </div>
             <div class="baggage-pill">
               <mat-icon>luggage</mat-icon>
-              {{ fare.baggage }}
+              <div class="baggage-weight">
+                <span class="baggage-value">{{ weightValue(fare.baggage) }}</span>
+                <span class="baggage-unit">{{ weightUnit(fare.baggage) }}</span>
+              </div>
+            </div>
+            <div class="baggage-pill" *ngIf="fare.cabin_baggage">
+              <mat-icon>work</mat-icon>
+              <div class="baggage-weight">
+                <span class="baggage-value">{{ weightValue(fare.cabin_baggage) }}</span>
+                <span class="baggage-unit">{{ weightUnit(fare.cabin_baggage) }}</span>
+              </div>
+            </div>
+            <div class="baggage-pill" *ngIf="fare?.flight_inventory?.meal_option">
+              <mat-icon>restaurant</mat-icon>
+              {{ fare.flight_inventory.meal_option }}
+            </div>
+            <div class="baggage-pill" *ngIf="fare?.flight_inventory?.seat_option">
+              <mat-icon>event_seat</mat-icon>
+              {{ fare.flight_inventory.seat_option }}
             </div>
           </div>
 
@@ -350,17 +386,25 @@
 
           <div class="price-container">
             <span class="price">₹{{ (fare.price_with_tax || fare.price) | number }}</span>
-            <mat-icon class="price-info">info</mat-icon>
+            <!-- <mat-icon class="price-info">info</mat-icon> -->
           </div>
         </div>
 
         <div class="price-section">
           <div class="booking-actions">
-            <button mat-flat-button class="hold-now" *ngIf="group?.type !== 'external'" (click)="bookNow(group, fare, fare.id)">Hold</button>
-            <button mat-flat-button class="book-now" (click)="bookNow(group, fare, fare.id)">Book Now</button>
-            <button mat-icon-button class="print-btn">
-              <mat-icon>print</mat-icon>
+            <button
+              mat-flat-button
+              class="hold-now"
+              color="primary"
+              *ngIf="group?.type !== 'external' && fare?.allow_hold_booking"
+              (click)="bookNow(group, fare, fare.id)"
+            >
+              Hold
             </button>
+            <button mat-flat-button color="primary" class="book-now" (click)="bookNow(group, fare, fare.id)">Book Now</button>
+            <!-- <button mat-icon-button class="print-btn">
+              <mat-icon>print</mat-icon>
+            </button> -->
           </div>
         </div>
       </div>

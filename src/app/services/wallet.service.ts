@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 
 export interface WalletBalance {
   balance: number;
+  wallet_balance?: string | number;
   currency: string;
   credit_limit: number;
   credit_balance: number;

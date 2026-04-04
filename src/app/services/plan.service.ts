@@ -37,8 +37,26 @@ export class PlanService {
     return this.http.get(`${this.apiUrl}/tenant-user-plans`, { params });
   }
 
+  getTenantsWithoutSubscription(): Observable<any> {
+    return this.http.get(
+      `${this.apiUrl}/tenant-user-plans/tenants-without-subscription`
+    );
+  }
+
+  getTenantPlanByTenant(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/tenant-user-plans/by-tenant`);
+  }
+
   getTenantPlan(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/tenant-user-plans/${id}`);
+  }
+
+  getPricingPlans(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/subscriptions/pricing-plans`);
+  }
+
+  createSubscriptionPayment(payload: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/subscriptions`, payload);
   }
 
   createTenantPlan(payload: {
@@ -46,6 +64,7 @@ export class PlanService {
     user_type: 'buyer' | 'seller';
     price: number;
     tenant_id?: number | null;
+    pricing_plan_id?: number | null;
     is_active?: boolean;
   }): Observable<any> {
     return this.http.post(`${this.apiUrl}/tenant-user-plans`, payload);
@@ -58,6 +77,7 @@ export class PlanService {
       user_type: 'buyer' | 'seller';
       price: number;
       tenant_id?: number | null;
+      pricing_plan_id?: number | null;
       is_active?: boolean;
     }
   ): Observable<any> {
@@ -69,7 +89,10 @@ export class PlanService {
   }
 
   toggleTenantPlanStatus(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/tenant-user-plans/${id}/toggle-status`, {});
+    return this.http.put(
+      `${this.apiUrl}/tenant-user-plans/${id}/toggle-status`,
+      {}
+    );
   }
 
   getUserSubscriptions(
@@ -130,7 +153,47 @@ export class PlanService {
   }
 
   toggleUserSubscriptionStatus(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/user-subscriptions/${id}/toggle-status`, {});
+    return this.http.put(
+      `${this.apiUrl}/user-subscriptions/${id}/toggle-status`,
+      {}
+    );
+  }
+
+  getPricingEnquiries(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/subscriptions/pricing-enquiries`);
+  }
+
+  getPricingEnquiry(id: number): Observable<any> {
+    return this.http.get(
+      `${this.apiUrl}/subscriptions/pricing-enquiries/${id}`
+    );
+  }
+
+  sendPricingEnquiryQuotation(
+    id: number,
+    payload: { price: number; note?: string; file?: File | null }
+  ): Observable<any> {
+    const formData = new FormData();
+    formData.append('price', String(payload.price));
+    if (payload.note) {
+      formData.append('note', payload.note);
+    }
+    if (payload.file) {
+      formData.append('attachment', payload.file);
+    }
+    return this.http.post(
+      `${this.apiUrl}/subscriptions/pricing-enquiries/${id}/send`,
+      formData
+    );
+  }
+
+  updatePricingEnquiryStatus(
+    id: number,
+    payload: { status: string; remark?: string }
+  ): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/subscriptions/pricing-enquiries/${id}/status-history`,
+      payload
+    );
   }
 }
-

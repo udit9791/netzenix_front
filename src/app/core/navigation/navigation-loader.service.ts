@@ -76,31 +76,40 @@ export class NavigationLoaderService {
       });
     }
 
-    if (this.hasPermission('view_search_hotel')) {
-      nav.push({
-        type: 'subheading',
-        label: 'Hotel',
-        children: [
-          {
-            type: 'link',
-            label: 'Hotel',
-            route: '/hotels/search',
-            queryParams: { type: 'normal' },
-            icon: 'mat:search'
-          },
-          {
-            type: 'link',
-            label: 'Confirm Hotel',
-            route: '/hotels/search',
-            queryParams: { type: 'confirm' },
-            icon: 'mat:search'
-          }
-        ]
-      });
+    if (
+      this.hasPermission('view_normal_hotel_search') ||
+      this.hasPermission('view_confirm_hotel_search')
+    ) {
+      const hotelChildren: NavigationItem[] = [];
+      if (this.hasPermission('view_normal_hotel_search')) {
+        hotelChildren.push({
+          type: 'link',
+          label: 'Hotel',
+          route: '/hotels/search',
+          queryParams: { type: 'normal' },
+          icon: 'mat:search'
+        });
+      }
+      if (this.hasPermission('view_confirm_hotel_search')) {
+        hotelChildren.push({
+          type: 'link',
+          label: 'Confirm Hotel',
+          route: '/hotels/search',
+          queryParams: { type: 'confirm' },
+          icon: 'mat:search'
+        });
+      }
+      if (hotelChildren.length) {
+        nav.push({
+          type: 'subheading',
+          label: 'Hotel',
+          children: hotelChildren
+        });
+      }
     }
 
     // ✅ Flights section
-    if (this.hasPermission('view_flights')) {
+    if (this.hasPermission('view_flights_search')) {
       nav.push({
         type: 'subheading',
         label: 'Flights',
@@ -122,41 +131,44 @@ export class NavigationLoaderService {
     }
 
     // ✅ Holidays section
-    if (this.hasPermission('view_holidays')) {
+    if (this.hasPermission('view_flights_search')) {
       nav.push({
         type: 'subheading',
         label: 'Holidays',
         children: [
-          {
-            type: 'link',
-            label: 'Fit Packages',
-            route: '/holiday/ftt-packages',
-            icon: 'mat:flight_takeoff'
-          },
+          // {
+          //   type: 'link',
+          //   label: 'Fit Packages',
+          //   route: '/holiday/ftt-packages',
+          //   icon: 'mat:flight_takeoff'
+          // },
           {
             type: 'link',
             label: 'Group Tours',
             route: '/holiday/group-tour',
             icon: 'mat:groups'
-          },
-          {
-            type: 'link',
-            label: 'Adhoc Group',
-            route: '/holiday/adhoc-group',
-            icon: 'mat:group_add'
-          },
-          {
-            type: 'link',
-            label: 'Private Tours',
-            route: '/holiday/private-tours',
-            icon: 'mat:directions_car'
           }
+          // {
+          //   type: 'link',
+          //   label: 'Adhoc Group',
+          //   route: '/holiday/adhoc-group',
+          //   icon: 'mat:group_add'
+          // },
+          // {
+          //   type: 'link',
+          //   label: 'Private Tours',
+          //   route: '/holiday/private-tours',
+          //   icon: 'mat:directions_car'
+          // }
         ]
       });
     }
 
     // ✅ Activities section (search)
-    if (this.hasPermission('view_holidays') || this.hasPermission('view_sales')) {
+    if (
+      this.hasPermission('view_holidays') ||
+      this.hasPermission('view_sales')
+    ) {
       nav.push({
         type: 'subheading',
         label: 'Activities',
@@ -221,99 +233,150 @@ export class NavigationLoaderService {
           },
           this.hasPermission('view_hotel_access') && {
             type: 'link',
+            label: 'Manage Bookings',
+            route: '/sale/manage-bookings',
+            icon: 'mat:book_online'
+          },
+          this.hasPermission('view_activity') && {
+            type: 'link',
             label: 'Manage Activity',
             route: '/sale/manage-activity',
             icon: 'mat:event_note'
+          },
+          this.hasPermission('view_flight_inventory') && {
+            type: 'link',
+            label: 'Transportation',
+            route: '/sale/transportation',
+            icon: 'mat:directions_bus'
+          },
+          this.hasPermission('view_flight_inventory') && {
+            type: 'link',
+            label: 'Itinerary Builder',
+            route: '/sale/itinerary-builder',
+            icon: 'mat:playlist_add_check'
           }
         ].filter(Boolean) as NavigationItem[]
       });
     }
 
     // ✅ Transactions section (separate)
-    if (this.hasPermission('view_sales')) {
+    if (
+      this.hasPermission('view_transections') ||
+      this.hasPermission('view_cancel_request')
+    ) {
       nav.push({
         type: 'subheading',
         label: 'Transactions',
         children: [
-          {
+          this.hasPermission('view_transections') && {
             type: 'link',
             label: 'Transactions',
             route: '/transactions',
             icon: 'mat:payments'
           },
-          {
+          this.hasPermission('view_cancel_request') && {
             type: 'link',
             label: 'Cancel Requests',
             route: '/transactions/cancel-requests',
             icon: 'mat:cancel'
           }
-        ]
+        ].filter(Boolean) as NavigationItem[]
       });
     }
 
     // ✅ Masters
-    nav.push({
-      type: 'subheading',
-      label: 'Masters',
-      children: [
-        {
-          type: 'link',
-          label: 'Tenants',
-          route: '/masters/tenant',
-          icon: 'mat:business'
-        },
-        {
-          type: 'link',
-          label: 'Airline',
-          route: '/masters/airline',
-          icon: 'mat:flight'
-        },
-        {
-          type: 'link',
-          label: 'Tenant Plans',
-          route: '/masters/tenant-plans',
-          icon: 'mat:assignment'
-        },
-        {
-          type: 'link',
-          label: 'User Plans',
-          route: '/masters/user-plans',
-          icon: 'mat:assignment_ind'
-        },
-        {
-          type: 'link',
-          label: 'Airport',
-          route: '/masters/airport',
-          icon: 'mat:location_on'
-        },
-        {
-          type: 'link',
-          label: 'Amenities',
-          route: '/masters/amenity',
-          icon: 'mat:category'
-        },
-        {
-          type: 'link',
-          label: 'Hotel Options',
-          route: '/masters/hotel-option',
-          icon: 'mat:list'
-        },
-        {
-          type: 'link',
-          label: 'Hotels',
-          route: '/masters/hotel',
-          icon: 'mat:hotel'
-        }
-      ]
-    });
+    if (
+      this.hasPermission('view_tenant') ||
+      this.hasPermission('view_airline') ||
+      this.hasPermission('view_tenant_plans') ||
+      this.hasPermission('view_airport') ||
+      this.hasPermission('view_amenities') ||
+      this.hasPermission('view_hotel_option') ||
+      this.hasPermission('view_hotel_master')
+    ) {
+      nav.push({
+        type: 'subheading',
+        label: 'Masters',
+        children: [
+          this.hasPermission('view_tenant') && {
+            type: 'link',
+            label: 'Tenants',
+            route: '/masters/tenant',
+            icon: 'mat:business'
+          },
+          this.hasPermission('view_airline') && {
+            type: 'link',
+            label: 'Airline',
+            route: '/masters/airline',
+            icon: 'mat:flight'
+          },
+          this.hasPermission('view_tenant_plans') && {
+            type: 'link',
+            label: 'Tenant Plans',
+            route: '/masters/tenant-plans',
+            icon: 'mat:assignment'
+          },
+          // this.hasPermission('view_tenant_plans') && {
+          //   type: 'link',
+          //   label: 'User Plans',
+          //   route: '/masters/user-plans',
+          //   icon: 'mat:assignment_ind'
+          // },
+          this.hasPermission('view_price_enquiry') && {
+            type: 'link',
+            label: 'Price Enquiries',
+            route: '/masters/price-enquiries',
+            icon: 'mat:contact_mail'
+          },
+          this.hasPermission('view_airport') && {
+            type: 'link',
+            label: 'Airport',
+            route: '/masters/airport',
+            icon: 'mat:location_on'
+          },
+          this.hasPermission('view_amenities') && {
+            type: 'link',
+            label: 'Amenities',
+            route: '/masters/amenity',
+            icon: 'mat:category'
+          },
+          this.hasPermission('view_hotel_option') && {
+            type: 'link',
+            label: 'Hotel Options',
+            route: '/masters/hotel-option',
+            icon: 'mat:list'
+          },
+          this.hasPermission('view_hotel_master') && {
+            type: 'link',
+            label: 'Hotels',
+            route: '/masters/hotel',
+            icon: 'mat:hotel'
+          },
+          this.hasPermission('view_amenities') && {
+            type: 'link',
+            label: 'Settings',
+            route: '/masters/settings',
+            icon: 'mat:settings'
+          },
+          this.hasPermission('view_commission_master') && {
+            type: 'link',
+            label: 'Commission',
+            route: '/masters/commission',
+            icon: 'mat:attach_money'
+          }
+        ].filter(Boolean) as NavigationItem[]
+      });
+    }
 
     // ✅ My Bookings (top-level)
-    nav.push({
-      type: 'link',
-      label: 'My Bookings',
-      route: '/my-bookings',
-      icon: 'mat:book_online'
-    });
+    if (this.hasPermission('view_my_booking')) {
+      nav.push({
+        type: 'link',
+        label: 'My Bookings',
+        route: '/my-bookings',
+        icon: 'mat:book_online'
+      });
+    }
 
     // 🔥 finally push items
     this._items.next(nav);

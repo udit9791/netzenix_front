@@ -15,7 +15,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDateRangePicker } from '@angular/material/datepicker';
+import {
+  MatCalendarCellClassFunction,
+  MatDateRangePicker
+} from '@angular/material/datepicker';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -75,6 +78,7 @@ export class AddHotelInventoryComponent implements OnInit {
   roomTypes: any[] = [];
   mealOptions: any[] = [];
   saving = false;
+  hotelInventoryDates: any[] = [];
   roomsSections: { section: string; items: any[] }[] = [];
   roomsFlat: any[] = [];
   selectedRoomIds: number[] = [];
@@ -205,6 +209,7 @@ export class AddHotelInventoryComponent implements OnInit {
           error: () => {}
         });
         this.loadHotelRooms(id);
+        this.loadHotelInventoryDatesForHotel(id);
       });
 
     const amountCtrl = this.form.get('holdBookingAmount') as FormControl;
@@ -724,8 +729,16 @@ export class AddHotelInventoryComponent implements OnInit {
         this.snackBar.open('Inventory saved', 'Close', { duration: 2000 });
         this.router.navigate(['/sale/hotel-inventory-management']);
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
+        const backend = err?.error || {};
+        if (backend && backend.date_error) {
+          const msg =
+            backend.message ||
+            'These dates are already added in another inventory for this hotel';
+          this.snackBar.open(msg, 'Close', { duration: 3000 });
+          return;
+        }
         this.snackBar.open('Failed to save inventory', 'Close', {
           duration: 2500
         });
@@ -778,6 +791,21 @@ export class AddHotelInventoryComponent implements OnInit {
       error: () => {}
     });
     this.loadHotelRooms(id);
+  }
+
+  loadHotelInventoryDatesForHotel(hotelId: number): void {
+    this.hotelInventoryDates = [];
+    const id = Number(hotelId || 0);
+    if (!id) return;
+    this.hotelService.getHotelInventoryDatesByHotel(id).subscribe({
+      next: (res: any) => {
+        const payload = res?.data ?? res;
+        this.hotelInventoryDates = Array.isArray(payload) ? payload : [];
+      },
+      error: () => {
+        this.hotelInventoryDates = [];
+      }
+    });
   }
 
   loadHotelRooms(id: number): void {
@@ -1003,6 +1031,18 @@ export class AddHotelInventoryComponent implements OnInit {
       if (found) return sec.section;
     }
     return 'Other';
+  }
+
+  getExistingDatesForRoom(roomId: number): string[] {
+    const rid = Number(roomId || 0);
+    if (!rid) return [];
+    const row = this.hotelInventoryDates.find(
+      (r: any) => Number(r.room_id) === rid
+    );
+    if (!row || !Array.isArray(row.dates)) return [];
+    return row.dates
+      .map((d: any) => d?.date)
+      .filter((s: any) => typeof s === 'string' && s);
   }
 
   dateToStr(d: any): string {
@@ -1343,6 +1383,15 @@ export class AddHotelInventoryComponent implements OnInit {
         return d >= from && d <= to;
       });
       return !blocked && !isPast;
+    };
+  }
+
+  dateClassForRoom(roomId: number): MatCalendarCellClassFunction<Date> {
+    const existing = new Set(this.getExistingDatesForRoom(roomId));
+    return (date: Date) => {
+      if (!date || !existing.size) return '';
+      const s = this.dateToStr(date);
+      return existing.has(s) ? 'existing-inventory-date' : '';
     };
   }
 

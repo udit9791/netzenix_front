@@ -1,0 +1,838 @@
+
+<div class="group-tour-detail" *ngIf="detail && !loading; else loadingOrError">
+  <div class="hero-section">
+    <div class="hero-left">
+      <div class="hero-image">
+        <img [src]="mainImage" [alt]="detail.name" />
+      </div>
+      <div class="hero-text">
+        <h1>{{ detail.name }}</h1>
+        <div class="subline">
+          <span *ngIf="nightsText">{{ nightsText }}</span>
+          <span *ngIf="departFrom.length">| Ex: {{ departFrom.join(', ') }}</span>
+        </div>
+        <p class="description">
+          {{ detail.description }}
+        </p>
+        <div class="hero-actions">
+          <!-- <button
+            mat-raised-button
+            color="primary"
+            *ngIf="!hasDayHotelWarning"
+          >
+            Book Now
+          </button> -->
+          <!-- <button mat-stroked-button color="primary">Enquire</button> -->
+        </div>
+      </div>
+    </div>
+
+    <div class="price-panel">
+      <div class="price-strip">
+        <div class="price-value">
+          <ng-container
+            *ngIf="
+              detail?.booknow !== false && detail.fromPrice != null;
+              else priceOnRequestTop
+            "
+          >
+            ₹ {{ formatPrice(detail.fromPrice) }}
+          </ng-container>
+        </div>
+        <!-- <div class="price-note">
+          per person
+        </div> -->
+        <ng-template #priceOnRequestTop>
+          <span>Price on request</span>
+        </ng-template>
+      </div>
+
+      <mat-card class="book-card">
+        <mat-card-content>
+          <h3 class="book-title">Book your trip</h3>
+
+          <div class="book-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Leaving From</mat-label>
+              <mat-select [(ngModel)]="leavingFrom">
+                <mat-option *ngFor="let c of departFrom" [value]="c">
+                  {{ c }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="">
+              <mat-label>Leaving On</mat-label>
+              <input
+                matInput
+                [matDatepicker]="leavePicker"
+                [matDatepickerFilter]="leavingDateFilter"
+                placeholder="DD/MM/YYYY"
+                [(ngModel)]="leavingOn"
+              />
+              <mat-datepicker-toggle
+                matSuffix
+                [for]="leavePicker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #leavePicker></mat-datepicker>
+            </mat-form-field>
+      
+          </div>
+
+          <div class="book-row">
+            <mat-form-field appearance="outline" class="rooms-guests-field full">
+              <mat-label>Rooms & Guests</mat-label>
+              <mat-icon matPrefix class="rg-caret">expand_more</mat-icon>
+              <input
+                matInput
+                [value]="roomsGuestsLabel"
+                readonly
+                (click)="onOpenRoomsGuests()"
+              />
+            </mat-form-field>
+           
+          </div>
+
+          <div class="book-row">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Transportation Type</mat-label>
+              <mat-select
+                [(ngModel)]="transportationType"
+                (ngModelChange)="onTransportationTypeChange($event)"
+                name="transportationType"
+              >
+                <mat-option value="SIC">SIC</mat-option>
+                <mat-option value="Private">Private</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="book-actions">
+            <button
+              mat-raised-button
+              color="warn"
+              class="btn-check"
+              (click)="onCheckAvailability()"
+            >
+              Check Availability
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              class="btn-lead"
+              *ngIf="detail?.booknow !== false && canBook"
+              (click)="onBookNow()"
+            >
+              Book Now
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <ng-template #roomsGuestsTpl>
+    <div class="p-2 w-full">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm text-gray-700">Rooms</div>
+        <div class="flex items-center gap-2">
+          <button mat-icon-button (click)="decrementRooms()">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <div class="min-w-[2rem] text-center">
+            {{ roomsConfig.length }}
+          </div>
+          <button mat-icon-button (click)="incrementRooms()">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div>
+        <div
+          *ngFor="let room of roomsConfig; let i = index"
+          class="border rounded p-2 mb-2"
+        >
+          <div class="font-medium mb-2">Room {{ i + 1 }}</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-gray-700">Adults</div>
+              <div class="flex items-center gap-2">
+                <button mat-icon-button (click)="decrementAdults(i)">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <div class="min-w-[2rem] text-center">
+                  {{ room.adults }}
+                </div>
+                <button mat-icon-button (click)="incrementAdults(i)">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-gray-700">Children</div>
+              <div class="flex items-center gap-2">
+                <button mat-icon-button (click)="decrementChildren(i)">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <div class="min-w-[2rem] text-center">
+                  {{ room.children }}
+                </div>
+                <button mat-icon-button (click)="incrementChildren(i)">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="room.children > 0" class="mt-2">
+            <div class="text-sm text-gray-700 mb-1">Child Age</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div *ngFor="let age of room.childAges; let j = index">
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-select
+                    [value]="age"
+                    (selectionChange)="setChildAge(i, j, $event.value)"
+                  >
+                    <mat-option
+                      *ngFor="let a of childAgeOptions"
+                      [value]="a"
+                    >
+                      {{ a }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <div class="mt-1">
+                  <mat-checkbox
+                    [checked]="room.extraBedFlags[j] || false"
+                    (change)="toggleExtraBed(i, j, $event.checked)"
+                  >
+                    Extra bed
+                  </mat-checkbox>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-3 flex justify-end gap-2">
+        <button mat-button (click)="onCancelRoomsGuests()">Cancel</button>
+        <button mat-flat-button color="primary" (click)="applyRoomsGuests()">
+          Apply
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #bookNowTpl>
+    <div class="price-dialog">
+      
+  
+
+      <div class="mt-4" *ngIf="detail?.pricing?.breakdown as b">
+        <div class="text-lg font-semibold mb-2">Price Breakup</div>
+        <div class="p-3 rounded border">
+          <div class="flex justify-between text-sm py-1">
+            <span>Base Price</span>
+            <span>₹ {{ formatPrice(b.total_base_fare ?? 0) }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="(b.markup ?? 0) > 0"
+          >
+            <span>Markup</span>
+            <span>₹ {{ formatPrice(b.markup ?? 0) }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="b && b.ct !== 'included'"
+          >
+            <span>Service Fee</span>
+            <span>₹ {{ formatPrice(b.service_fee ?? 0) }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="b?.is_same_state && b?.ct !== 'included'"
+          >
+            <span>CGST</span>
+            <span>₹ {{ formatPrice(b.cgst ?? 0) }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="b?.is_same_state && b?.ct !== 'included'"
+          >
+            <span>SGST</span>
+            <span>₹ {{ formatPrice(b.sgst ?? 0) }}</span>
+          </div>
+          <div
+            class="flex justify-between text-sm py-1"
+            *ngIf="b && !b.is_same_state && b.ct !== 'included'"
+          >
+            <span>IGST</span>
+            <span>₹ {{ formatPrice(b.igst ?? 0) }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1">
+            <span>Commission</span>
+            <span>- ₹ {{ formatPrice(b.commission ?? 0) }}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1">
+            <span>TDS on Commission</span>
+            <span>₹ {{ formatPrice(b.tds_on_commission ?? 0) }}</span>
+          </div>
+          <mat-divider class="my-2"></mat-divider>
+          <div class="flex justify-between font-semibold py-1">
+            <span>Total Amount to be paid</span>
+            <span>₹ {{ formatPrice(b.final_total ?? bookingSummary.totalAmount) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="price-row actions-row">
+        <button mat-raised-button color="primary" (click)="onConfirmBookNow()">
+          Book Now
+        </button>
+        <button mat-stroked-button color="warn" mat-dialog-close>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #downloadItineraryTpl>
+    <div class="price-dialog">
+      <div class="text-lg font-semibold mb-4">Download Itinerary</div>
+
+      <mat-form-field appearance="outline" class="w-full mb-3">
+        <mat-label>Customer name</mat-label>
+        <input matInput [(ngModel)]="downloadCustomerName" />
+      </mat-form-field>
+
+      <div class="mb-2">
+        <mat-checkbox [(ngModel)]="downloadShowPrice">
+          Show price
+        </mat-checkbox>
+      </div>
+
+      <div class="mb-4">
+        <mat-checkbox [(ngModel)]="downloadShowCompanyDetails">
+          Show company details
+        </mat-checkbox>
+      </div>
+
+      <div class="price-row actions-row">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="confirmDownloadItineraryPdf()"
+        >
+          Download PDF
+        </button>
+        <button mat-stroked-button color="warn" mat-dialog-close>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="gallery-section" *ngIf="galleryImages.length">
+    <h2>Gallery</h2>
+    <div class="gallery-grid">
+      <img
+        *ngFor="let img of galleryImages"
+        [src]="img"
+        [alt]="detail.name"
+      />
+    </div>
+  </div>
+
+  <div class="content-layout">
+    <div class="content-main">
+      <section class="section" *ngIf="groupDates.length">
+        <h2>Costing details</h2>
+
+        <div class="departure-tabs" *ngIf="departureMonthFilters.length">
+          <button
+            mat-button
+            class="tab-chip"
+            [color]="activeMonthKey === 'ALL' ? 'primary' : undefined"
+            (click)="activeMonthKey = 'ALL'"
+          >
+            ALL
+          </button>
+          <button
+            mat-button
+            class="tab-chip"
+            *ngFor="let m of departureMonthFilters"
+            [color]="activeMonthKey === m.key ? 'primary' : undefined"
+            (click)="activeMonthKey = m.key"
+          >
+            {{ m.label }}
+          </button>
+        </div>
+
+        <div class="departure-list">
+          <div
+            class="departure-item"
+            *ngFor="let d of filteredGroupDates; let i = index"
+            (click)="onSelectDeparture(d)"
+          >
+            <div class="departure-left">
+              <mat-radio-button [checked]="d === selectedDeparture">
+              </mat-radio-button>
+              <div class="departure-info">
+                <div class="departure-dates">
+                  {{ formatDepartureLong(d) }}
+                </div>
+                <div
+                  class="departure-badge"
+                  [ngClass]="i === 0 ? 'badge-fast' : 'badge-available'"
+                >
+                  {{ i === 0 ? 'Fast Filling' : 'Available' }}
+                </div>
+              </div>
+            </div>
+            <div class="departure-price" *ngIf="detail?.fromPrice">
+              <!-- <div class="price-value">
+                ₹ {{ formatPrice(detail?.fromPrice) }}
+              </div>
+              <div class="price-note">
+                per person - {{ formatDepartureMonth(d) }}
+              </div> -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" *ngIf="detail.days?.length">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-label">Itinerary</div>
+            <div class="panel-sub" *ngIf="nightsText">
+              {{ nightsText }}
+            </div>
+          </div>
+          <button
+            mat-stroked-button
+            color="primary"
+            class="panel-action"
+            (click)="openDownloadItineraryDialog()"
+          >
+            Download Itinerary
+          </button>
+        </div>
+
+        <div class="itinerary-list">
+          <div
+            class="itinerary-day"
+            *ngFor="let day of detail.days; let i = index"
+          >
+            <div class="day-index">
+              {{ i + 1 }}
+            </div>
+            <div class="day-body">
+              <div class="day-title">
+                Day {{ i + 1 }} - {{ day.title || ('Day ' + (i + 1)) }}
+                <span *ngIf="day.date">
+                  • {{ day.date }}
+                </span>
+              </div>
+              <div class="day-images" *ngIf="day.images?.length">
+                <div class="day-image" *ngFor="let img of day.images">
+                  <img
+                    [src]="resolvePhoto(img) || ''"
+                    [alt]="'Day ' + (i + 1) + ' image'"
+                  />
+                </div>
+              </div>
+              <div class="day-desc">
+                {{ day.description }}
+              </div>
+              <div class="day-warning" *ngIf="day.hotelWarning">
+                <span class="badge-warning">
+                  {{ day.hotelWarning }}
+                </span>
+              </div>
+              <div
+                class="day-meta"
+                *ngIf="
+                  day.no_of_rooms || day.extra_adults || day.children_with_bed
+                "
+              >
+                Included for
+                {{ day.no_of_rooms || 0 }}
+                room<span *ngIf="(day.no_of_rooms || 0) > 1">s</span>
+                <span
+                  *ngIf="day.extra_adults || day.children_with_bed"
+                >
+                  •
+                </span>
+                <span *ngIf="day.extra_adults">
+                  {{ day.extra_adults }} extra bed<span
+                    *ngIf="day.extra_adults > 1"
+                  >s</span>
+                  added for adult<span
+                    *ngIf="day.extra_adults > 1"
+                  >s</span>
+                  <span *ngIf="day.children_with_bed">
+                    and
+                  </span>
+                </span>
+                <span *ngIf="day.children_with_bed">
+                  {{ day.children_with_bed }} extra bed<span
+                    *ngIf="day.children_with_bed > 1"
+                  >s</span>
+                  added for child
+                </span>
+              </div>
+              <div class="day-hotel-actions" *ngIf="day.hotels?.length">
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  (click)="openHotelSelectionDialog(i)"
+                >
+                  Update Itinerary
+                </button>
+              </div>
+              <div class="day-hotels" *ngIf="day.hotels?.length">
+                <div
+                  class="day-hotel-card"
+                  *ngFor="let hotel of day.hotels"
+                >
+                  <div class="day-hotel-photo" *ngIf="hotel.photo_url">
+                    <img
+                      [src]="resolvePhoto(hotel.photo_url) || ''"
+                      [alt]="hotel.name"
+                    />
+                  </div>
+                  <div class="day-hotel-info">
+                    <div class="day-hotel-name">
+                      {{ hotel.name }}
+                    </div>
+                    <div class="day-hotel-address">
+                      {{ hotel.address }}
+                    </div>
+                    <div
+                      class="day-hotel-room-meal"
+                      *ngIf="
+                        hotel.rooms?.length && hotel.id === day.default_hotel_id
+                      "
+                    >
+                      <span *ngIf="getDefaultRoomNameForDay(day)">
+                        Room: {{ getDefaultRoomNameForDay(day) }}
+                      </span>
+                      <span *ngIf="getDefaultMealPlanNameForDay(day)">
+                        , Meal plan: {{ getDefaultMealPlanNameForDay(day) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" *ngIf="hotelList.length">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-label">Hotels</div>
+          </div>
+        </div>
+        <div class="hotel-list">
+          <div class="hotel-row" *ngFor="let hotel of hotelList">
+            <div class="hotel-icon">
+              <mat-icon>hotel</mat-icon>
+            </div>
+            <div class="hotel-text">
+              <div class="hotel-line-main">
+                Overnight stay at {{ hotel.name }}
+              </div>
+              <div class="hotel-line-sub">
+                {{ hotel.address }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" *ngIf="detail?.vehicles?.length">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-label">Transportation</div>
+          </div>
+        </div>
+        <div class="transportation-block">
+          <div
+            class="transport-type-group"
+            *ngIf="(transportationType || 'SIC') === 'SIC' && vehiclesByType('sic').length"
+          >
+            <h4 class="transport-type-title">Shared (SIC)</h4>
+            <div class="departure-list">
+              <div
+                class="departure-item"
+                *ngFor="let v of vehiclesByType('sic')"
+                (click)="onSelectVehicle(v.id)"
+              >
+                <div class="departure-left">
+                  <mat-radio-button [checked]="v.id === selectedVehicleId">
+                  </mat-radio-button>
+                  <div class="departure-info">
+                    <div class="departure-dates">
+                      {{ v.name || ('Vehicle ' + v.id) }}
+                    </div>
+                    <div class="departure-badge">
+                      Max {{ v.max_occupancy || 'N/A' }} passengers
+                      <ng-container *ngIf="v.vehicles_required">
+                        • x {{ v.vehicles_required }} vehicle
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+                <div class="departure-price" *ngIf="v.photo">
+                  <img
+                    [src]="resolvePhoto(v.photo) || ''"
+                    [alt]="v.name"
+                    width="50"
+                    height="50"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="transport-type-group"
+            *ngIf="(transportationType || 'SIC') === 'Private' && vehiclesByType('private').length"
+          >
+            <h4 class="transport-type-title">Private</h4>
+            <div class="departure-list">
+              <div
+                class="departure-item"
+                *ngFor="let v of vehiclesByType('private')"
+              >
+                <div class="departure-left">
+                  <div class="flex items-center gap-2">
+                    <button mat-icon-button (click)="decrementVehicle(v.id)">
+                      <mat-icon>remove</mat-icon>
+                    </button>
+                    <span>{{ selectedVehicles[v.id] || 0 }}</span>
+                    <button mat-icon-button (click)="incrementVehicle(v.id)">
+                      <mat-icon>add</mat-icon>
+                    </button>
+                  </div>
+                  <div class="departure-info">
+                    <div class="departure-dates">
+                      {{ v.name || ('Vehicle ' + v.id) }}
+                    </div>
+                    <div class="departure-badge">
+                      Max {{ v.max_occupancy || 'N/A' }} passengers
+                      <ng-container *ngIf="v.vehicles_required">
+                        • x {{ v.vehicles_required }} vehicle
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+                <div class="departure-price" *ngIf="v.photo">
+                  <img
+                    [src]="resolvePhoto(v.photo) || ''"
+                    [alt]="v.name"
+                    width="50"
+                    height="50"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              Selected Capacity: {{ getSelectedCapacity() }} / {{ totalPeople }}
+            </div>
+            <div *ngIf="vehicleSelectionError">
+              {{ vehicleSelectionError }}
+            </div>
+            <div
+              *ngIf="
+                !vehicleSelectionError &&
+                getSelectedCapacity() > totalPeople &&
+                totalPeople > 0
+              "
+            >
+              Extra seats available
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ng-template #dayHotelSelectionTpl let-data let-dialogRef="dialogRef">
+        <ng-container *ngIf="activeDayIndexForDialog !== null">
+          <h2 mat-dialog-title>
+            Update Itinerary - Day {{ activeDayIndexForDialog + 1 }}
+          </h2>
+          <mat-dialog-content class="day-hotel-dialog">
+            <mat-radio-group
+              [(ngModel)]="daySelectedHotelId[activeDayIndexForDialog!]"
+              class="hotel-radio-group"
+            >
+              <div
+                class="day-hotel-card"
+                *ngFor="let hotel of (data?.hotels || [])"
+              >
+                <div class="day-hotel-header">
+                  <mat-radio-button
+                    class="hotel-radio"
+                    [value]="hotel.id"
+                    (change)="onDialogHotelChange(activeDayIndexForDialog!, hotel.id)"
+                  >
+                    {{ hotel.name }}
+                  </mat-radio-button>
+                </div>
+                <div class="day-hotel-body">
+                  <div class="day-hotel-photo" *ngIf="hotel.photo_url">
+                    <img
+                      [src]="resolvePhoto(hotel.photo_url) || ''"
+                      [alt]="hotel.name"
+                    />
+                  </div>
+                  <div class="day-hotel-info">
+                    <div class="day-hotel-name">
+                      {{ hotel.name }}
+                    </div>
+                    <div class="day-hotel-address">
+                      {{ hotel.address }}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="day-hotel-room-meal"
+                  *ngIf="hotel.id === daySelectedHotelId[activeDayIndexForDialog!]"
+                >
+                  <mat-form-field appearance="fill" class="day-select">
+                    <mat-label>Room</mat-label>
+                    <mat-select
+                      [(ngModel)]="daySelectedRoomId[activeDayIndexForDialog!]"
+                      (selectionChange)="onDayDialogRoomChange(
+                        activeDayIndexForDialog!,
+                        hotel.id
+                      )"
+                    >
+                      <mat-option
+                        *ngFor="let room of hotel.rooms || []"
+                        [value]="room.room_id"
+                      >
+                        {{ room.room_name || ('Room ' + room.room_id) }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field
+                    appearance="fill"
+                    class="day-select"
+                    *ngIf="getMealsForDayAndHotel(activeDayIndexForDialog!, hotel.id).length"
+                  >
+                    <mat-label>Meal Plan</mat-label>
+                    <mat-select
+                      [ngModel]="daySelectedMealId[activeDayIndexForDialog!]"
+                      (selectionChange)="onDialogMealChange(
+                        activeDayIndexForDialog!,
+                        $event.value
+                      )"
+                    >
+                      <mat-option
+                        *ngFor="
+                          let meal of getMealsForDayAndHotel(
+                            activeDayIndexForDialog!,
+                            hotel.id
+                          )
+                        "
+                        [value]="meal.id"
+                      >
+                        {{ meal.name || ('Meal ' + meal.id) }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+            </mat-radio-group>
+          </mat-dialog-content>
+          <mat-dialog-actions align="end">
+            <button mat-button (click)="dialogRef.close()">Cancel</button>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="onApplyHotelSelection(dialogRef)"
+            >
+              Apply
+            </button>
+          </mat-dialog-actions>
+        </ng-container>
+      </ng-template>
+
+      <section class="section">
+        <div class="info-panel">
+          <div class="info-header">
+            <div class="info-title">Inclusions</div>
+          </div>
+          <div class="info-body">
+            <p>
+              {{
+                detail.inclusions
+                  || 'Inclusions as per final package and itinerary shared with the customer.'
+              }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="info-panel">
+          <div class="info-header">
+            <div class="info-title">Exclusions</div>
+          </div>
+          <div class="info-body">
+            <p>
+              {{
+                detail.exclusions
+                  || 'Anything not mentioned in the inclusions, personal expenses and taxes as applicable.'
+              }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="info-panel">
+          <div class="info-header">
+            <div class="info-title">Terms &amp; Conditions</div>
+          </div>
+          <div class="info-body">
+            <p>
+              {{
+                detail.terms
+                  || 'All packages are subject to availability and standard booking terms.'
+              }}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="content-side">
+      <section class="section" *ngIf="departFrom.length">
+        <h3>Departure cities</h3>
+        <div class="chip-list">
+          <mat-chip
+            *ngFor="let c of departFrom"
+            (click)="onSelectDepartureCity(c)"
+            [ngClass]="{ 'chip-selected': c === leavingFrom }"
+          >
+            {{ c }}
+          </mat-chip>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<ng-template #loadingOrError>
+  <div class="loading-wrapper" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  <div class="error-wrapper" *ngIf="!loading && error">
+    {{ error }}
+  </div>
+</ng-template>

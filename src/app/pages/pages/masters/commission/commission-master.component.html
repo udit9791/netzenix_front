@@ -1,0 +1,134 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <div class="flex items-center justify-between px-4 py-3">
+      <vex-breadcrumbs [crumbs]="['Masters', 'Commission Master']"></vex-breadcrumbs>
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="p-4 space-y-4 commission-master-container">
+      <div class="flex items-center gap-4 mb-2">
+        <mat-form-field appearance="outline">
+          <mat-label>Product Type</mat-label>
+          <mat-select
+            [(ngModel)]="selectedProductType"
+            (selectionChange)="onProductTypeChange()"
+          >
+            <mat-option
+              *ngFor="let pt of productTypes"
+              [value]="pt"
+            >
+              {{ pt }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="relative">
+        <table mat-table [dataSource]="dataSource" class="w-full">
+          <ng-container matColumnDef="product_name">
+            <th mat-header-cell *matHeaderCellDef>
+              Product Name
+            </th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.product_name }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="discount_type">
+            <th mat-header-cell *matHeaderCellDef style="width: 50px">
+              Discount Type
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-form-field appearance="outline" class="w-1/2">
+                <mat-select [(ngModel)]="row.discount_type">
+                  <mat-option
+                    *ngFor="let opt of discountTypeOptions"
+                    [value]="opt"
+                  >
+                    {{ opt }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="discount">
+            <th mat-header-cell *matHeaderCellDef style="width: 50px">
+              Discount
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-form-field appearance="outline" class="w-1/2">
+                <input
+                  matInput
+                  type="number"
+                  [(ngModel)]="row.discount"
+                />
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="markup_type">
+            <th mat-header-cell *matHeaderCellDef style="width: 50px">
+              Markup Type
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-form-field appearance="outline" class="w-1/2">
+                <mat-select [(ngModel)]="row.markup_type">
+                  <mat-option
+                    *ngFor="let opt of markupTypeOptions"
+                    [value]="opt"
+                  >
+                    {{ opt }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="markup">
+            <th mat-header-cell *matHeaderCellDef style="width: 50px">
+              Markup
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-form-field appearance="outline" class="w-1/2">
+                <input
+                  matInput
+                  type="number"
+                  [(ngModel)]="row.markup"
+                />
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: displayedColumns"
+          ></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td
+              class="mat-cell py-4 text-center"
+              [attr.colspan]="displayedColumns.length"
+            >
+              <div
+                *ngIf="isLoading"
+                class="flex justify-center items-center p-4"
+              >
+                <mat-progress-spinner diameter="40"></mat-progress-spinner>
+              </div>
+              <div *ngIf="!isLoading">No commission records found</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="flex justify-end">
+        <button mat-flat-button color="primary" (click)="submit()">
+          Submit
+        </button>
+      </div>
+    </div>
+  </vex-page-layout-content>
+</vex-page-layout>

@@ -12,24 +12,16 @@
   margin-bottom: 16px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
 .filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .apply-btn {
-  --mdc-filled-button-container-height: 32px;
-  padding: 0 12px;
-  min-width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .apply-btn .mdc-button__label {
@@ -43,6 +35,18 @@
 
 .table-wrapper {
   overflow: auto;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .loading {

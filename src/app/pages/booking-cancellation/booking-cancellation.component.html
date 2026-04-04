@@ -1,0 +1,295 @@
+<div class="container mx-auto p-4">
+  <div *ngIf="loading" class="flex justify-center items-center h-64">
+    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  </div>
+
+  <div *ngIf="!loading && error" class="bg-red-100 text-red-800 p-3 rounded">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error" class="space-y-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-semibold mb-1">
+          Booking Cancellation
+        </h1>
+        <p class="text-xs text-gray-600">
+          Order #{{ orderDetails?.id }} • Status: {{ getStatusName() }}
+        </p>
+      </div>
+      <div class="space-x-2">
+        <button mat-stroked-button (click)="goBack()">Back</button>
+      </div>
+    </div>
+
+    <div *ngIf="!isHotelType && segments.length === 0">
+      <p class="text-sm text-gray-700">No flight segments found for this booking.</p>
+    </div>
+    <div *ngIf="isHotelType && hotelRooms.length === 0">
+      <p class="text-sm text-gray-700">No rooms found for this booking.</p>
+    </div>
+
+    <div *ngIf="!isHotelType && onwardSegments.length">
+      <h2 class="text-sm font-semibold mb-2">Onward Segments</h2>
+      <div *ngFor="let seg of onwardSegments; let si = index" class="border rounded mb-4 p-3 bg-white">
+        <div class="flex justify-between items-center mb-2">
+          <div>
+            <div class="text-sm font-semibold">
+              {{ seg.from }}-{{ seg.to }} on
+              {{ seg.flight_date | date: 'dd/MM/yyyy' }}
+              via {{ seg.airline }}
+              <span *ngIf="seg.airline_code || seg.flight_number">
+                [{{ seg.airline_code || '' }}{{ seg.airline_code && seg.flight_number ? '-' : '' }}{{ seg.flight_number || '' }}]
+              </span>
+              <span *ngIf="seg.dep_time">
+                at {{ seg.dep_time }}
+              </span>
+            </div>
+            <div class="text-xs text-gray-600">
+              Airline PNR:
+              <span class="font-semibold">
+                {{ seg.pnr || flightDetails?.inventory?.pnr || '-' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-sm font-semibold mt-2 mb-1">
+          Passenger Details
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-xs">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="border p-2 text-left">Name</th>
+                <th class="border p-2 text-left">Pax Type</th>
+                <th class="border p-2 text-left">Trip Type</th>
+                <th class="border p-2 text-left">Ticket No</th>
+                <th class="border p-2 text-left">Status</th>
+                <th class="border p-2 text-center" *ngIf="isOrderOwner">
+                  Cancel
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of passengers">
+                <td class="border p-2">
+                  {{ t.title }} {{ t.first_name }} {{ t.last_name }}
+                </td>
+                <td class="border p-2">
+                  {{ t.passanger_type || 'ADT' }}
+                </td>
+                <td class="border p-2">
+                  {{ seg.type || 'Onward' }}
+                </td>
+                <td class="border p-2">
+                  {{ t.ticket_number || '-' }}
+                </td>
+                <td class="border p-2">
+                  <ng-container
+                    *ngIf="getCancelStatus(seg.id, t.id); else bookingStatusTplOnward"
+                  >
+                    {{ getCancelStatus(seg.id, t.id) }}
+                  </ng-container>
+                  <ng-template #bookingStatusTplOnward>
+                    {{ t.status_name || 'Confirmed' }}
+                  </ng-template>
+                </td>
+                <td
+                  class="border p-2 text-center"
+                  *ngIf="isOrderOwner"
+                >
+                  <ng-container
+                    *ngIf="!isCancellationRequested(seg.id, t.id); else noCancelOnward"
+                  >
+                    <mat-checkbox
+                      [disabled]="t.status_name"
+                      [ngModel]="isSelected(seg.id, t.id)"
+                      (ngModelChange)="toggleSelection(seg.id, t.id, $event)"
+                    ></mat-checkbox>
+                  </ng-container>
+                  <ng-template #noCancelOnward>
+                    -
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!isHotelType && returnSegments.length">
+      <h2 class="text-sm font-semibold mb-2">Return Segments</h2>
+      <div *ngFor="let seg of returnSegments; let si = index" class="border rounded mb-4 p-3 bg-white">
+        <div class="flex justify-between items-center mb-2">
+          <div>
+            <div class="text-sm font-semibold">
+              {{ seg.from }}-{{ seg.to }} on
+              {{ seg.flight_date | date: 'dd/MM/yyyy' }}
+              via {{ seg.airline }}
+              <span *ngIf="seg.airline_code || seg.flight_number">
+                [{{ seg.airline_code || '' }}{{ seg.airline_code && seg.flight_number ? '-' : '' }}{{ seg.flight_number || '' }}]
+              </span>
+              <span *ngIf="seg.dep_time">
+                at {{ seg.dep_time }}
+              </span>
+            </div>
+            <div class="text-xs text-gray-600">
+              Airline PNR:
+              <span class="font-semibold">
+                {{ seg.pnr || flightDetails?.inventory?.pnr || '-' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-sm font-semibold mt-2 mb-1">
+          Passenger Details
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-xs">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="border p-2 text-left">Name</th>
+                <th class="border p-2 text-left">Pax Type</th>
+                <th class="border p-2 text-left">Trip Type</th>
+                <th class="border p-2 text-left">Ticket No</th>
+                <th class="border p-2 text-left">Status</th>
+                <th class="border p-2 text-center" *ngIf="isOrderOwner">
+                  Cancel
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of passengers">
+                <td class="border p-2">
+                  {{ t.title }} {{ t.first_name }} {{ t.last_name }}
+                </td>
+                <td class="border p-2">
+                  {{ t.passanger_type || 'ADT' }}
+                </td>
+                <td class="border p-2">
+                  {{ seg.type || 'Return' }}
+                </td>
+                <td class="border p-2">
+                  {{ t.ticket_number || '-' }}
+                </td>
+                <td class="border p-2">
+                  <ng-container
+                    *ngIf="getCancelStatus(seg.id, t.id); else bookingStatusTplReturn"
+                  >
+                    {{ getCancelStatus(seg.id, t.id) }}
+                  </ng-container>
+                  <ng-template #bookingStatusTplReturn>
+                    {{ t.status_name || 'Confirmed' }}
+                  </ng-template>
+                </td>
+                <td
+                  class="border p-2 text-center"
+                  *ngIf="isOrderOwner"
+                >
+                  <ng-container
+                    *ngIf="!isCancellationRequested(seg.id, t.id); else noCancelReturn"
+                  >
+                    <mat-checkbox
+                      [disabled]="t.status_name"
+                      [ngModel]="isSelected(seg.id, t.id)"
+                      (ngModelChange)="toggleSelection(seg.id, t.id, $event)"
+                    ></mat-checkbox>
+                  </ng-container>
+                  <ng-template #noCancelReturn>
+                    -
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="isHotelType && hotelRooms.length">
+      <h2 class="text-sm font-semibold mb-2">Rooms</h2>
+      <div class="border rounded mb-4 p-3 bg-white">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-xs">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="border p-2 text-left">Room Name</th>
+                <th class="border p-2 text-left">Meal</th>
+                <th class="border p-2 text-left">Check In</th>
+                <th class="border p-2 text-left">Check Out</th>
+                <th class="border p-2 text-left">Nights</th>
+                <th class="border p-2 text-left">Rooms</th>
+                <th class="border p-2 text-left">Status</th>
+                <th class="border p-2 text-center" *ngIf="isOrderOwner">Cancel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of hotelRooms">
+                <td class="border p-2">{{ r.room_name || '-' }}</td>
+                <td class="border p-2">{{ r.meal_type_name || 'Room only' }}</td>
+                <td class="border p-2">{{ r.check_in || '-' }}</td>
+                <td class="border p-2">{{ r.check_out || '-' }}</td>
+                <td class="border p-2">{{ r.nights }}</td>
+                <td class="border p-2">
+                  <div>Rooms: {{ r.rooms }}</div>
+                  <div>
+                    Adults:
+                    <span class="font-semibold">{{ r.adults }}</span>
+                    <span *ngIf="r.adult_extra_bed">
+                      &nbsp;• Adult extra bed:
+                      <span class="font-semibold">{{ r.adult_extra_bed }}</span>
+                    </span>
+                  </div>
+                  <div>
+                    Children:
+                    <span class="font-semibold">{{ r.children }}</span>
+                    <span *ngIf="r.child_extra_bed">
+                      &nbsp;• Child extra bed:
+                      <span class="font-semibold">{{ r.child_extra_bed }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td class="border p-2">
+                  <ng-container *ngIf="getHotelOrderDetailId() as odid">
+                    <ng-container *ngIf="getCancelStatus(r.id, odid); else hotelStatusTpl">
+                      {{ getCancelStatus(r.id, odid) }}
+                    </ng-container>
+                    <ng-template #hotelStatusTpl>
+                      {{ orderDetails?.status_name || 'Confirmed' }}
+                    </ng-template>
+                  </ng-container>
+                </td>
+                <td class="border p-2 text-center" *ngIf="isOrderOwner">
+                  <ng-container *ngIf="getHotelOrderDetailId() as odid">
+                    <mat-checkbox
+                      [ngModel]="isSelected(r.id, odid)"
+                      (ngModelChange)="toggleSelection(r.id, odid, $event)"
+                    ></mat-checkbox>
+                  </ng-container>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end space-x-2 mt-4">
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button
+        mat-flat-button
+        color="warn"
+        *ngIf="isOrderOwner"
+        [disabled]="!hasSelection || submitting"
+        (click)="submitCancellationRequests()"
+      >
+        Submit Cancellation Request
+      </button>
+    </div>
+  </div>
+</div>

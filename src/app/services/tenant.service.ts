@@ -116,4 +116,17 @@ export class TenantService {
     }
     return this.http.put(`${this.apiUrl}/tenants/${id}`, payload);
   }
+
+  getTenantPermissions(tenantId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/tenants/${tenantId}/permissions`);
+  }
+
+  assignTenantPermissions(
+    tenantId: number,
+    permissionIds: number[]
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/tenants/${tenantId}/permissions`, {
+      permission_ids: permissionIds
+    });
+  }
 }

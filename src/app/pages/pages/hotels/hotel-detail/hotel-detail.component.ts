@@ -9,6 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { VexSecondaryToolbarComponent } from '@vex/components/vex-secondary-toolbar/vex-secondary-toolbar.component';
 import { VexBreadcrumbsComponent } from '@vex/components/vex-breadcrumbs/vex-breadcrumbs.component';
 import { VexPageLayoutComponent } from '@vex/components/vex-page-layout/vex-page-layout.component';
@@ -50,6 +51,7 @@ import { environment } from '../../../../../environments/environment';
     MatFormFieldModule,
     MatSelectModule,
     MatTabsModule,
+    MatCheckboxModule,
     ReactiveFormsModule,
     MatDialogModule,
     HotelSearchBarComponent,
@@ -85,9 +87,12 @@ export class HotelDetailComponent {
   @ViewChild('roomsGuestsTpl') roomsGuestsTpl!: TemplateRef<any>;
   @ViewChild('roomPhotosTpl') roomPhotosTpl!: TemplateRef<any>;
   @ViewChild('hotelPhotosTpl') hotelPhotosTpl!: TemplateRef<any>;
-  roomsConfig: { adults: number; children: number; childAges: number[] }[] = [
-    { adults: 2, children: 0, childAges: [] }
-  ];
+  roomsConfig: {
+    adults: number;
+    children: number;
+    childAges: number[];
+    extraBedFlags: boolean[];
+  }[] = [{ adults: 2, children: 0, childAges: [], extraBedFlags: [] }];
   childAgeOptions: number[] = Array.from({ length: 18 }, (_, i) => i);
   minCheckIn: Date = this.today();
   minCheckOut: Date = this.addDays(this.today(), 1);
@@ -174,6 +179,13 @@ export class HotelDetailComponent {
             .map((x) => Number(x))
             .filter((n) => !isNaN(n))
         : [];
+      const extraBedFlagsStr = String((p['extraBedFlags'] ?? '').toString());
+      const extraBedFlags = extraBedFlagsStr
+        ? extraBedFlagsStr
+            .split(',')
+            .map((x) => Number(x))
+            .filter((n) => !isNaN(n))
+        : [];
       this.params = {
         from,
         to,
@@ -182,7 +194,8 @@ export class HotelDetailComponent {
         children,
         inventory_id,
         type,
-        childAges
+        childAges,
+        extraBedFlags
       };
       this.searchType = type === 'confirm' ? 'confirm' : 'normal';
       this.selectedInventoryId = inventory_id || null;
@@ -213,12 +226,14 @@ export class HotelDetailComponent {
       const baseChildrenPerRoom = Math.floor(totalChildren / safeRooms);
       let extraChildren = totalChildren % safeRooms;
       let ageIndex = 0;
+      let extraIndex = 0;
       for (let i = 0; i < safeRooms; i++) {
         const roomAdults = baseAdultsPerRoom + (extraAdults > 0 ? 1 : 0);
         if (extraAdults > 0) extraAdults -= 1;
         const roomChildren = baseChildrenPerRoom + (extraChildren > 0 ? 1 : 0);
         if (extraChildren > 0) extraChildren -= 1;
         const ages: number[] = [];
+        const flags: boolean[] = [];
         for (let j = 0; j < roomChildren; j++) {
           const age =
             childAges[ageIndex] && !isNaN(childAges[ageIndex])
@@ -226,11 +241,18 @@ export class HotelDetailComponent {
               : 5;
           ages.push(age);
           ageIndex += 1;
+          const flagVal =
+            extraBedFlags[extraIndex] && !isNaN(extraBedFlags[extraIndex])
+              ? extraBedFlags[extraIndex]
+              : 0;
+          flags.push(flagVal === 1);
+          extraIndex += 1;
         }
         this.roomsConfig.push({
           adults: roomAdults,
           children: roomChildren,
-          childAges: ages
+          childAges: ages,
+          extraBedFlags: flags
         });
       }
       this.loadData();
@@ -300,6 +322,7 @@ export class HotelDetailComponent {
         adults: this.params.adults,
         children: this.params.children,
         childAges: this.params.childAges,
+        extraBedFlags: this.params.extraBedFlags,
         type: this.params.type,
         inventory_id: invId
       })
@@ -538,7 +561,12 @@ export class HotelDetailComponent {
 
   incrementRooms() {
     if (this.roomsConfig.length >= 4) return;
-    this.roomsConfig.push({ adults: 2, children: 0, childAges: [] });
+    this.roomsConfig.push({
+      adults: 2,
+      children: 0,
+      childAges: [],
+      extraBedFlags: []
+    });
   }
 
   decrementRooms() {
@@ -566,6 +594,7 @@ export class HotelDetailComponent {
     if (room.children >= 4) return;
     room.children += 1;
     room.childAges.push(5);
+    room.extraBedFlags.push(false);
   }
 
   decrementChildren(i: number) {
@@ -574,12 +603,22 @@ export class HotelDetailComponent {
     if (room.children <= 0) return;
     room.children -= 1;
     room.childAges.pop();
+    room.extraBedFlags.pop();
   }
 
   setChildAge(roomIndex: number, childIndex: number, age: number) {
     const room = this.roomsConfig[roomIndex];
     if (!room) return;
     room.childAges[childIndex] = age;
+  }
+
+  toggleExtraBed(roomIndex: number, childIndex: number, checked: boolean) {
+    const room = this.roomsConfig[roomIndex];
+    if (!room) return;
+    if (!room.extraBedFlags || room.extraBedFlags.length !== room.children) {
+      room.extraBedFlags = Array.from({ length: room.children }, () => false);
+    }
+    room.extraBedFlags[childIndex] = checked;
   }
 
   applyRoomsGuests() {
@@ -730,6 +769,16 @@ export class HotelDetailComponent {
     const childAgesCombined: number[] = this.roomsConfig
       .reduce((acc: number[], r) => acc.concat(r.childAges || []), [])
       .filter((x) => typeof x === 'number' && !isNaN(x));
+    const extraBedFlagsCombined: number[] = [];
+    this.roomsConfig.forEach((r) => {
+      for (let j = 0; j < r.children; j++) {
+        const f =
+          Array.isArray(r.extraBedFlags) &&
+          j < r.extraBedFlags.length &&
+          r.extraBedFlags[j];
+        extraBedFlagsCombined.push(f ? 1 : 0);
+      }
+    });
     const invId = Number(
       this.selectedInventoryId || this.params.inventory_id || 0
     );
@@ -741,6 +790,7 @@ export class HotelDetailComponent {
       adults: v.adults,
       children: v.children,
       childAges: childAgesCombined,
+      extraBedFlags: extraBedFlagsCombined,
       inventory_id: invId,
       type: this.searchType
     };
@@ -794,8 +844,11 @@ export class HotelDetailComponent {
       const pPerson = Number(p?.person ?? 0);
       return pMeal === mealId && pPerson === effPersons;
     });
-    const detailId =
-      (opt && opt.detail_id != null ? opt.detail_id : match?.id) ?? null;
+    const detailIdRaw =
+      (opt && (opt.detail_id != null ? opt.detail_id : opt.detailId)) ??
+      (match && (match.detail_id != null ? match.detail_id : match.id)) ??
+      null;
+    const detailId = detailIdRaw != null ? Number(detailIdRaw) : null;
     const payload: any = {
       from: this.params.from || null,
       to: this.params.to || null,
@@ -803,6 +856,8 @@ export class HotelDetailComponent {
       adults: this.params.adults || null,
       children: this.params.children || null,
       childAges: this.params.childAges || null,
+      extraBedFlags: this.params.extraBedFlags || null,
+      type: (this.params as any)?.type || this.searchType || null,
       inventory_id: this.params.inventory_id || null,
       photo_url:
         this.primaryHotelPhotoUrl ||
@@ -819,6 +874,9 @@ export class HotelDetailComponent {
         meal_type_name: opt?.meal_type_name ?? null,
         rooms_used: opt?.rooms_used ?? null,
         childAges: this.params.childAges || null,
+        extraBedFlags: this.params.extraBedFlags || null,
+        extra_bed_adults: opt?.extra_bed_adults ?? null,
+        extra_bed_children: opt?.extra_bed_children ?? null,
         extra_beds_used: opt?.extra_beds_used ?? null,
         extra_bed_price: opt?.extra_bed_price ?? null,
         total_price: opt?.total_price ?? null,

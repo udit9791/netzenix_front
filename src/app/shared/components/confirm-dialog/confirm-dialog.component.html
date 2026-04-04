@@ -1,11 +1,14 @@
 <h2 mat-dialog-title>{{ data.title }}</h2>
 <mat-dialog-content>
-  <p>{{ data.message }}</p>
+  <p [innerHTML]="data.message"></p>
+  <p *ngIf="data.warningNote" style="color: #d32f2f; margin-top: 8px;">
+    {{ data.warningNote }}
+  </p>
   <div *ngIf="data.flightDetails" class="text-xs">
     <div>Traveler Type: {{ (data.travelerType || 'adult') | titlecase }}</div>
     <div *ngIf="(data.travelerType || '').toLowerCase() !== 'infant'">Per-person price: ₹ {{ getSellPrice() }}</div>
     <div *ngIf="(data.travelerType || '').toLowerCase() === 'infant'">Per-person infant price: ₹ {{ getInfantPrice() }}</div>
-    <div>Max refundable amount: ₹ {{ getPerPersonMaxRefund() }}</div>
+    <div>Max Penalty amount: ₹ {{ getPerPersonMaxRefund() }}</div>
   </div>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

@@ -373,7 +373,12 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Special Tag</mat-label>
-        <input matInput formControlName="specialTag" placeholder="e.g. Premium, VIP" />
+        <mat-select formControlName="specialTag">
+          <mat-option [value]="''">None</mat-option>
+          <mat-option *ngFor="let tag of specialTags" [value]="tag">
+            {{ tag }}
+          </mat-option>
+        </mat-select>
       </mat-form-field>
 
       <div class="flex items-center">
@@ -411,7 +416,13 @@
         <input matInput type="number" formControlName="holdBookingCutOffDays" min="1" />
                 <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('required')">Cut-off days is required</mat-error>
                 <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('min')">Must be at least 1 day</mat-error>
-                <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('maxDaysExceeded')">Cannot exceed 30 days</mat-error>
+                <mat-error *ngIf="flightForm.get('holdBookingCutOffDays')?.hasError('maxDaysExceeded')">
+                  Cannot exceed
+                  {{
+                    flightForm.get('holdBookingCutOffDays')?.errors?.['maxDaysExceeded']?.max
+                  }}
+                  days
+                </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -449,7 +460,7 @@
 
           <div class="flex items-center gap-2">
             <mat-form-field appearance="outline" class="flex-1">
-              <mat-label>Refundable Amount (₹)</mat-label>
+              <mat-label>Penalty Amount (₹)</mat-label>
               <input matInput type="number" formControlName="amount" min="0" [max]="flightForm.get('pricePerSeat')?.value" />
               <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('required')">Amount is required</mat-error>
               <mat-error *ngIf="fareRules.at(i).get('amount')?.hasError('min')">Amount cannot be negative</mat-error>

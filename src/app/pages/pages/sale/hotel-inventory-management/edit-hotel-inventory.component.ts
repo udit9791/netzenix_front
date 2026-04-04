@@ -105,6 +105,8 @@ export class EditHotelInventoryComponent implements OnInit {
       holdBookingAmount: [null],
       holdBookingCutOffDays: [null],
       holdBookingLimit: [null],
+      markupType: [null],
+      markupValue: [null],
       blackoutDates: this.fb.array([]),
       blackoutDateInput: [null],
       roomDetails: this.fb.array([])
@@ -606,7 +608,14 @@ export class EditHotelInventoryComponent implements OnInit {
     }
     this.form.patchValue({
       checkinTime: inv.check_in_time || '',
-      checkoutTime: inv.check_out_time || ''
+      checkoutTime: inv.check_out_time || '',
+      markupType:
+        inv.markup_type === 'P'
+          ? 'percentage'
+          : inv.markup_type === 'F'
+            ? 'flat'
+            : null,
+      markupValue: inv.markup_value != null ? Number(inv.markup_value) : null
     });
 
     const invExtra = inv.extra_costs || inv.extraCosts || null;
@@ -786,6 +795,22 @@ export class EditHotelInventoryComponent implements OnInit {
 
     const payload = {
       inventory: {
+        hotel_id:
+          this.form.get('hotelId')?.value != null
+            ? Number(this.form.get('hotelId')?.value)
+            : null,
+        country_id:
+          this.form.get('countryId')?.value != null
+            ? Number(this.form.get('countryId')?.value)
+            : null,
+        state_id:
+          this.form.get('stateId')?.value != null
+            ? Number(this.form.get('stateId')?.value)
+            : null,
+        city_id:
+          this.form.get('cityId')?.value != null
+            ? Number(this.form.get('cityId')?.value)
+            : null,
         check_in_time: this.form.get('checkinTime')?.value,
         check_out_time: this.form.get('checkoutTime')?.value,
         extra_costs: extraCosts,
@@ -809,6 +834,16 @@ export class EditHotelInventoryComponent implements OnInit {
         hold_booking_limit:
           this.form.get('holdBookingLimit')?.value != null
             ? Number(this.form.get('holdBookingLimit')?.value)
+            : null,
+        markup_type:
+          this.form.get('markupType')?.value === 'percentage'
+            ? 'P'
+            : this.form.get('markupType')?.value === 'flat'
+              ? 'F'
+              : null,
+        markup_value:
+          this.form.get('markupValue')?.value != null
+            ? Number(this.form.get('markupValue')?.value)
             : null,
         blackout_dates: blackoutDates
       },

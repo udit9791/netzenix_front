@@ -1,0 +1,168 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <div class="flex items-center justify-between px-4 py-3">
+      <vex-breadcrumbs
+        [crumbs]="['Masters', 'Tenant Plans', 'View']"
+      ></vex-breadcrumbs>
+      <button mat-stroked-button color="primary" (click)="goBack()">
+        Back to list
+      </button>
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="p-4 space-y-4">
+      <div
+        *ngIf="isLoading"
+        class="flex justify-center items-center p-8"
+      >
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+
+      <div *ngIf="!isLoading && plan" class="space-y-6">
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border p-4 space-y-2">
+            <h2 class="text-lg font-semibold">Tenant Details</h2>
+            <div>
+              <span class="font-medium">Tenant ID:</span>
+              <span *ngIf="tenantId !== null; else noTenantId">
+                {{ tenantId }}
+              </span>
+              <ng-template #noTenantId>-</ng-template>
+            </div>
+            <div>
+              <span class="font-medium">Name:</span>
+              {{ tenantName }}
+            </div>
+            <div>
+              <span class="font-medium">Domain:</span>
+              {{ tenantDomain }}
+            </div>
+          </div>
+
+          <div class="rounded-lg border p-4 space-y-2">
+            <h2 class="text-lg font-semibold">Subscription Details</h2>
+            <div>
+              <span class="font-medium">Subscription ID:</span>
+              <span *ngIf="subscriptionId !== null; else noSubscriptionId">
+                {{ subscriptionId }}
+              </span>
+              <ng-template #noSubscriptionId>-</ng-template>
+            </div>
+            <div>
+              <span class="font-medium">Plan ID:</span>
+              <span *ngIf="planId !== null; else noPlanId">
+                {{ planId }}
+              </span>
+              <ng-template #noPlanId>-</ng-template>
+            </div>
+            <div>
+              <span class="font-medium">User ID:</span>
+              <span *ngIf="userId !== null; else noUserId">
+                {{ userId }}
+              </span>
+              <ng-template #noUserId>-</ng-template>
+            </div>
+            <div>
+              <span class="font-medium">Amount:</span>
+              <span *ngIf="amountValue !== null; else noAmountValue">
+                {{ amountValue | number: '1.2-2' }}
+              </span>
+              <ng-template #noAmountValue>-</ng-template>
+            </div>
+            <div>
+              <span class="font-medium">Active:</span>
+              <span *ngIf="isActive !== null; else noActive">
+                {{ isActive ? 'Active' : 'Inactive' }}
+              </span>
+              <ng-template #noActive>-</ng-template>
+            </div>
+            <div *ngIf="subscriptionCreatedAt">
+              <span class="font-medium">Created At:</span>
+              {{ subscriptionCreatedAt | date: 'dd-MM-yyyy HH:mm' }}
+            </div>
+            <div *ngIf="subscriptionUpdatedAt">
+              <span class="font-medium">Updated At:</span>
+              {{ subscriptionUpdatedAt | date: 'dd-MM-yyyy HH:mm' }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="rounded-lg border p-4 space-y-2"
+          *ngIf="pricingPlan"
+        >
+          <h2 class="text-lg font-semibold">Pricing Plan Details</h2>
+          <div>
+            <span class="font-medium">Plan Name:</span>
+            {{ pricingPlanName }}
+          </div>
+          <div>
+            <span class="font-medium">Price:</span>
+            <span *ngIf="pricingPlanPrice !== null; else noPricingPrice">
+              {{ pricingPlanPrice | number: '1.2-2' }}
+            </span>
+            <ng-template #noPricingPrice>-</ng-template>
+          </div>
+          <div>
+            <span class="font-medium">Billing Cycle:</span>
+            {{ billingCycle | titlecase }}
+          </div>
+          <div>
+            <span class="font-medium">Button Text:</span>
+            {{ buttonText }}
+          </div>
+          <div>
+            <span class="font-medium">Recommended:</span>
+            {{ isRecommended }}
+          </div>
+          <div>
+            <span class="font-medium">Status:</span>
+            {{ pricingStatus }}
+          </div>
+          <div>
+            <span class="font-medium">Sort Order:</span>
+            <span *ngIf="sortOrder !== null; else noSortOrder">
+              {{ sortOrder }}
+            </span>
+            <ng-template #noSortOrder>-</ng-template>
+          </div>
+          <div *ngIf="pricingCreatedAt">
+            <span class="font-medium">Created At:</span>
+            {{ pricingCreatedAt | date: 'dd-MM-yyyy HH:mm' }}
+          </div>
+          <div *ngIf="pricingUpdatedAt">
+            <span class="font-medium">Updated At:</span>
+            {{ pricingUpdatedAt | date: 'dd-MM-yyyy HH:mm' }}
+          </div>
+        </div>
+
+        <div class="rounded-lg border p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm text-gray-600">
+              Payment link amount
+            </div>
+            <div class="text-xl font-semibold">
+              <span *ngIf="paymentAmount !== null; else noAmount">
+                {{ paymentAmount | number: '1.2-2' }}
+              </span>
+              <ng-template #noAmount>-</ng-template>
+            </div>
+          </div>
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="createPaymentLink()"
+            [disabled]="paymentAmount === null || paymentAmount <= 0"
+          >
+            send Payment Link
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && !plan" class="p-4 text-center">
+        No tenant plan data found
+      </div>
+    </div>
+  </vex-page-layout-content>
+</vex-page-layout>

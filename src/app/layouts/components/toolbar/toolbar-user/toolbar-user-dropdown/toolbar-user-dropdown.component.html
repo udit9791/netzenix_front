@@ -37,6 +37,18 @@
       <mat-icon class="notification-chevron flex-none" svgIcon="mat:chevron_right"></mat-icon>
     </a>
 
+    <a
+    
+      [routerLink]="['/sub-users']"
+      class="notification flex items-center"
+      matRipple
+      matRippleColor="rgb(var(--vex-color-primary-600), 0.1)">
+      <mat-icon
+        class="vex-user-menu-item__icon icon-sm"
+        svgIcon="mat:group"
+      ></mat-icon>
+      <div class="vex-user-menu-item__label">Sub Users</div>
+    </a>
     <!-- Always visible: Sign Out -->
     <a
       (click)="logout()"

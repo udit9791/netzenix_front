@@ -1,0 +1,135 @@
+<vex-page-layout>
+  <vex-page-layout-header>
+    <div class="flex items-center justify-between px-4 py-3">
+      <vex-breadcrumbs
+        [crumbs]="['Masters', 'Price Enquiries']"
+      ></vex-breadcrumbs>
+    </div>
+  </vex-page-layout-header>
+
+  <vex-page-layout-content>
+    <div class="p-4 space-y-4">
+      <div class="flex flex-wrap gap-4 items-center">
+        <mat-form-field appearance="outline">
+          <mat-label>Search</mat-label>
+          <input
+            matInput
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="applyFilter()"
+            placeholder="Search by name, email, phone or plan"
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="relative">
+        <table mat-table [dataSource]="pagedData" class="w-full">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>ID</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.id }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="plan_name">
+            <th mat-header-cell *matHeaderCellDef>Plan</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.plan_name || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Name</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.name }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.email }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="phone">
+            <th mat-header-cell *matHeaderCellDef>Phone</th>
+            <td mat-cell *matCellDef="let row">
+              {{ formatPhone(row) }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="business_type">
+            <th mat-header-cell *matHeaderCellDef>Business Type</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.business_type || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.status || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="message">
+            <th mat-header-cell *matHeaderCellDef>Message</th>
+            <td mat-cell *matCellDef="let row" class="message-cell">
+              {{ row.message || '-' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="created_at">
+            <th mat-header-cell *matHeaderCellDef>Created At</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.created_at | date: 'dd-MM-yyyy HH:mm' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="viewDetails(row)"
+                matTooltip="View details"
+              >
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: displayedColumns"
+          ></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td
+              class="mat-cell py-4 text-center"
+              [attr.colspan]="displayedColumns.length"
+            >
+              <div
+                *ngIf="isLoading"
+                class="flex justify-center items-center p-4"
+              >
+                <mat-spinner diameter="40"></mat-spinner>
+              </div>
+              <div *ngIf="!isLoading">No price enquiries found</div>
+            </td>
+          </tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalItems"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="[5, 10, 25, 50]"
+          (page)="onPageChange($event)"
+        >
+        </mat-paginator>
+      </div>
+    </div>
+  </vex-page-layout-content>
+</vex-page-layout>

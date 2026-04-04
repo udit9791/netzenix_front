@@ -12,52 +12,111 @@
 
   <!-- Ticket content -->
   <div id="printSection" *ngIf="!loading && !error && orderDetails" class="bg-white border rounded-lg shadow-lg print:shadow-none print:border-0">
-    <!-- Header -->
+    <!-- Header / Agency Details -->
     <div class="p-4 border-b flex justify-between items-center company-info">
-      <h1 class="text-xl font-bold">{{ orderDetails?.company_name || 'Sunabha Green Technologies Pvt Ltd' }}</h1>
-      <div class="text-right">
-        <p>{{ orderDetails?.company_email || 'trip@subcrm.com' }}</p>
-        <p>{{ orderDetails?.company_phone || '9724000401' }}</p>
+      <div>
+        <h1 class="text-xl font-bold">
+          {{ orderDetails?.user_details?.agency_name || userDetail?.agency_name || orderDetails?.company_name || 'Sunabha Green Technologies Pvt Ltd' }}
+        </h1>
+        <p
+          class="text-xs"
+          *ngIf="
+            orderDetails?.user_details?.address_line1 ||
+            orderDetails?.user_details?.address_line2 ||
+            userDetail?.address_line1 ||
+            userDetail?.address_line2
+          ">
+          {{
+            orderDetails?.user_details?.address_line1 ||
+            userDetail?.address_line1
+          }}
+          {{
+            orderDetails?.user_details?.address_line2 ||
+            userDetail?.address_line2
+          }}
+        </p>
       </div>
-    </div>
-
-    <!-- PNR Section -->
-    <div class="p-4 border-b flex justify-between items-center">
-      <div></div>
-      <div class="text-center">
-        <p class="text-sm">AIRLINE PNR</p>
-        <h2 class="text-2xl font-bold">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</h2>
+      <div class="text-right text-xs">
+        <p *ngIf="orderDetails?.user_details?.mobile || userDetail?.mobile">
+          Mobile:
+          {{ orderDetails?.user_details?.mobile || userDetail?.mobile }}
+        </p>
+        <p *ngIf="orderDetails?.user_details?.email || userDetail?.email">
+          Email:
+          {{ orderDetails?.user_details?.email || userDetail?.email }}
+        </p>
+        <p
+          *ngIf="
+            orderDetails?.user_details?.gst ||
+            orderDetails?.user_details?.gst_number ||
+            userDetail?.gst_number
+          ">
+          GST:
+          {{
+            orderDetails?.user_details?.gst ||
+            orderDetails?.user_details?.gst_number ||
+            userDetail?.gst_number
+          }}
+        </p>
       </div>
     </div>
 
     <!-- Flight Info -->
     <div class="p-4 border-b">
       <div class="bg-black text-white p-2 mb-4">
-        <h2 class="font-bold">Your flight from {{ flightDetails?.details?.[0]?.from || 'Ahmedabad' }} — {{ flightDetails?.details?.[0]?.to || 'Bagdogra' }}</h2>
+        <h2 class="font-bold">
+          Your trip from {{ firstSegment?.from || '' }} — {{ lastSegment?.to || '' }}
+        </h2>
         <p class="text-xs">* Please verify flight times with the airline prior to departure</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div
+        *ngFor="let d of flightDetails?.details; let i = index"
+        class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+      >
         <div>
           <div class="flex items-center mb-2">
-            <img src="assets/img/airlines/{{ flightDetails?.details?.[0]?.airline_code || 'G8' }}.png" alt="Airline Logo" class="w-10 h-10 mr-2">
+            <img
+              [src]="airlineLogoUrl"
+              alt="Airline Logo"
+              class="w-20 h-20 mr-2"
+            />
             <div>
-              <p class="font-bold">{{ flightDetails?.details?.[0]?.airline || 'Akasa Air' }}</p>
-              <p class="text-xs">{{ flightDetails?.details?.[0]?.airline_code || 'G8' }}-{{ flightDetails?.details?.[0]?.flight_number || '1305' }}</p>
+              <p class="font-bold">{{ d.airline || '' }}</p>
+              <p class="text-xs">
+                {{ d.airline_code || '' }}{{ d.airline_code && d.flight_number ? '-' : ''
+                }}{{ d.flight_number || '' }}
+              </p>
             </div>
           </div>
         </div>
 
         <div>
-          <p class="text-xs">{{ flightDetails?.details?.[0]?.from || 'Ahmedabad (AMD)' }}</p>
-          <p class="font-bold">{{ flightDetails?.details?.[0]?.from_city || 'Ahmedabad' }}</p>
-          <p>{{ flightDetails?.details?.[0]?.dep_date ? (flightDetails?.details?.[0]?.dep_date + ' ' + flightDetails?.details?.[0]?.dep_time | date:'EEE, dd MMM, yyyy, HH:mm') : (flightDetails?.details?.[0]?.dep_time || 'Thu, 14 Aug, 2025, 04:35 PM') }}</p>
+          <p class="text-xs">{{ d.from || 'Ahmedabad (AMD)' }}</p>
+          <p class="font-bold">{{ d.from_city || 'Ahmedabad' }}</p>
+          <p>
+            <span *ngIf="d.flight_date">
+              {{ d.flight_date | date: 'EEE, dd MMM, yyyy' }}
+            </span>
+            <span *ngIf="d.dep_time">
+              <ng-container *ngIf="d.flight_date">, </ng-container>
+              {{ d.dep_time }}
+            </span>
+          </p>
         </div>
 
         <div>
-          <p class="text-xs">{{ flightDetails?.details?.[0]?.to || 'Bagdogra (IXB)' }}</p>
-          <p class="font-bold">{{ flightDetails?.details?.[0]?.to_city || 'Bagdogra' }}</p>
-          <p>{{ flightDetails?.details?.[0]?.arr_date ? (flightDetails?.details?.[0]?.arr_date + ' ' + flightDetails?.details?.[0]?.arr_time | date:'EEE, dd MMM, yyyy, HH:mm') : (flightDetails?.details?.[0]?.arr_time || 'Thu, 14 Aug, 2025, 07:20 PM') }}</p>
+          <p class="text-xs">{{ d.to || 'Bagdogra (IXB)' }}</p>
+          <p class="font-bold">{{ d.to_city || 'Bagdogra' }}</p>
+          <p>
+            <span *ngIf="d.arrival_date">
+              {{ d.arrival_date | date: 'EEE, dd MMM, yyyy' }}
+            </span>
+            <span *ngIf="d.arr_time">
+              <ng-container *ngIf="d.arrival_date">, </ng-container>
+              {{ d.arr_time }}
+            </span>
+          </p>
         </div>
       </div>
 
@@ -71,9 +130,62 @@
             <div>Economy</div>
             
             <div class="font-semibold">Baggage:</div>
-            <div>Checked-In: 15 KG</div>
+            <div>
+              Checked-In: {{ checkinWeight }}
+              <span *ngIf="cabinWeight"> | Cabin: {{ cabinWeight }}</span>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div *ngIf="flightDetails?.details?.length" class="mt-4">
+        <h3 class="font-bold mb-2 text-sm">Flight Segment Details</h3>
+        <table class="w-full border-collapse text-xs">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="border p-2 text-left">Sl No</th>
+              <th class="border p-2 text-left">Type</th>
+              <th class="border p-2 text-left">Flight</th>
+              <th class="border p-2 text-left">From</th>
+              <th class="border p-2 text-left">To</th>
+              <th class="border p-2 text-left">Departure</th>
+              <th class="border p-2 text-left">Arrival</th>
+              <th class="border p-2 text-left">PNR</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of flightDetails.details; let i = index">
+              <td class="border p-2">{{ i + 1 }}</td>
+              <td class="border p-2">{{ d.type || '-' }}</td>
+              <td class="border p-2">
+                {{ d.airline_code || '' }}{{ d.airline_code && d.flight_number ? '-' : '' }}{{ d.flight_number || '' }}
+              </td>
+              <td class="border p-2">{{ d.from }}</td>
+              <td class="border p-2">{{ d.to }}</td>
+              <td class="border p-2">
+                <span *ngIf="d.flight_date">
+                  {{ d.flight_date | date: 'dd MMM yyyy' }}
+                </span>
+                <span *ngIf="d.dep_time">
+                  <ng-container *ngIf="d.flight_date">, </ng-container>
+                  {{ d.dep_time }}
+                </span>
+              </td>
+              <td class="border p-2">
+                <span *ngIf="d.arrival_date">
+                  {{ d.arrival_date | date: 'dd MMM yyyy' }}
+                </span>
+                <span *ngIf="d.arr_time">
+                  <ng-container *ngIf="d.arrival_date">, </ng-container>
+                  {{ d.arr_time }}
+                </span>
+              </td>
+              <td class="border p-2">
+                {{ d.pnr || flightDetails?.inventory?.pnr || '-' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -95,18 +207,56 @@
             <td class="border p-2">{{ i + 1 }}</td>
             <td class="border p-2">{{ traveler?.title }} {{ traveler?.first_name }} {{ traveler?.last_name }}</td>
             <td class="border p-2">{{ traveler?.passanger_type || 'Adult' }}</td>
-            <td class="border p-2">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</td>
+            <td class="border p-2">{{ flightDetails?.details?.[0]?.pnr || flightDetails?.inventory?.pnr || '-' }}</td>
             <td class="border p-2">{{ traveler?.ticket_number || '' }}</td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Barcode for each passenger -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div *ngFor="let traveler of orderDetails?.details; let i = index" class="text-center">
-          <img [src]="flightDetails?.details?.[0]?.barcode || 'assets/img/barcode-placeholder.png'" alt="Barcode" class="mx-auto h-20">
-          <p class="text-xs mt-1">{{ flightDetails?.inventory?.pnr || 'ICIMWK' }}</p>
+      <!-- Barcodes per flight segment -->
+      <div *ngIf="flightDetails?.details?.length > 0" class="mt-4">
+        <div
+          *ngFor="let detail of flightDetails.details; let i = index"
+          class="mb-4 pb-4 border-b last:border-b-0">
+          <p class="text-sm font-semibold mb-1">
+            Barcode(s) for your journey {{ detail?.from }}-{{ detail?.to }} on
+            {{ detail?.airline }}
+          </p>
+          <p class="text-xs mb-2" *ngIf="detail?.pnr">
+            PNR: <span class="font-semibold">{{ detail.pnr }}</span>
+          </p>
+          <div class="flex justify-center">
+            <img
+              *ngIf="detail?.barcode"
+              [src]="detail.barcode"
+              alt="Boarding Pass Barcode"
+              class="max-w-xs h-auto"
+              style="max-height: 80px;" />
+            <img
+              *ngIf="!detail?.barcode && i === 0 && flightDetails?.inventory?.barcode"
+              [src]="flightDetails.inventory.barcode"
+              alt="Boarding Pass Barcode"
+              class="max-w-xs h-auto"
+              style="max-height: 80px;" />
+            <p
+              *ngIf="!detail?.barcode && (i !== 0 || !flightDetails?.inventory?.barcode)"
+              class="text-gray-500 text-xs">
+              No barcode available
+            </p>
+          </div>
         </div>
+      </div>
+
+      <!-- Fallback for legacy barcode display -->
+      <div
+        *ngIf="flightDetails?.inventory?.barcode && !flightDetails?.details?.length"
+        class="mt-4 text-center">
+        <p class="text-sm font-semibold mb-2">Boarding Pass Barcode</p>
+        <img
+          [src]="flightDetails.inventory.barcode"
+          alt="Boarding Pass Barcode"
+          class="max-w-xs h-auto"
+          style="max-height: 80px;" />
       </div>
     </div>
 
@@ -124,9 +274,42 @@
         <p>{{ orderDetails?.total_amount || '0.00' }}</p>
       </div>
       
-      <div class="flex justify-between border-b pb-2">
-        <p>Taxes, Surcharge & Fees</p>
-        <p>{{ (orderDetails?.sgst + orderDetails?.cgst + orderDetails?.service_fee) || '0.00' }}</p>
+
+
+      <div class="flex justify-between border-b pb-2" *ngIf="(orderDetails?.sgst || 0) > 0">
+        <p>SGST</p>
+        <p>{{ orderDetails?.sgst || '0.00' }}</p>
+      </div>
+
+      <div class="flex justify-between border-b pb-2" *ngIf="(orderDetails?.cgst || 0) > 0">
+        <p>CGST</p>
+        <p>{{ orderDetails?.cgst || '0.00' }}</p>
+      </div>
+
+      <div
+        class="flex justify-between border-b pb-2"
+        *ngIf="
+          (orderDetails?.igst || 0) > 0 &&
+          ((orderDetails?.sgst || 0) + (orderDetails?.cgst || 0)) === 0
+        "
+      >
+        <p>IGST</p>
+        <p>{{ orderDetails?.igst || '0.00' }}</p>
+      </div>
+
+      <div class="flex justify-between border-b pb-2" *ngIf="(orderDetails?.service_fee || 0) > 0">
+        <p>Service Fee</p>
+        <p>{{ orderDetails?.service_fee || '0.00' }}</p>
+      </div>
+
+      <div class="flex justify-between border-b pb-2" *ngIf="(orderDetails?.commission || 0) > 0">
+        <p>Commission</p>
+        <p>-{{ orderDetails?.commission || '0.00' }}</p>
+      </div>
+
+      <div class="flex justify-between border-b pb-2" *ngIf="(orderDetails?.tds_on_commission || 0) > 0">
+        <p>TDS on Commission</p>
+        <p>{{ orderDetails?.tds_on_commission || '0.00' }}</p>
       </div>
       
       <div class="flex justify-between font-bold pt-2">

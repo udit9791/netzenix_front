@@ -1,0 +1,65 @@
+.itinerary-builder {
+  max-width: 960px;
+  margin: 16px auto;
+}
+
+.itinerary-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.days-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.day-item {
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.travel-type {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.travel-type-group {
+  display: flex;
+  gap: 16px;
+}
+
+.group-dates-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.group-date-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}

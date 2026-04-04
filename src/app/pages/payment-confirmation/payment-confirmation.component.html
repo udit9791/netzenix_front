@@ -1,9 +1,12 @@
 <div class="container mx-auto p-6 max-w-5xl">
   <div class="bg-white rounded-lg shadow-lg overflow-hidden">
     <!-- Header with confirmation message -->
-    <div class="bg-green-500 p-4 text-white">
+    <div class="bg-blue-500 p-4 text-white flex items-center justify-between">
+      <button mat-icon-button color="primary" (click)="goBack()" class="bg-white text-blue-600 rounded-full mr-2">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
       <h1 class="text-xl font -bold">Your Trip Details</h1>
-      <p class="text-sm bg-green-600 inline-block px-2 py-1 rounded">{{ bookingStatusName || 'N/A' }}</p>
+      <p class="text-sm bg-blue-600 inline-block px-2 py-1 rounded">{{ bookingStatusName || 'N/A' }}</p>
       <p *ngIf="orderDetails?.status === 8 && holdRemainingText" class="text-xs bg-yellow-600 inline-block px-2 py-1 rounded ml-2">
         Hold: {{ holdRemainingText }}
       </p>
@@ -74,47 +77,63 @@
             <span class="font-semibold">₹ {{ orderDetails.total_amount || 0 }}</span>
           </div>
 
-          <div class="flex justify-between py-1 border-b border-gray-200">
-            <span class="text-gray-700">Service Fee</span>
-            <span class="font-semibold">₹ {{ orderDetails.service_fee || 0 }}</span>
-          </div>
+          <ng-container *ngIf="!isSupplier">
+            <div class="flex justify-between py-1 border-b border-gray-200">
+              <span class="text-gray-700">Service Fee</span>
+              <span class="font-semibold">₹ {{ orderDetails.service_fee || 0 }}</span>
+            </div>
 
-          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="orderDetails.igst && orderDetails.igst > 0">
-            <span class="text-gray-700">IGST</span>
-            <span class="font-semibold">₹ {{ orderDetails.igst }}</span>
-          </div>
+            <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="orderDetails.igst && orderDetails.igst > 0">
+              <span class="text-gray-700">IGST</span>
+              <span class="font-semibold">₹ {{ orderDetails.igst }}</span>
+            </div>
 
-          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.sgst">
-            <span class="text-gray-700">SGST</span>
-            <span class="font-semibold">₹ {{ orderDetails.sgst }}</span>
-          </div>
+            <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.sgst">
+              <span class="text-gray-700">SGST</span>
+              <span class="font-semibold">₹ {{ orderDetails.sgst }}</span>
+            </div>
 
-          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.cgst">
-            <span class="text-gray-700">CGST</span>
-            <span class="font-semibold">₹ {{ orderDetails.cgst }}</span>
-          </div>
+            <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="(!orderDetails.igst || orderDetails.igst === 0) && orderDetails.cgst">
+              <span class="text-gray-700">CGST</span>
+              <span class="font-semibold">₹ {{ orderDetails.cgst }}</span>
+            </div>
 
-          <div class="flex justify-between py-1 border-b border-gray-200">
-            <span class="text-gray-700">Commission</span>
-            <span class="font-semibold text-green-700">-₹ {{ orderDetails.commission || 0 }}</span>
-          </div>
+            <div class="flex justify-between py-1 border-b border-gray-200">
+              <span class="text-gray-700">Commission</span>
+              <span class="font-semibold text-green-700">-₹ {{ orderDetails.commission || 0 }}</span>
+            </div>
 
-          <div
-            class="flex justify-between py-1 border-b border-gray-200"
-            *ngIf="orderDetails.markup && orderDetails.markup > 0"
-          >
-            <span class="text-gray-700">Markup</span>
-            <span class="font-semibold">₹ {{ orderDetails.markup }}</span>
-          </div>
+            <div
+              class="flex justify-between py-1 border-b border-gray-200"
+              *ngIf="orderDetails.markup && orderDetails.markup > 0"
+            >
+              <span class="text-gray-700">Markup</span>
+              <span class="font-semibold">₹ {{ orderDetails.markup }}</span>
+            </div>
+          </ng-container>
 
-          <div class="flex justify-between py-1 border-b border-gray-200">
+          <div class="flex justify-between py-1 border-b border-gray-200" *ngIf="!isSupplier">
             <span class="text-gray-700">TDS on Commission</span>
             <span class="font-semibold">₹ {{ orderDetails.tds_on_commission || 0 }}</span>
           </div>
 
-          <div class="flex justify-between py-2 mt-1 border-t border-gray-300">
+          <div
+            class="flex justify-between py-1 border-b border-gray-200"
+            *ngIf="orderDetails?.status === 8 && orderDetails?.hold_amount"
+          >
+            <span class="text-gray-700">Hold Amount</span>
+            <span class="font-semibold">₹ {{ orderDetails.hold_amount || 0 }}</span>
+          </div>
+
+          <div class="flex justify-between py-2 mt-1 border-t border-gray-300" *ngIf="!isSupplier">
             <span class="text-gray-900 font-semibold">TOTAL PAYMENT FOR TRIP</span>
-            <span class="font-semibold text-gray-900">₹ {{ orderDetails.final_total || 0 }}</span>
+            <span class="font-semibold text-gray-900">
+              ₹ {{
+                orderDetails?.status === 8
+                  ? (orderDetails?.hold_amount || 0)
+                  : (orderDetails?.final_total || 0)
+              }}
+            </span>
           </div>
 
           <div class="flex justify-between py-1 text-xs text-gray-500">
@@ -123,12 +142,149 @@
         </div>
       </div>
 
-      <!-- Attached Trips Section -->
       <div class="p-4 border-b">
         <div class="flex justify-between items-center mb-2">
           <h2 class="text-lg font-semibold">Attached Trips</h2>
 
         </div>
+      </div>
+
+      <div class="p-4 border-b" *ngIf="orderDetails?.type === 'itinerary'">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Itinerary Details</h2>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded mb-4" *ngIf="orderDetails?.itinerary_info">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+            <div>
+              <p class="text-xs text-gray-500">ITINERARY NAME</p>
+              <p class="font-semibold">
+                {{ orderDetails.itinerary_info.name || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">TRAVEL TYPE</p>
+              <p class="font-semibold text-xs uppercase">
+                {{ orderDetails.itinerary_info.travel_type || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">NIGHTS</p>
+              <p class="font-semibold">
+                {{ orderDetails.itinerary_info.nights || '—' }}
+              </p>
+            </div>
+          </div>
+
+         
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded" *ngIf="orderDetails?.itinerary_days?.length">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-md font-semibold">Day-wise Plan</h3>
+          </div>
+
+          <div
+            *ngFor="let d of orderDetails.itinerary_days"
+            class="mb-3 border border-gray-200 rounded p-3 last:mb-0"
+          >
+            <div class="flex justify-between items-center mb-1">
+              <p class="text-sm font-semibold">
+                Day {{ d.day_number }} - {{ d.meta?.title || 'N/A' }}
+              </p>
+            </div>
+            <p class="text-xs text-gray-700 mb-1">
+              Hotel: <span class="font-medium">{{ d.hotel_name || 'N/A' }}</span>
+              • Room: <span class="font-medium">{{ d.room_name || 'N/A' }}</span>
+              • Meal Plan:
+              <span class="font-medium">{{ d.meal_plan_name || 'N/A' }}</span>
+              • Rooms: <span class="font-medium">{{ d.rooms }}</span>
+              • Adults: <span class="font-medium">{{ d.adults }}</span>
+              • Children: <span class="font-medium">{{ d.children }}</span>
+              • Extra Bed Adults:
+              <span class="font-medium">{{ d.extra_bed_adults }}</span>
+              • Extra Bed Children:
+              <span class="font-medium">{{ d.extra_bed_children }}</span>
+            </p>
+            <p class="text-xs text-gray-600 whitespace-pre-line">
+              {{ d.meta?.description || '' }}
+            </p>
+          </div>
+        </div>
+
+
+          <div
+            class="mt-4"
+            *ngIf="itineraryDetail?.pricing?.vehicles_selected?.length"
+          >
+            <p class="text-xs text-gray-500 mb-2">TRANSPORTATION</p>
+            <div class="space-y-2">
+              <div
+                class="flex items-center border rounded p-2 text-xs bg-white"
+                *ngFor="
+                  let v of itineraryDetail.pricing.vehicles_selected
+                "
+              >
+                <div class="mr-3" *ngIf="getItineraryVehicleImage(v.vehicle_id) as img">
+                  <img
+                    [src]="img"
+                    [alt]="
+                      getItineraryVehicleName(v.vehicle_id) || 'Vehicle'
+                    "
+                    class="w-16 h-10 object-cover rounded"
+                  />
+                </div>
+                <div class="flex-1">
+                  <div class="font-semibold">
+                    {{
+                      getItineraryVehicleName(v.vehicle_id) ||
+                        ('Vehicle ' + v.vehicle_id)
+                    }}
+                  </div>
+                  <div class="text-[11px] text-gray-600">
+                    Type:
+                    {{
+                      getItineraryVehicleType(v.vehicle_id) ||
+                        v.type ||
+                        'N/A'
+                    }}
+                    • Qty: {{ v.qty }}
+                    <span *ngIf="v.max_occupancy">
+                      • Max {{ v.max_occupancy }} passengers
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div *ngIf="orderDetails.itinerary_info.inclusions">
+              <p class="text-xs text-gray-500 mb-1">INCLUSIONS</p>
+              <div
+                class="border rounded p-3 text-xs whitespace-pre-line max-h-48 overflow-y-auto"
+              >
+                {{ orderDetails.itinerary_info.inclusions }}
+              </div>
+            </div>
+            <div *ngIf="orderDetails.itinerary_info.exclusions">
+              <p class="text-xs text-gray-500 mb-1">EXCLUSIONS</p>
+              <div
+                class="border rounded p-3 text-xs whitespace-pre-line max-h-48 overflow-y-auto"
+              >
+                {{ orderDetails.itinerary_info.exclusions }}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4" *ngIf="orderDetails.itinerary_info.terms">
+            <p class="text-xs text-gray-500 mb-1">TERMS</p>
+            <div
+              class="border rounded p-3 text-xs whitespace-pre-line max-h-48 overflow-y-auto"
+            >
+              {{ orderDetails.itinerary_info.terms }}
+            </div>
+          </div>
       </div>
 
       <!-- Hotel Details Section -->
@@ -182,10 +338,10 @@
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
+            <!-- <div>
               <p class="text-xs text-gray-500">EXTRA BED PRICE</p>
               <p class="font-semibold">₹ {{ hotelDetails?.inventory?.extra_bed_price || 0 }}</p>
-            </div>
+            </div> -->
             <div>
               <p class="text-xs text-gray-500">ROOM ID</p>
               <p class="font-semibold">
@@ -224,10 +380,10 @@
               <p class="font-semibold mb-2">
                 {{ hotelDetails?.inventory?.hotel_name || additionalData?.hotel_name || 'N/A' }}
               </p>
-              <p class="text-xs text-gray-500">STAY DATES</p>
+              <!-- <p class="text-xs text-gray-500">STAY DATES</p>
               <p class="font-semibold">
                 {{ additionalData?.from || 'N/A' }} - {{ additionalData?.to || 'N/A' }}
-              </p>
+              </p> -->
             </div>
           </div>
         </div>
@@ -259,6 +415,20 @@
                   • Children:
                   <span class="font-semibold">{{ room.children }}</span>
                 </p>
+                <p
+                  class="text-xs text-gray-500 mb-1"
+                  *ngIf="room.child_extra_bed || room.adult_extra_bed"
+                >
+                  <span *ngIf="room.adult_extra_bed">
+                    Extra bed adults:
+                    <span class="font-semibold">{{ room.adult_extra_bed }}</span>
+                  </span>
+                  <span *ngIf="room.child_extra_bed">
+                    <span *ngIf="room.adult_extra_bed">&nbsp;• </span>
+                    Child extra bed:
+                    <span class="font-semibold">{{ room.child_extra_bed }}</span>
+                  </span>
+                </p>
                 <p class="text-xs text-gray-500">
                   Check-in:
                   <span class="font-semibold">{{ room.check_in }}</span>
@@ -271,10 +441,10 @@
                   • Price/night:
                   <span class="font-semibold">₹ {{ room.price_per_night }}</span>
                 </p>
-                <p class="text-xs text-gray-500">
+                <!-- <p class="text-xs text-gray-500">
                   Total price:
                   <span class="font-semibold">₹ {{ room.total_price }}</span>
-                </p>
+                </p> -->
               </div>
             </div>
 
@@ -338,6 +508,42 @@
                 </div>
               </div>
             </div>
+
+            <div class="mt-4 bg-white rounded p-3 border border-gray-200">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">REFUNDABILITY</p>
+                  <span
+                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                    [ngClass]="isRefundable() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                  >
+                    {{ isRefundable() ? 'Refundable' : 'Non-Refundable' }}
+                  </span>
+                </div>
+                <div *ngIf="isRefundable() && getRefundAmount() > 0" class="text-xs text-gray-700 text-left md:text-right">
+                  <p>Approx. maximum refund per ticket:</p>
+                  <p class="font-semibold text-gray-900">₹ {{ getRefundAmount() | number : '1.0-0' }}</p>
+                </div>
+              </div>
+
+              <div *ngIf="getFareRules().length" class="mt-3">
+                <p class="text-xs font-semibold text-gray-700 mb-1">Refund Rules</p>
+                <table class="w-full text-xs border border-gray-200 rounded">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="text-left px-2 py-1 border-b border-gray-200">Days before departure</th>
+                      <th class="text-left px-2 py-1 border-b border-gray-200"> Penalty amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let r of getFareRules()">
+                      <td class="px-2 py-1 border-b border-gray-100">{{ r.days_before_departure }}</td>
+                      <td class="px-2 py-1 border-b border-gray-100">{{ r.refundable_amount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -353,10 +559,15 @@
         </div>
 
         <div class="flex justify-end space-x-2">
-          <button mat-stroked-button color="primary" class="text-xs">PRINT TRIP SHEET</button>
-          <button mat-stroked-button color="primary" class="text-xs">E-MAIL TRIP SHEET</button>
-          <button mat-flat-button color="primary" class="text-xs" (click)="printAllTickets()">PRINT ALL TICKETS</button>
-          <button mat-flat-button color="warn" class="text-xs">CANCEL TRIP</button>
+          <button
+            *ngIf="isFlightOrder()"
+            mat-flat-button
+            color="primary"
+            class="text-xs"
+            (click)="printAllTicket()">
+            PRINT TICKETS
+          </button>
+          <!-- <button mat-flat-button color="warn" class="text-xs">CANCEL TRIP</button> -->
         </div>
       </div>
 
@@ -364,13 +575,24 @@
       <div class="p-4 border-b">
         <div class="flex justify-between items-center mb-2">
           <h2 class="text-lg font-semibold">Traveler Details</h2>
-          <button *ngIf="orderDetails?.update_passengers_detail === 0 || isNamingWindowOpen()" mat-raised-button color="primary" class="text-xs" (click)="openPassengerUpdateModal()">Update Passenger Details</button>
+        </div>
+
+        <div *ngIf="isTravelerUpdateWindowOpen() && getTravelerDetailsCutOffDate()" class="mb-3">
+          <p class="text-xs text-red-600">
+            Update Traveler Details before
+            <span class="font-semibold">
+              {{ getTravelerDetailsCutOffDate() | date: 'dd-MM-yyyy' }}
+            </span>
+          </p>
         </div>
 
         <!-- Multiple Barcodes Display for each flight in flight_inventory_details -->
         <div *ngIf="flightDetails?.details?.length > 0" class="mb-4 p-4 bg-gray-50 rounded">
           <div *ngFor="let detail of flightDetails?.details; let i = index" class="mb-4 pb-4" [ngClass]="{'border-b border-gray-200': i < flightDetails.details.length - 1}">
-            <p class="text-sm font-semibold mb-2">Barcode(s) for your journey {{ detail?.from }}-{{ detail?.to }} on {{ detail?.airline }}</p>
+            <p class="text-sm font-semibold mb-1">Barcode(s) for your journey {{ detail?.from }}-{{ detail?.to }} on {{ detail?.airline }}</p>
+            <p class="text-xs text-gray-600 mb-2" *ngIf="detail?.pnr">
+              PNR: <span class="font-semibold">{{ detail.pnr }}</span>
+            </p>
             <div class="flex flex-col items-start mb-2">
               <div *ngFor="let traveler of orderDetails.details; let j = index" class="mb-2">
                 <p class="text-sm mb-1">{{ traveler.title }} {{ traveler.first_name }} {{ traveler.last_name }}</p>
@@ -416,8 +638,42 @@
               <p class="border p-2 rounded text-sm">{{ traveler.date_of_birth }}</p>
             </div>
           </div>
-           <span class="text-xs inline-block px-2 py-1 rounded bg-gray-100 text-gray-800" *ngIf="traveler?.status_name">{{ traveler.status_name }}</span>
-           <button mat-flat-button color="warn" class="text-xs" *ngIf="!traveler?.status_name && isRefundable() && traveler?.status == null" [disabled]="!canCancelTraveler()" (click)="cancelTraveler(traveler, i)">Cancel Booking</button>
+          <span
+            class="text-xs inline-block px-2 py-1 rounded bg-gray-100 text-gray-800"
+            *ngIf="traveler?.status_name"
+            >{{ traveler.status_name }}</span
+          >
+          <button
+            mat-flat-button
+            color="warn"
+            class="text-xs"
+            *ngIf="canShowFlightCancelBooking(traveler)"
+            (click)="openBookingCancellation()"
+          >
+            Cancel Booking
+          </button>
+          <button
+            mat-flat-button
+            color="warn"
+            class="text-xs ml-2"
+            *ngIf="canShowHotelCancelBooking(traveler)"
+            (click)="openBookingCancellation()"
+          >
+            Cancel Hotel Booking
+          </button>
+          <button
+            *ngIf="
+              isTravelerUpdateWindowOpen() &&
+              orderDetails?.update_passengers_detail == 0  &&
+              canManageHoldActions()
+            "
+            mat-raised-button
+            color="primary"
+            class="text-xs ml-2"
+            (click)="openPassengerUpdateModal()"
+          >
+            Update Passenger Details
+          </button>
         </div>
       </div>
 
@@ -433,7 +689,13 @@
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label class="text-xs text-gray-500">TITLE</label>
-                  <input class="border p-2 rounded w-full" formControlName="title" placeholder="Mr/Mrs/Ms" />
+                  <select
+                    class="border p-2 rounded w-full"
+                    formControlName="title">
+                    <option *ngFor="let t of getTitleOptions(i)" [value]="t">
+                      {{ t }}
+                    </option>
+                  </select>
                 </div>
                 <div>
                   <label class="text-xs text-gray-500">FIRST NAME</label>
@@ -459,6 +721,112 @@
         </div>
       </div>
 
+      <!-- Payment History -->
+      <div class="p-4" *ngIf="orderDetails?.order_histories?.length">
+        <h2 class="text-lg font-semibold mb-3">Payment History</h2>
+        <div class="overflow-auto">
+          <table class="min-w-full text-xs text-gray-700 border border-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-2 py-2 text-left border-b border-gray-200">Order ID</th>
+                <th class="px-2 py-2 text-left border-b border-gray-200">Old Status</th>
+                <th class="px-2 py-2 text-left border-b border-gray-200">New Status</th>
+                <th class="px-2 py-2 text-left border-b border-gray-200">Description</th>
+                <th class="px-2 py-2 text-left border-b border-gray-200">Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let h of orderDetails.order_histories"
+                class="hover:bg-gray-50"
+              >
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ h.order_id  || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ h.old_status_name || h.old_status || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ h.new_status_name || h.new_status || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ h.description || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ h.created_at | date:'dd/MM/yy HH:mm' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div
+        class="p-4"
+        *ngIf="hasInstallmentSchedule"
+      >
+        <h2 class="text-lg font-semibold mb-3">
+          Installment Payment Schedule
+        </h2>
+        <div class="overflow-auto">
+          <table class="min-w-full text-xs text-gray-700 border border-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-2 py-2 text-left border-b border-gray-200">
+                  Installment
+                </th>
+                <th class="px-2 py-2 text-right border-b border-gray-200">
+                  Amount
+                </th>
+                <th class="px-2 py-2 text-right border-b border-gray-200">
+                  Due date
+                </th>
+                <th class="px-2 py-2 text-left border-b border-gray-200">
+                  Status
+                </th>
+                <th class="px-2 py-2 text-center border-b border-gray-200">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let inst of installmentSchedule"
+                class="hover:bg-gray-50"
+              >
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ inst.installment_no || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100 text-right">
+                  INR
+                  {{
+                    inst.installment_amount
+                      | number: '1.2-2'
+                  }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100 text-right">
+                  {{ inst.payment_date | date: 'dd/MM/yy' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100">
+                  {{ inst.status || '-' }}
+                </td>
+                <td class="px-2 py-1 border-b border-gray-100 text-center">
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    class="text-xs px-3 py-1"
+                    *ngIf="inst.status === 'pending'"
+                    (click)="goToPayment()"
+                  >
+                    Pay Now
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Important Rules and Terms -->
       <div class="p-4">
         <h2 class="text-lg font-semibold mb-3">Important Rules and Terms</h2>
@@ -474,13 +842,29 @@
 
       <!-- Action buttons -->
       <div class="flex justify-center mt-6 space-x-4 p-4">
-        <button mat-raised-button color="primary" (click)="printAllTickets()" *ngIf="orderDetails?.status !== 8">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="printAllTicket()"
+          *ngIf="isFlightOrder() && orderDetails?.status !== 8">
           <mat-icon>print</mat-icon>
-          Print All Ticket
+          Print Ticket
         </button>
-        <button mat-raised-button color="accent" *ngIf="orderDetails?.status === 8 && holdRemainingText && holdRemainingText !== 'Hold expired'" (click)="goToPayment()">
+        <button
+          mat-raised-button
+          color="accent"
+          *ngIf="orderDetails?.status === 8 && holdRemainingText && holdRemainingText !== 'Hold expired' && canManageHoldActions()"
+          (click)="goToPayment()">
           <mat-icon>check_circle</mat-icon>
           Confirm Booking
+        </button>
+        <button
+          mat-raised-button
+          color="warn"
+          *ngIf="orderDetails?.status === 8 && holdRemainingText && holdRemainingText !== 'Hold expired' && canManageHoldActions()"
+          (click)="releaseHold()">
+          <mat-icon>cancel</mat-icon>
+          Release Hold
         </button>
         <button mat-raised-button (click)="goToHome()">
           <mat-icon>home</mat-icon>

@@ -13,6 +13,7 @@ interface WalletResponse {
   success: boolean;
   data: {
     balance: number;
+    wallet_balance?: string | number;
     currency: string;
     credit_limit: number;
     credit_balance: number;
@@ -77,7 +78,9 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   // Wallet related properties
   walletBalance: number = 0;
+  walletAvailableBalance: number = 0;
   creditBalance: number = 0;
+  creditLimit: number = 0;
   totalAvailableBalance: number = 0;
   hasEnoughBalance: boolean = false;
 
@@ -86,6 +89,11 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   // Payment processing status
   isProcessing: boolean = false;
+
+  allowInstallments: boolean = false;
+  installmentPayments: any[] = [];
+  currentInstallmentAmount: number = 0;
+  selectedInstallmentId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -143,6 +151,15 @@ export class PaymentComponent implements OnInit, OnDestroy {
             this.tdsonCommission = this.bookingDetails.tds_on_commission || 0;
             this.markup = this.bookingDetails.markup || 0;
 
+            this.allowInstallments =
+              (this.bookingDetails.allow_installments ?? 0) === 1;
+            const instRaw = Array.isArray(
+              this.bookingDetails.installment_payments
+            )
+              ? this.bookingDetails.installment_payments
+              : [];
+            this.installmentPayments = instRaw;
+
             // Hold and status
             this.bookingStatus = Number(this.bookingDetails.status || 0);
             this.holdAmount = Number(this.bookingDetails.hold_amount || 0);
@@ -156,6 +173,37 @@ export class PaymentComponent implements OnInit, OnDestroy {
                 (this.bookingDetails.final_total || 0) - this.holdAmount;
             } else {
               this.totalAmount = this.bookingDetails.final_total || 0;
+            }
+
+            if (this.allowInstallments && this.installmentPayments.length) {
+              const pending =
+                this.installmentPayments.find(
+                  (p: any) => p && p.status === 'pending'
+                ) || this.installmentPayments[0];
+              if (pending && pending.id != null) {
+                this.selectedInstallmentId = Number(pending.id);
+              } else {
+                this.selectedInstallmentId = null;
+              }
+              const rawAmt =
+                pending && pending.installment_amount != null
+                  ? pending.installment_amount
+                  : 0;
+              const instAmt =
+                typeof rawAmt === 'string'
+                  ? parseFloat(rawAmt)
+                  : Number(rawAmt || 0);
+              this.currentInstallmentAmount = instAmt;
+              this.amount = instAmt;
+              this.totalAmount = instAmt;
+              this.convenienceFee = 0;
+              this.serviceFeecgst = 0;
+              this.serviceFeesgst = 0;
+              this.serviceFeeigst = 0;
+              this.markup = 0;
+              this.commission = 0;
+              this.tdsonCommission = 0;
+              this.holdAmount = 0;
             }
 
             // Set tax values based on IGST or CGST/SGST
@@ -188,11 +236,18 @@ export class PaymentComponent implements OnInit, OnDestroy {
       (response: WalletResponse) => {
         if (response.success) {
           this.walletBalance = response.data.balance;
+          const walletBalanceRaw = response.data.wallet_balance ?? 0;
+          this.walletAvailableBalance =
+            typeof walletBalanceRaw === 'string'
+              ? parseFloat(walletBalanceRaw)
+              : Number(walletBalanceRaw);
+          this.creditLimit = response.data.credit_limit;
           this.creditBalance = response.data.credit_balance;
           // Only add positive wallet balance to credit balance
           this.totalAvailableBalance =
-            (this.walletBalance > 0 ? this.walletBalance : 0) +
-            this.creditBalance;
+            (this.walletAvailableBalance > 0
+              ? this.walletAvailableBalance
+              : 0) + this.creditBalance;
           this.checkWalletBalance();
         } else {
           console.error('Failed to fetch wallet balance');
@@ -275,6 +330,11 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   processPayment(): void {
+    if (!this.selectedPaymentMethod) {
+      alert('Please select a payment method');
+      return;
+    }
+
     if (this.isProcessing) {
       return; // Prevent multiple submissions
     }
@@ -298,11 +358,16 @@ export class PaymentComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const paymentData = {
+    const paymentData: any = {
       booking_id: this.bookingId,
       amount: this.totalAmount,
       payment_method: 'wallet'
     };
+
+    paymentData.allow_installments = this.allowInstallments ? 1 : 0;
+    if (this.allowInstallments && this.selectedInstallmentId != null) {
+      paymentData.installment_payment_id = this.selectedInstallmentId;
+    }
 
     this.specialFlightService.processPayment(paymentData).subscribe(
       (response: any) => {
@@ -319,11 +384,16 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   submitOnlinePayment(): void {
     // Implement online payment gateway integration here
-    const paymentData = {
+    const paymentData: any = {
       booking_id: this.bookingId,
       amount: this.totalAmount,
       payment_method: 'online'
     };
+
+    paymentData.allow_installments = this.allowInstallments ? 1 : 0;
+    if (this.allowInstallments && this.selectedInstallmentId != null) {
+      paymentData.installment_payment_id = this.selectedInstallmentId;
+    }
 
     this.specialFlightService.processPayment(paymentData).subscribe(
       (response: any) => {
@@ -346,7 +416,8 @@ export class PaymentComponent implements OnInit, OnDestroy {
       }
       // Redirect to confirmation page or provided URL
       if (response.data) {
-        this.router.navigate(['/flights/payment-confirmation', this.bookingId]);
+        alert('success');
+        this.router.navigate(['/payment-confirmation', this.bookingId]);
       }
     } else {
       alert(`Payment failed: ${response.message}`);

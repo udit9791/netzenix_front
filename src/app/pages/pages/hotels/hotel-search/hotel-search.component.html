@@ -30,7 +30,7 @@
     <div *ngIf="!confirmAvailabilityLoading && !confirmAvailabilityError">
       <div class="flex flex-wrap gap-2" *ngIf="confirmAvailableDates.length > 0">
         <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded" *ngFor="let d of confirmAvailableDates">
-          {{ d.date }} <span class="text-xs text-blue-600 ml-1">(Rooms: {{ d.total }})</span>
+          {{ d.date | date:'dd-MM-yyyy' }} <span class="text-xs text-blue-600 ml-1">(Rooms: {{ d.total }})</span>
         </span>
       </div>
       <div class="text-gray-600" *ngIf="confirmAvailableDates.length === 0">
@@ -95,9 +95,9 @@
         </div>
       </div>
     </div>
-    <div class="mt-2">
+    <!-- <div class="mt-2">
       <mat-checkbox [formControl]="petFriendlyCtrl">Pet Friendly</mat-checkbox>
-    </div>
+    </div> -->
     <div class="mt-3 flex justify-end gap-2">
       <button mat-button (click)="onCancelRoomsGuests()">Cancel</button>
       <button mat-flat-button color="primary" (click)="applyRoomsGuests()">Apply</button>
@@ -150,13 +150,18 @@
           <mat-icon *ngFor="let i of [0,1,2,3,4]" class="star" [class.muted]="i >= h.star_rating">grade</mat-icon>
         </div>
         <a class="hotel-location" *ngIf="h.city">{{ h.city }}</a>
-        <div class="chips">
+        <!-- <div class="chips">
           <span class="chip">Swimming Pool</span>
           <span class="chip">Restaurant</span>
-        </div>
+        </div> -->
         <ul class="feature-list">
-          <li><mat-icon>check_circle</mat-icon><span>Free Cancellation</span></li>
-          <li><mat-icon>check_circle</mat-icon><span>Free stay for the kid</span></li>
+          <li>
+            <mat-icon>check_circle</mat-icon>
+            <span [ngStyle]="{ color: h.refundable ? '' : 'red' }">
+              {{ h.refundable ? 'Refundable' : 'Non Refundable' }}
+            </span>
+          </li>
+          <!-- <li><mat-icon>check_circle</mat-icon><span>Free stay for the kid</span></li> -->
           <!-- <li><mat-icon>check_circle</mat-icon><span>Enjoy Happy Hours with 1+1 offer</span></li> -->
         </ul>
       </div>

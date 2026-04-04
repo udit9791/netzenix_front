@@ -24,7 +24,7 @@
                   {{ s <= starRating ? 'star' : 'star_border' }}
                 </mat-icon>
               </span>
-              <span class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold">GST ASSURED</span>
+              <!-- <span class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold">GST ASSURED</span> -->
               <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold"
                     [ngClass]="isRefundable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                 {{ isRefundable ? 'Refundable' : 'Non-Refundable' }}
@@ -49,9 +49,10 @@
               <div class="font-medium">
                 Room {{ rb.roomIndex }} • {{ rb.adults }} Adult<span *ngIf="rb.adults !== 1">s</span>
                 <span *ngIf="rb.children>0">, {{ rb.children }} Child</span>
+                <span *ngIf="rb.extraBedChildren>0">, {{ rb.extraBedChildren }} Child with bed</span>
                 <span *ngIf="rb.extraBeds>0">, {{ rb.extraBeds }} Extra Bed</span>
               </div>
-              <div class="mt-1">
+              <!-- <div class="mt-1">
                 <div class="flex justify-between">
                   <span>Base Fare</span>
                   <span>₹ {{ rb.baseTotal | number:'1.2-2' }}</span>
@@ -64,7 +65,7 @@
                   <span>Room Total</span>
                   <span>₹ {{ rb.roomTotal | number:'1.2-2' }}</span>
                 </div>
-              </div>
+              </div> -->
             </div>
             <div class="border-t border-dashed mt-2 pt-2" *ngIf="charges">
               <div class="font-medium mb-1">Total For All Rooms</div>
@@ -140,7 +141,7 @@
               </div>
             </div>
           </ng-template>
-          <div class="mt-3 text-xs text-blue-700">See Inclusions</div>
+          <!-- <div class="mt-3 text-xs text-blue-700">See Inclusions</div> -->
         </div>
 
         <div class="text-lg font-semibold mt-4 mb-2">Important Information</div>
@@ -291,7 +292,7 @@
 
         <div class="flex justify-end gap-2 mt-4">
           <button mat-stroked-button (click)="goBackToHotel()">Back to Hotel</button>
-          <button mat-stroked-button color="primary" *ngIf="canHoldBooking" (click)="onHoldBooking()" [disabled]="holding">Hold Booking</button>
+          <button *ngIf="canHoldBooking" mat-raised-button color="accent" class="hold-button" [disabled]="holding" (click)="onHoldBooking()">HOLD BOOKING</button>
           <button mat-flat-button color="primary" (click)="onPayNow()" [disabled]="paying">Pay Now</button>
         </div>
         <div class="mt-2 text-xs text-gray-700" *ngIf="canHoldBooking && inventory?.hold_booking_limit">

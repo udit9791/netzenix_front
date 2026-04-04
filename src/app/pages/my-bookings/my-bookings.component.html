@@ -30,13 +30,65 @@
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Search</mat-label>
-        <input matInput (keyup)="applyFilter($event)" placeholder="Search bookings">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
+      <div class="filters-row">
+        <mat-form-field appearance="outline" class="mr-4">
+          <mat-label>Reference Number</mat-label>
+          <input
+            matInput
+            [(ngModel)]="filters.reference"
+            name="referenceFilter"
+            placeholder="Reference ID"
+          />
+        </mat-form-field>
 
-      <button mat-raised-button color="primary">
+        <mat-form-field appearance="outline" class="mr-4">
+          <mat-label>Travel Date</mat-label>
+          <input
+            matInput
+            [matDatepicker]="travelDatePicker"
+            [(ngModel)]="filters.travelDate"
+            name="travelDateFilter"
+            placeholder="DD/MM/YYYY"
+          />
+          <mat-datepicker-toggle matSuffix [for]="travelDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #travelDatePicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mr-4">
+          <mat-label>Travel Mode</mat-label>
+          <mat-select
+            [(ngModel)]="filters.travelMode"
+            name="travelModeFilter"
+          >
+            <mat-option [value]="''">All</mat-option>
+            <mat-option *ngFor="let m of travelModeOptions" [value]="m">
+              {{ m }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mr-4">
+          <mat-label>PNR Number</mat-label>
+          <input
+            matInput
+            [(ngModel)]="filters.pnr"
+            name="pnrFilter"
+            placeholder="PNR"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="mr-4">
+          <mat-label>Traveller Name</mat-label>
+          <input
+            matInput
+            [(ngModel)]="filters.traveller"
+            name="travellerFilter"
+            placeholder="Traveller"
+          />
+        </mat-form-field>
+      </div>
+
+      <button mat-raised-button color="primary" (click)="applyFilters()">
         <mat-icon>filter_list</mat-icon>
         Filters
       </button>
@@ -73,6 +125,20 @@
         <td mat-cell *matCellDef="let booking"> {{booking.travel_mode}} </td>
       </ng-container>
 
+      <!-- PNR Column -->
+      <ng-container matColumnDef="pnr">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> PNR </th>
+        <td mat-cell *matCellDef="let booking">
+          {{ booking.pnr || booking.pnr_no || booking.pnr_number || booking.booking_pnr }}
+        </td>
+      </ng-container>
+
+      <!-- Pax Column -->
+      <ng-container matColumnDef="no_of_pax">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Pax </th>
+        <td mat-cell *matCellDef="let booking"> {{booking.no_of_pax}} </td>
+      </ng-container>
+
       <!-- Traveller Column -->
       <ng-container matColumnDef="traveller">
         <th mat-header-cell *matHeaderCellDef mat-sort-header> Traveller </th>
@@ -91,7 +157,7 @@
         <td mat-cell *matCellDef="let booking"> 
           <span class="status-badge" [ngClass]="{
             'confirmed': booking.status === 1 || (booking.status_name?.toLowerCase() === 'confirmed'),
-            'pending': booking.status === 0 || (booking.status_name?.toLowerCase() === 'pending'),
+            'pending': booking.status === 0 || booking.status === 17 || (booking.status_name?.toLowerCase() === 'pending'),
             'cancelled': booking.status === 2 || (booking.status_name?.toLowerCase() === 'cancelled'),
             'hold': booking.status === 8 || (booking.status_name?.toLowerCase() === 'hold'),
             'requested': booking.status === 11 || (booking.status_name?.toLowerCase() === 'requested')

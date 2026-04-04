@@ -295,6 +295,31 @@ export class HotelSearchComponent {
       if (v.checkIn && v.checkOut) {
         this.search();
       }
+      const invId = this.selectedInventoryId;
+      if (invId && invId > 0) {
+        this.confirmAvailabilityLoading = true;
+        this.confirmAvailabilityError = '';
+        this.confirmDateRanges = [];
+        this.confirmAvailableDates = [];
+        this.hotelService.getInventoryDates(invId, 'search').subscribe({
+          next: (datesRes: any) => {
+            const roomsData = Array.isArray(datesRes?.data)
+              ? datesRes.data
+              : Array.isArray(datesRes)
+                ? datesRes
+                : [];
+            this.confirmDateRanges =
+              this.groupInventoryDatesIntoRanges(roomsData);
+            this.confirmAvailableDates = this.buildAvailableDates(roomsData);
+            this.confirmAvailabilityLoading = false;
+          },
+          error: () => {
+            this.confirmAvailabilityError =
+              'Failed to load confirm availability dates';
+            this.confirmAvailabilityLoading = false;
+          }
+        });
+      }
     });
   }
 
@@ -644,7 +669,7 @@ export class HotelSearchComponent {
           return;
         }
         this.selectedInventoryId = invId;
-        this.hotelService.getInventoryDates(invId).subscribe({
+        this.hotelService.getInventoryDates(invId, 'search').subscribe({
           next: (datesRes: any) => {
             const roomsData = Array.isArray(datesRes?.data)
               ? datesRes.data
@@ -699,7 +724,7 @@ export class HotelSearchComponent {
           return;
         }
         this.selectedInventoryId = invId;
-        this.hotelService.getInventoryDates(invId).subscribe({
+        this.hotelService.getInventoryDates(invId, 'search').subscribe({
           next: (datesRes: any) => {
             const roomsData = Array.isArray(datesRes?.data)
               ? datesRes.data

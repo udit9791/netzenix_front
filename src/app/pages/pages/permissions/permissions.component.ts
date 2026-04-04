@@ -32,11 +32,15 @@ export class PermissionsComponent implements OnInit {
   selectedPermissions: Set<string> = new Set();
   roleForm!: FormGroup;
   groupedPermissions: Array<{
-    moduleKey: string;
-    moduleName: string;
-    items: Array<{ action: string; name: string }>;
+    groupKey: string;
+    groupLabel: string;
+    modules: Array<{
+      moduleKey: string;
+      moduleLabel: string;
+      actions: Array<{ action: string; name: string; label: string }>;
+    }>;
   }> = [];
-  otherPermissions: string[] = [];
+  otherPermissions: any[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -83,51 +87,92 @@ export class PermissionsComponent implements OnInit {
     });
   }
 
-  /** 🔹 Build grouped permissions by module name */
+  /** 🔹 Build grouped permissions by group_name and module/action */
   private buildGroupedPermissions() {
-    const list: string[] = (this.permissions || [])
-      .map((p: any) => p?.name ?? p)
-      .filter((s: any) => typeof s === 'string');
-    const actionOrder = ['view', 'create', 'edit', 'delete'];
-    const map: Map<
+    const all: any[] = Array.isArray(this.permissions) ? this.permissions : [];
+    const groupMap: Map<
       string,
-      { moduleKey: string; items: Array<{ action: string; name: string }> }
+      {
+        groupKey: string;
+        modules: Map<
+          string,
+          {
+            moduleKey: string;
+            actions: Array<{ action: string; name: string; label: string }>;
+          }
+        >;
+      }
     > = new Map();
-    const others: string[] = [];
+    const others: any[] = [];
+    const actionOrder = ['view', 'create', 'edit', 'delete'];
 
-    for (const perm of list) {
-      const m = perm.match(/^(view|create|edit|delete)_(.+)$/);
-      if (m) {
-        const action = m[1];
-        const moduleKey = m[2];
-        if (!map.has(moduleKey)) {
-          map.set(moduleKey, { moduleKey, items: [] });
-        }
-        const bucket = map.get(moduleKey)!;
-        // Avoid duplicates
-        if (!bucket.items.some((it) => it.name === perm)) {
-          bucket.items.push({ action, name: perm });
-        }
-      } else {
-        // Non-CRUD style permissions
-        if (!others.includes(perm)) others.push(perm);
+    for (const p of all) {
+      const rawName = p && (p.name ?? p);
+      const name = typeof rawName === 'string' ? rawName : '';
+      if (!name) {
+        others.push(p);
+        continue;
+      }
+
+      const groupKey =
+        p &&
+        (p.group_name || p.groupName) &&
+        String(p.group_name || p.groupName)
+          ? String(p.group_name || p.groupName)
+          : '';
+
+      const m = name.match(/^(view|create|edit|delete)_(.+)$/);
+      const action = m ? m[1] : '';
+      const moduleKey = m ? m[2] : '';
+
+      if (!groupKey || !action || !moduleKey) {
+        others.push(p);
+        continue;
+      }
+
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, {
+          groupKey,
+          modules: new Map()
+        });
+      }
+      const group = groupMap.get(groupKey)!;
+
+      if (!group.modules.has(moduleKey)) {
+        group.modules.set(moduleKey, {
+          moduleKey,
+          actions: []
+        });
+      }
+      const module = group.modules.get(moduleKey)!;
+
+      if (!module.actions.some((a) => a.name === name)) {
+        module.actions.push({
+          action,
+          name,
+          label: action.charAt(0).toUpperCase() + action.slice(1)
+        });
       }
     }
 
-    // Sort items inside each module by action order
-    this.groupedPermissions = Array.from(map.values())
+    this.groupedPermissions = Array.from(groupMap.values())
       .map((grp) => ({
-        moduleKey: grp.moduleKey,
-        moduleName: this.prettyModuleName(grp.moduleKey),
-        items: grp.items.sort(
-          (a, b) =>
-            actionOrder.indexOf(a.action) - actionOrder.indexOf(b.action)
-        )
+        groupKey: grp.groupKey,
+        groupLabel: this.prettyModuleName(grp.groupKey),
+        modules: Array.from(grp.modules.values())
+          .map((m) => ({
+            moduleKey: m.moduleKey,
+            moduleLabel: this.prettyModuleName(m.moduleKey),
+            actions: m.actions.sort(
+              (a, b) =>
+                actionOrder.indexOf(a.action) - actionOrder.indexOf(b.action)
+            )
+          }))
+          .sort((a, b) => a.moduleLabel.localeCompare(b.moduleLabel))
       }))
-      .sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+      .sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
 
-    // Format others (keep as raw names; template will format label)
-    this.otherPermissions = others.sort();
+    this.otherPermissions = others;
   }
 
   /** 🔹 Format module name from key (e.g., my_booking → My Booking) */

@@ -109,6 +109,37 @@ export class HotelService {
     }
     return this.http.get(`${this.apiUrl}/hotels/unassigned`, { params });
   }
+
+  getBookingHotelsByType(
+    bookingType: string,
+    cityId?: number,
+    search?: string
+  ): Observable<any> {
+    const payload: any = {
+      type: bookingType || 'fit'
+    };
+    if (cityId) {
+      payload.city_id = cityId;
+    }
+    if (search) {
+      payload.search = search;
+    }
+    return this.http.post(`${this.apiUrl}/hotels/list-by-type`, payload);
+  }
+
+  getInventoryMealPlans(inventoryId: number): Observable<any> {
+    const params: any = { inventory_id: String(inventoryId) };
+    return this.http.get(`${this.apiUrl}/hotel-inventories/meal-plans`, {
+      params
+    });
+  }
+
+  getInventoryRooms(hotelId: number): Observable<any> {
+    const params: any = { hotel_id: String(hotelId) };
+    return this.http.get(`${this.apiUrl}/hotel-inventories/rooms`, {
+      params
+    });
+  }
   searchAvailability(params: {
     q: string;
     from: string;
@@ -158,6 +189,7 @@ export class HotelService {
     adults?: number;
     children?: number;
     childAges?: number[];
+    extraBedFlags?: number[];
     inventory_id: number;
     type?: 'normal' | 'confirm';
   }): Observable<any> {
@@ -172,6 +204,9 @@ export class HotelService {
     if (params.childAges && params.childAges.length) {
       p.childAges = params.childAges.join(',');
     }
+    if (params.extraBedFlags && params.extraBedFlags.length) {
+      p.extraBedFlags = params.extraBedFlags.join(',');
+    }
     if (params.type) {
       p.type = params.type;
     }
@@ -181,6 +216,13 @@ export class HotelService {
   }
   getHotelRooms(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/hotels/${id}/rooms`);
+  }
+
+  getHotelInventoryDatesByHotel(hotelId: number): Observable<any> {
+    const params: any = { hotel_id: String(hotelId) };
+    return this.http.get(`${this.apiUrl}/hotel-inventories/hotel-dates`, {
+      params
+    });
   }
 
   saveAllDetails(payload: any): Observable<any> {
@@ -307,8 +349,15 @@ export class HotelService {
     return this.http.get(`${this.apiUrl}/hotel-inventories/${id}`);
   }
 
-  getInventoryDates(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/hotel-inventories/${id}/dates`);
+  getInventoryDates(
+    id: number,
+    type?: 'normal' | 'confirm' | 'search'
+  ): Observable<any> {
+    const params: any = {};
+    if (type) params.type = type;
+    return this.http.get(`${this.apiUrl}/hotel-inventories/${id}/dates`, {
+      params
+    });
   }
 
   updateInventoryDates(
@@ -393,6 +442,7 @@ export class HotelService {
       adults?: number;
       children?: number;
       childAges?: string;
+      extraBedFlags?: string;
       service_fee?: number;
       discount?: number;
       selected_room_id?: number;
@@ -410,6 +460,8 @@ export class HotelService {
       params.children = String(extras.children);
     if (typeof extras?.childAges === 'string')
       params.childAges = extras.childAges;
+    if (typeof extras?.extraBedFlags === 'string')
+      params.extraBedFlags = extras.extraBedFlags;
     if (typeof extras?.service_fee === 'number')
       params.service_fee = String(extras.service_fee);
     if (typeof extras?.discount === 'number')

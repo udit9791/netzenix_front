@@ -48,7 +48,7 @@
           <ng-container matColumnDef="tenant">
             <th mat-header-cell *matHeaderCellDef>Tenant</th>
             <td mat-cell *matCellDef="let row">
-              {{ row.tenant?.name || '-' }}
+              {{ row.tenant_name || row.tenant?.name || '-' }}
             </td>
           </ng-container>
 
@@ -57,16 +57,7 @@
               Name
             </th>
             <td mat-cell *matCellDef="let row">
-              {{ row.name }}
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="user_type">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>
-              User Type
-            </th>
-            <td mat-cell *matCellDef="let row">
-              {{ row.user_type | titlecase }}
+              {{ row.plan_name || row.name }}
             </td>
           </ng-container>
 
@@ -75,7 +66,7 @@
               Price
             </th>
             <td mat-cell *matCellDef="let row">
-              {{ row.price | number: '1.2-2' }}
+              {{ (row.plan_price || row.price) | number: '1.2-2' }}
             </td>
           </ng-container>
 
@@ -93,6 +84,13 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                color="accent"
+                (click)="viewPlanDetail(row)"
+              >
+                <mat-icon>visibility</mat-icon>
+              </button>
               <button
                 mat-icon-button
                 color="primary"
@@ -144,20 +142,38 @@
 
     <ng-template #planFormDialog>
       <h2 mat-dialog-title>
-        {{ dialogMode === 'add' ? 'Add Plan' : 'Edit Plan' }}
+        {{ dialogMode === 'add' ? 'Assign Plan' : 'Edit Plan' }}
       </h2>
       <mat-dialog-content>
         <form [formGroup]="planForm" class="space-y-4">
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Name</mat-label>
-            <input matInput formControlName="name" />
+            <mat-label>Tenant</mat-label>
+            <mat-select
+              formControlName="tenant_id"
+              (selectionChange)="onTenantSelectionChange($event.value)"
+            >
+              <mat-option
+                *ngFor="let t of availableTenants"
+                [value]="t.id"
+              >
+                {{ t.name }}
+              </mat-option>
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>User Type</mat-label>
-            <mat-select formControlName="user_type">
-              <mat-option value="buyer">Buyer</mat-option>
-              <mat-option value="seller">Seller</mat-option>
+            <mat-label>Pricing Plan</mat-label>
+            <mat-select
+              formControlName="pricing_plan_id"
+              (selectionChange)="onPricingPlanSelectionChange($event.value)"
+            >
+              <mat-option
+                *ngFor="let p of pricingPlans"
+                [value]="p.id"
+              >
+                {{ p.plan_name || p.name }} -
+                {{ p.price | number: '1.2-2' }}
+              </mat-option>
             </mat-select>
           </mat-form-field>
 
@@ -174,7 +190,7 @@
       <mat-dialog-actions align="end">
         <button mat-button mat-dialog-close>Cancel</button>
         <button mat-flat-button color="primary" (click)="savePlan()">
-          Save
+          Assign
         </button>
       </mat-dialog-actions>
     </ng-template>
