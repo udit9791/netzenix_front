@@ -267,13 +267,22 @@ export class BookingCancellationComponent implements OnInit {
   private buildCancelStatusMap() {
     this.cancelStatusMap = {};
 
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    const isItinerary = orderType === 'itinerary';
+
     this.cancelRequests.forEach((r: any) => {
       if (Array.isArray(r.details)) {
         r.details.forEach((d: any) => {
-          const segmentId = Number(d.segment_id);
+          let segmentId = Number(d.segment_id);
           const orderDetailId = Number(d.order_detail_id);
 
-          if (!segmentId || !orderDetailId) return;
+          if (!orderDetailId) return;
+
+          if (isItinerary) {
+            segmentId = 0;
+          } else {
+            if (!segmentId) return;
+          }
 
           const key = `${segmentId}_${orderDetailId}`;
           const raw =
@@ -343,6 +352,11 @@ export class BookingCancellationComponent implements OnInit {
   }
 
   submitCancellationRequests(): void {
+    const t = String(this.orderDetails?.type || '').toLowerCase();
+    if (t === 'itinerary') {
+      this.submitItineraryCancellationRequests();
+      return;
+    }
     const pairs = this.getSelectedPairs();
     if (!this.orderDetails?.id) {
       alert('Missing order ID');
@@ -433,6 +447,10 @@ export class BookingCancellationComponent implements OnInit {
     return Array.isArray(r) ? r : [];
   }
 
+  get isItineraryType(): boolean {
+    return String(this.orderDetails?.type || '').toLowerCase() === 'itinerary';
+  }
+
   getHotelOrderDetailId(): number | null {
     const d = this.orderDetails?.details;
     if (Array.isArray(d) && d.length > 0) {
@@ -440,5 +458,135 @@ export class BookingCancellationComponent implements OnInit {
       return id || null;
     }
     return null;
+  }
+
+  canCancelItineraryPassenger(t: any): boolean {
+    if (!this.isOrderOwner || !this.isItineraryType) {
+      return false;
+    }
+    const detailId = Number(t?.id || 0);
+    if (detailId && this.isCancellationRequested(0, detailId)) {
+      return false;
+    }
+    const statusCodeRaw = t?.status ?? t?.status_id ?? '';
+    if (
+      statusCodeRaw !== '' &&
+      statusCodeRaw !== null &&
+      statusCodeRaw !== undefined
+    ) {
+      const code = Number(statusCodeRaw);
+
+      console.log(statusCodeRaw);
+      if (code && code !== 1 && code !== 17) {
+        return false;
+      }
+    }
+    const raw = t?.status_name ?? t?.status ?? '';
+    const s = String(raw).toLowerCase();
+    if (!s) {
+      return true;
+    }
+    if (s.includes('cancel')) {
+      return false;
+    }
+    if (s.includes('request')) {
+      return false;
+    }
+    return true;
+  }
+
+  private submitItineraryCancellationRequests(): void {
+    if (!this.orderDetails?.id) {
+      alert('Missing order ID');
+      return;
+    }
+    const pairs = this.getSelectedPairs();
+    if (!pairs.length) {
+      alert('Please select at least one passenger to cancel');
+      return;
+    }
+    const ok = window.confirm(
+      'Are you sure you want to submit cancellation request for selected passengers?'
+    );
+    if (!ok) {
+      return;
+    }
+    this.submitting = true;
+    const requests = pairs.map((p) => {
+      const detailId = p.orderDetailId;
+      const payload: any = { order_id: this.orderDetails.id };
+      if (detailId) {
+        payload.order_detail_id = detailId;
+        payload.detail_id = detailId;
+      }
+      return this.http.post(
+        `${environment.apiUrl}/orders/cancel-request`,
+        payload
+      );
+    });
+    forkJoin(requests).subscribe({
+      next: () => {
+        this.submitting = false;
+        alert('Cancellation request submitted');
+        this.router.navigate([
+          '/flights/booking-confirmation',
+          this.orderDetails.id
+        ]);
+      },
+      error: () => {
+        this.submitting = false;
+        alert('Failed to submit cancellation request');
+      }
+    });
+  }
+
+  cancelItineraryPassenger(t: any): void {
+    if (!this.isItineraryType || !this.orderDetails?.id) {
+      return;
+    }
+    if (!this.canCancelItineraryPassenger(t)) {
+      alert('Cancellation not allowed for this passenger');
+      return;
+    }
+    const name =
+      `${t?.title || ''} ${t?.first_name || ''} ${t?.last_name || ''}`.trim();
+    const baseMessage = 'Are you sure you want to cancel this passenger?';
+    const message = name
+      ? `Are you sure you want to cancel for ${name}?`
+      : baseMessage;
+    const ok = window.confirm(message);
+    if (!ok) {
+      return;
+    }
+    const orderId = this.orderDetails.id;
+    const detailId = Number(t?.id || 0);
+    const payload: any = { order_id: orderId };
+    if (detailId) {
+      payload.order_detail_id = detailId;
+      payload.detail_id = detailId;
+    }
+    this.submitting = true;
+    this.http
+      .post(`${environment.apiUrl}/orders/cancel-request`, payload)
+      .subscribe({
+        next: (res: any) => {
+          this.submitting = false;
+          if (res?.success) {
+            alert('Cancellation request submitted');
+            if (t) {
+              t.status_name = 'Requested';
+            }
+          } else {
+            alert(
+              res?.message ||
+                'Failed to submit cancellation request for passenger'
+            );
+          }
+        },
+        error: () => {
+          this.submitting = false;
+          alert('Failed to submit cancellation request for passenger');
+        }
+      });
   }
 }

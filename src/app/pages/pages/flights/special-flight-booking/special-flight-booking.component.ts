@@ -509,19 +509,15 @@ export class SpecialFlightBookingComponent implements OnInit, OnDestroy {
 
   private updateFreezeCountdownDisplay() {
     if (this.freezeSecondsRemaining <= 0) {
-      this.freezeCountdownDisplay = 'Expired';
+      this.freezeCountdownDisplay = '00:00';
       return;
     }
     const total = this.freezeSecondsRemaining;
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
-    if (minutes > 0) {
-      this.freezeCountdownDisplay = `${minutes}m ${seconds
-        .toString()
-        .padStart(2, '0')}s`;
-    } else {
-      this.freezeCountdownDisplay = `${seconds}s`;
-    }
+    const mm = minutes.toString().padStart(2, '0');
+    const ss = seconds.toString().padStart(2, '0');
+    this.freezeCountdownDisplay = `${mm}:${ss}`;
   }
 
   loadFlightDetails() {
@@ -553,6 +549,18 @@ export class SpecialFlightBookingComponent implements OnInit, OnDestroy {
               : raw;
 
           this.booking.flightInventoryData = flightData;
+
+          const freeze = raw.freeze ?? null;
+          if (freeze) {
+            const seconds =
+              typeof freeze.seconds_remaining === 'number'
+                ? freeze.seconds_remaining
+                : null;
+            const expiresAt = freeze.expires_at || freeze.expiresAt || null;
+            if (seconds !== null && expiresAt) {
+              this.startFreezeCountdown(seconds, expiresAt);
+            }
+          }
           this.updateInternationalFlagFromInventory(flightData);
           this.generateTravelerForms(
             this.booking.adults,
@@ -1491,10 +1499,11 @@ export class SpecialFlightBookingComponent implements OnInit, OnDestroy {
   isProceedDisabled(): boolean {
     const loading = this.isLoading;
     const bookingAllowed = this.isBookingAllowed();
-    const disabled = loading || !bookingAllowed;
+    const disabled = loading || !bookingAllowed || this.freezeExpired;
     console.log('Proceed to Payment disabled state:', {
       isLoading: loading,
       bookingAllowed,
+      freezeExpired: this.freezeExpired,
       disabled
     });
     return disabled;

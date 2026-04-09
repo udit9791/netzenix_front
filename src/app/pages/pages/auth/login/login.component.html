@@ -52,6 +52,35 @@
         >
       </div>
 
+      <div *ngIf="otpStep" class="flex flex-col">
+        <mat-form-field class="flex-1">
+          <mat-label>OTP</mat-label>
+          <input
+            formControlName="otp"
+            matInput
+            maxlength="6"
+            autocomplete="one-time-code" />
+          <mat-hint>
+            Enter the 6 digit code sent to your email.
+          </mat-hint>
+        </mat-form-field>
+        <div class="text-right text-secondary text-xs">
+          <ng-container *ngIf="otpCountdown > 0; else otpExpiredTpl">
+            Time remaining: {{ otpCountdownDisplay }}
+          </ng-container>
+          <ng-template #otpExpiredTpl>
+            OTP expired.
+            <button
+              mat-button
+              color="primary"
+              type="button"
+              (click)="resendOtp()">
+              Resend OTP
+            </button>
+          </ng-template>
+        </div>
+      </div>
+
       <button (click)="send()" color="primary" mat-raised-button type="button">
         SIGN IN
       </button>

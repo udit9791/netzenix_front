@@ -87,6 +87,12 @@ export class CancelRequestProceedComponent implements OnInit {
     penaltyAmount: number;
     finalAmount: number;
   }> = [];
+  itineraryRefundRules: any[] = [];
+  itineraryRefundRulesView: Array<{
+    days: number;
+    percentage: number;
+    date: string;
+  }> = [];
   rejectNote: string = '';
   cancelRequestId: number | null = null;
   orderId: number | null = null;
@@ -170,6 +176,9 @@ export class CancelRequestProceedComponent implements OnInit {
           } else {
             this.buildRequestDetailsView();
           }
+        } else if (this.isItineraryType()) {
+          this.requestColumns = ['traveler', 'status', 'penalty'];
+          this.loadItineraryRefundRules();
         } else {
           this.requestColumns = [...this.flightRequestColumns];
           this.buildRequestDetailsView();
@@ -403,6 +412,95 @@ export class CancelRequestProceedComponent implements OnInit {
           finalAmount
         };
       });
+    } else if (this.isItineraryType()) {
+      const itOrder: any = this.order?.itinerary_order || {};
+      const travelDateStr: string | undefined = itOrder?.travel_date;
+      let diffDays = 0;
+      if (travelDateStr) {
+        const travelDate = new Date(travelDateStr);
+        if (!isNaN(travelDate.getTime())) {
+          const today = new Date();
+          const startOfToday = new Date(today.toDateString());
+          const ms = travelDate.getTime() - startOfToday.getTime();
+          diffDays = Math.floor(ms / (1000 * 60 * 60 * 24));
+          if (diffDays < 0) {
+            diffDays = 0;
+          }
+        }
+      }
+
+      const rules = Array.isArray(this.itineraryRefundRules)
+        ? [...this.itineraryRefundRules]
+        : [];
+      rules.sort(
+        (a: any, b: any) =>
+          Number(b?.days_before_checkin ?? 0) -
+          Number(a?.days_before_checkin ?? 0)
+      );
+
+      let selectedPct = 0;
+      for (const r of rules) {
+        const days = Number(r?.days_before_checkin ?? 0);
+        if (diffDays >= days) {
+          selectedPct = Number(r?.percentage ?? 0);
+          break;
+        }
+      }
+
+      this.requestDetailsView = this.requestDetails.map((d) => {
+        const detailId = Number(
+          d.order_detail_id ?? d.detail_id ?? d.orderDetailId ?? 0
+        );
+        const detail = this.orderDetails.find(
+          (od) => Number(od.id) === detailId
+        );
+        const traveler = detail
+          ? `${detail.first_name || ''} ${detail.last_name || ''}`.trim()
+          : String(detailId || '');
+        const travelerTypeRaw =
+          detail?.passanger_type ?? detail?.passenger_type ?? '';
+        const travelerType = travelerTypeRaw
+          ? String(travelerTypeRaw).charAt(0).toUpperCase() +
+            String(travelerTypeRaw).slice(1).toLowerCase()
+          : '';
+        const statusRaw = d.status_name ?? d.status ?? '';
+        const status = statusRaw != null ? String(statusRaw) : '';
+        const baseRaw =
+          detail?.base_price ??
+          detail?.basePrice ??
+          detail?.base_fare ??
+          detail?.baseFare ??
+          detail?.price ??
+          0;
+        const baseAmount = Number(baseRaw || 0);
+
+        let penaltyAmount = 0;
+        if (selectedPct > 0 && baseAmount > 0) {
+          penaltyAmount = Math.round((baseAmount * selectedPct) / 100);
+        } else {
+          const penaltyRaw =
+            d.penalty_amount ??
+            d.penaltyAmount ??
+            d.refund_amount ??
+            d.refundAmount ??
+            d.final_amount ??
+            d.finalAmount ??
+            d.amount ??
+            0;
+          penaltyAmount = Number(penaltyRaw || 0);
+        }
+        const finalAmount = penaltyAmount;
+
+        return {
+          segmentId: 0,
+          traveler,
+          travelerType,
+          status,
+          baseAmount,
+          penaltyAmount,
+          finalAmount
+        };
+      });
     } else {
       this.requestDetailsView = this.requestDetails.map((d) => {
         const segmentId = Number(d.segment_id ?? d.segmentId ?? 0);
@@ -608,5 +706,110 @@ export class CancelRequestProceedComponent implements OnInit {
   private isHotelType(): boolean {
     const t = this.order?.type ?? this.request?.type ?? '';
     return String(t).toLowerCase() === 'hotel';
+  }
+
+  isItineraryType(): boolean {
+    const t = this.order?.type ?? this.request?.type ?? '';
+    return String(t).toLowerCase() === 'itinerary';
+  }
+
+  private loadItineraryRefundRules(): void {
+    const itOrder: any = this.order?.itinerary_order || {};
+    const itineraryId = Number(
+      itOrder?.itinerary_id ?? this.order?.type_id ?? 0
+    );
+    if (!itineraryId) {
+      this.itineraryRefundRules = Array.isArray(
+        this.order?.itinerary_info?.refund_rules
+      )
+        ? this.order.itinerary_info.refund_rules
+        : [];
+      this.buildRequestDetailsView();
+      return;
+    }
+
+    const params: any = {};
+    if (itOrder.departure_id != null) {
+      params.departure_id = String(itOrder.departure_id);
+    }
+    if (itOrder.rooms != null) {
+      params.rooms = String(itOrder.rooms);
+    }
+    if (itOrder.adults != null) {
+      params.adults = String(itOrder.adults);
+    }
+    if (itOrder.children != null) {
+      params.children = String(itOrder.children);
+    }
+
+    this.http
+      .get<any>(
+        `${environment.apiUrl}/itineraries/${itineraryId}/selected-detail`,
+        { params }
+      )
+      .subscribe({
+        next: (res: any) => {
+          const data = res && res.data ? res.data : res;
+          const rules = Array.isArray(data?.refund_rules)
+            ? data.refund_rules
+            : [];
+          this.itineraryRefundRules = rules;
+          this.buildItineraryRefundRulesView();
+          this.buildRequestDetailsView();
+        },
+        error: () => {
+          this.itineraryRefundRules = Array.isArray(
+            this.order?.itinerary_info?.refund_rules
+          )
+            ? this.order.itinerary_info.refund_rules
+            : [];
+          this.buildItineraryRefundRulesView();
+          this.buildRequestDetailsView();
+        }
+      });
+  }
+
+  private buildItineraryRefundRulesView(): void {
+    const rules = Array.isArray(this.itineraryRefundRules)
+      ? this.itineraryRefundRules
+      : [];
+    const itOrder: any = this.order?.itinerary_order || {};
+    const travelDateStr: string | undefined = itOrder?.travel_date;
+    let travelDate: Date | null = null;
+    if (travelDateStr) {
+      const d = new Date(travelDateStr);
+      if (!isNaN(d.getTime())) {
+        travelDate = d;
+      }
+    }
+    this.itineraryRefundRulesView = rules.map((r: any) => {
+      const daysRaw = r?.days_before_checkin;
+      const days =
+        typeof daysRaw === 'number'
+          ? daysRaw
+          : daysRaw != null
+            ? Number(daysRaw)
+            : 0;
+      let dateText = '';
+      if (travelDate && !isNaN(days)) {
+        const d = new Date(travelDate);
+        d.setDate(d.getDate() - days);
+        dateText = d.toLocaleDateString('en-IN');
+      } else if (!isNaN(days)) {
+        dateText = `${days} days before check-in`;
+      }
+      const pctRaw = r?.percentage;
+      const pct =
+        typeof pctRaw === 'number'
+          ? pctRaw
+          : pctRaw != null
+            ? Number(pctRaw)
+            : 0;
+      return {
+        days,
+        percentage: pct,
+        date: dateText
+      };
+    });
   }
 }

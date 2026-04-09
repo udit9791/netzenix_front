@@ -103,6 +103,31 @@
 
     <mat-divider *ngIf="requestDetailsView?.length"></mat-divider>
 
+    <div
+      class="section p-2"
+      *ngIf="isItineraryType() && itineraryRefundRulesView?.length"
+    >
+      <div class="section-title">Refund Rules</div>
+      <div class="table-wrapper">
+        <table class="w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th class="border p-2 text-left">Date</th>
+              <th class="border p-2 text-left">Days Before Check-In</th>
+              <th class="border p-2 text-left">Penalty (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of itineraryRefundRulesView">
+              <td class="border p-2">{{ r.date }}</td>
+              <td class="border p-2">{{ r.days }}</td>
+              <td class="border p-2">{{ r.percentage }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="section p-2" *ngIf="requestDetailsView?.length">
       <div class="section-title">
         Cancellation Request Details

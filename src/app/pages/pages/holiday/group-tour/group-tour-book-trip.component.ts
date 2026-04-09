@@ -14,6 +14,7 @@ import {
 import { ToastrService } from 'ngx-toastr';
 import { environment } from 'src/environments/environment';
 import { TravelerDetailsDialog } from '../../flights/special-flight-booking/traveler-details-dialog';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-group-tour-book-trip',
@@ -393,8 +394,16 @@ export class GroupTourBookTripComponent implements OnInit {
     });
   }
 
-  onPayNow(useInstallments = false): void {
+  private buildItineraryBookingPayload(
+    typeParam: 'hold' | 'confirm',
+    useInstallments: boolean
+  ): any | null {
     this.submitAttempted = true;
+    if (!this.detail || !this.detail.pricing) {
+      this.toastr.error('Pricing details are not available.');
+      return null;
+    }
+
     for (const t of this.travelersModel) {
       if (
         !t.title ||
@@ -403,19 +412,16 @@ export class GroupTourBookTripComponent implements OnInit {
         (t.type === 'Child' && !t.birthdate)
       ) {
         this.toastr.error('Please fill all traveler details.');
-        return;
+        return null;
       }
     }
+
     const email = (this.contact.email || '').trim();
     const phone = (this.contact.phone || '').trim();
     const city = (this.contact.city || '').trim();
     if (!email || !phone || !city) {
       this.toastr.error('Please fill all required contact information.');
-      return;
-    }
-    if (!this.detail || !this.detail.pricing) {
-      this.toastr.error('Pricing details are not available.');
-      return;
+      return null;
     }
 
     const pricing = this.detail.pricing;
@@ -423,7 +429,7 @@ export class GroupTourBookTripComponent implements OnInit {
 
     if (!itineraryId) {
       this.toastr.error('Itinerary information is missing.');
-      return;
+      return null;
     }
 
     const travelDate = pricing.travel_date || this.selection?.date || null;
@@ -433,7 +439,7 @@ export class GroupTourBookTripComponent implements OnInit {
 
     if (!travelDate || !departureId || !departureFrom) {
       this.toastr.error('Travel details are incomplete.');
-      return;
+      return null;
     }
 
     const rooms = this.selection?.rooms ?? pricing.rooms ?? 1;
@@ -460,12 +466,12 @@ export class GroupTourBookTripComponent implements OnInit {
       !Array.isArray(pricing.vehicles_selected)
     ) {
       this.toastr.error('Vehicle selection is missing.');
-      return;
+      return null;
     }
 
     if (!this.travelersModel.length) {
       this.toastr.error('No traveler details found.');
-      return;
+      return null;
     }
 
     const mainTraveler = this.travelersModel[0];
@@ -523,11 +529,23 @@ export class GroupTourBookTripComponent implements OnInit {
         birthdate: mainTraveler.birthdate || null
       },
       other_guests: otherGuests,
-      type: 'confirm'
+      type: typeParam
     };
 
-    if (useInstallments) {
+    if (typeParam === 'confirm' && useInstallments) {
       payload.installment_flag = 1;
+    }
+
+    return payload;
+  }
+
+  onPayNow(useInstallments = false): void {
+    const payload = this.buildItineraryBookingPayload(
+      'confirm',
+      useInstallments
+    );
+    if (!payload) {
+      return;
     }
 
     this.isLoading = true;
@@ -560,6 +578,202 @@ export class GroupTourBookTripComponent implements OnInit {
           this.toastr.error('Failed to create itinerary booking.');
         }
       });
+  }
+
+  get canShowHoldButton(): boolean {
+    const d = this.detail;
+
+    if (!d) {
+      return false;
+    }
+
+    const allowRaw =
+      (d as any).allow_hold_booking ?? (d as any).allowHoldBooking;
+
+    console.log(allowRaw);
+    const allowBool =
+      allowRaw === true ||
+      allowRaw === 1 ||
+      allowRaw === '1' ||
+      allowRaw === 'true' ||
+      allowRaw === 'TRUE';
+
+    if (!allowBool) {
+      return false;
+    }
+
+    let holdDateStr: string | null =
+      (d as any).hold_booking_date ?? (d as any).holdBookingDate ?? null;
+
+    if (!holdDateStr) {
+      const holdDaysRaw =
+        (d as any).hold_booking_days ?? (d as any).holdBookingDays;
+      const holdDays =
+        holdDaysRaw != null && holdDaysRaw !== '' ? Number(holdDaysRaw) : null;
+
+      const pricing = (d as any).pricing || {};
+      const travelDateStr: string | null =
+        pricing.travel_date ??
+        this.selection?.date ??
+        (d as any).fitStart ??
+        null;
+
+      if (holdDays != null && !isNaN(holdDays) && travelDateStr) {
+        const travelDate = new Date(travelDateStr);
+        if (isFinite(travelDate.getTime())) {
+          const cutOff = new Date(travelDate.getTime());
+          cutOff.setDate(cutOff.getDate() - holdDays);
+          holdDateStr = cutOff.toISOString();
+        }
+      }
+    }
+
+    if (!holdDateStr) {
+      return allowBool;
+    }
+
+    const holdDate = new Date(holdDateStr);
+    if (!isFinite(holdDate.getTime())) {
+      return allowBool;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    holdDate.setHours(23, 59, 59, 999);
+
+    return today.getTime() <= holdDate.getTime();
+  }
+
+  onHoldNow(): void {
+    const payload = this.buildItineraryBookingPayload('hold', false);
+    if (!payload) {
+      return;
+    }
+
+    const d = this.detail;
+    if (!d) {
+      this.toastr.error('Itinerary details are not available.');
+      return;
+    }
+
+    const pricing = payload.pricing || {};
+    const totalRaw =
+      pricing.totalPrice ??
+      pricing.fromPrice ??
+      pricing.total ??
+      pricing.total_price;
+    const totalPrice = Number(totalRaw || 0) || 0;
+
+    const holdType = (d as any).hold_type;
+    const holdValueRaw = (d as any).hold_value;
+    const holdValue =
+      typeof holdValueRaw === 'number'
+        ? holdValueRaw
+        : holdValueRaw != null
+          ? Number(holdValueRaw)
+          : 0;
+
+    if (!totalPrice || !holdType || !holdValue) {
+      this.toastr.error('Hold booking details are not configured.');
+      return;
+    }
+
+    let holdAmount = 0;
+    if (holdType === 'F') {
+      holdAmount = holdValue;
+    } else if (holdType === 'P') {
+      holdAmount = (totalPrice * holdValue) / 100;
+    }
+
+    const holdLimitHoursRaw = (d as any).hold_booking_limit;
+    const holdLimitHours =
+      holdLimitHoursRaw != null ? Number(holdLimitHoursRaw) : 0;
+    const holdLimitText = this.formatHoldLimitHours(holdLimitHours);
+
+    const now = new Date();
+    const holdValidDate = isFinite(holdLimitHours)
+      ? new Date(now.getTime() + holdLimitHours * 60 * 60 * 1000)
+      : now;
+    const holdValidText = isNaN(holdValidDate.getTime())
+      ? ''
+      : `${String(holdValidDate.getDate()).padStart(2, '0')}-${String(
+          holdValidDate.getMonth() + 1
+        ).padStart(2, '0')}-${holdValidDate.getFullYear()}`;
+
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        width: '450px',
+        data: {
+          title: 'Hold Booking Confirmation',
+          message: `Do you want to hold this booking for ${holdLimitText}?<br><br>Total Package Amount: <strong>₹${totalPrice.toFixed(
+            2
+          )}</strong><br><br>Hold Charge: <strong>₹${holdAmount.toFixed(
+            2
+          )}</strong> (${
+            holdType === 'F' ? 'Fixed amount' : holdValue + '% of total'
+          })<br><br>Hold Valid Until: ${holdValidText}`,
+          warningNote:
+            'Note: If the booking is not completed within this time, the hold amount will not be refundable.',
+          confirmText: 'Confirm Hold',
+          cancelText: 'Cancel',
+          useTextFormat: true
+        }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (result) {
+          this.isLoading = true;
+          this.http
+            .post<any>(
+              `${environment.apiUrl}/itineraries/confirm-booking`,
+              payload
+            )
+            .subscribe({
+              next: (res) => {
+                this.isLoading = false;
+                const success =
+                  res && (res.success === true || res.status === true);
+                if (!success || !res.data || !res.data.order_id) {
+                  this.toastr.error(
+                    res && res.message
+                      ? res.message
+                      : 'Failed to create itinerary hold booking.'
+                  );
+                  return;
+                }
+                this.toastr.success(
+                  res.message ||
+                    'Itinerary booking held. Proceeding to payment.'
+                );
+                const orderId = res.data.order_id;
+                this.router.navigate(['/flights/payment', orderId]);
+              },
+              error: () => {
+                this.isLoading = false;
+                this.toastr.error('Failed to create itinerary hold booking.');
+              }
+            });
+        }
+      });
+  }
+
+  private formatHoldLimitHours(hoursRaw: number): string {
+    const hours = Number(hoursRaw || 0);
+    if (!isFinite(hours) || hours <= 0) {
+      return '0 hours';
+    }
+    if (hours <= 24) {
+      const label = hours === 1 ? 'hour' : 'hours';
+      return `${hours} ${label}`;
+    }
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    const dayLabel = days === 1 ? 'day' : 'days';
+    if (remainingHours <= 0) {
+      return `${days} ${dayLabel}`;
+    }
+    const hourLabel = remainingHours === 1 ? 'hour' : 'hours';
+    return `${days} ${dayLabel} and ${remainingHours} ${hourLabel}`;
   }
 
   get hasInstallmentPlan(): boolean {

@@ -320,6 +320,72 @@ export class PaymentConfirmationComponent implements OnInit {
       });
   }
 
+  private getItineraryRefundRules(): any[] {
+    const detail = this.itineraryDetail as any;
+    const rulesFromDetail = detail?.refund_rules;
+    if (Array.isArray(rulesFromDetail)) {
+      return rulesFromDetail;
+    }
+    const info = this.orderDetails?.itinerary_info;
+    const rulesFromInfo = info?.refund_rules;
+    return Array.isArray(rulesFromInfo) ? rulesFromInfo : [];
+  }
+
+  private getItineraryTravelDate(): Date | null {
+    try {
+      const itOrder: any = this.orderDetails?.itinerary_order || {};
+      const travelDateStr: string | undefined = itOrder.travel_date;
+      if (!travelDateStr) {
+        return null;
+      }
+      const d = new Date(travelDateStr);
+      if (isNaN(d.getTime())) {
+        return null;
+      }
+      return d;
+    } catch {
+      return null;
+    }
+  }
+
+  private buildItineraryRefundRulesMessage(): string {
+    const rules = this.getItineraryRefundRules();
+    if (!rules || rules.length === 0) {
+      return 'No refund rules available for this itinerary.<br/>Are you sure you want to proceed to cancellation?';
+    }
+    const travelDate = this.getItineraryTravelDate();
+    let html =
+      '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">' +
+      '<thead><tr>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Date</th>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Days Before Check-In</th>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Penalty (%)</th>' +
+      '</tr></thead><tbody>';
+    rules.forEach((r: any) => {
+      const daysRaw = r?.days_before_checkin;
+      const days =
+        typeof daysRaw === 'number'
+          ? daysRaw
+          : daysRaw != null
+            ? Number(daysRaw)
+            : 0;
+      let dateText = '-';
+      if (travelDate && !isNaN(days)) {
+        const d = new Date(travelDate);
+        d.setDate(d.getDate() - days);
+        dateText = d.toLocaleDateString('en-IN');
+      } else if (!isNaN(days)) {
+        dateText = `${days} days before check-in`;
+      }
+      const pct = r?.percentage ?? '-';
+      html += `<tr><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${dateText}</td><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${days}</td><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${pct}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    html +=
+      '<div style="margin-top:12px;">Are you sure you want to proceed to cancellation with these penalty rules?</div>';
+    return html;
+  }
+
   private getItineraryVehicleById(id: number): any {
     const list =
       this.itineraryDetail && Array.isArray(this.itineraryDetail.vehicles)
@@ -1172,6 +1238,33 @@ export class PaymentConfirmationComponent implements OnInit {
     return result;
   }
 
+  canShowItineraryCancelBooking(): boolean {
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType !== 'itinerary') {
+      return false;
+    }
+    const orderStatus = this.orderDetails?.status;
+    const condStatusNotBlocked =
+      orderStatus !== 2 &&
+      orderStatus !== 3 &&
+      orderStatus !== 4 &&
+      orderStatus !== 5 &&
+      orderStatus !== 8;
+
+    const condManageHold = this.canManageHoldActions();
+    const result = condStatusNotBlocked && condManageHold;
+
+    console.log('canShowItineraryCancelBooking()', {
+      order_type: orderType,
+      order_status: orderStatus,
+      condStatusNotBlocked,
+      condManageHold,
+      result
+    });
+
+    return result;
+  }
+
   canCancelHotel(): boolean {
     const inv = this.getHotelInventory();
     const refundable = Number(inv?.is_refundable ?? 0) === 1;
@@ -1285,7 +1378,44 @@ export class PaymentConfirmationComponent implements OnInit {
       alert('Missing order ID');
       return;
     }
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType === 'itinerary') {
+      const message = this.buildItineraryRefundRulesMessage();
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Itinerary Cancellation',
+          message,
+          confirmText: 'Proceed',
+          cancelText: 'Close'
+        }
+      });
+      dialogRef.afterClosed().subscribe((confirmed) => {
+        if (confirmed) {
+          this.router.navigate(['/flights/booking-cancellation', id]);
+        }
+      });
+      return;
+    }
     this.router.navigate(['/flights/booking-cancellation', id]);
+  }
+
+  openItineraryCancellation() {
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType !== 'itinerary') {
+      alert('Itinerary booking not found');
+      return;
+    }
+    if (!this.orderDetails?.id) {
+      alert('Missing order ID');
+      return;
+    }
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this itinerary booking?'
+    );
+    if (!confirmed) {
+      return;
+    }
+    this.cancelFullOrder();
   }
 
   private buildTravelersForCalculation(excludeIndex: number): any[] {

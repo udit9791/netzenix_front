@@ -366,7 +366,7 @@ export class UpdatePricingComponent implements OnInit {
     end_date: string | null;
     person: number;
     meal_type: number;
-    amount: number;
+    amount: number | null;
     type: 'week_days' | 'weekend_days';
   }> {
     const out: any[] = [];
@@ -399,29 +399,63 @@ export class UpdatePricingComponent implements OnInit {
             const isConfirm = this.currentType === 'confirm';
             const startVal = isConfirm ? this.normalizeDateStr(from) : null;
             const endVal = isConfirm ? this.normalizeDateStr(to) : null;
-            if (vWk && vWk.value !== null && vWk.value !== '') {
-              out.push({
-                id: idWk,
-                room_id: rid,
-                start_date: startVal,
-                end_date: endVal,
-                person,
-                meal_type: mealId,
-                amount: Number(vWk.value),
-                type: 'week_days'
-              });
+
+            if (vWk) {
+              const raw = vWk.value;
+              const hasValue = raw !== null && raw !== '';
+              const num = hasValue ? Number(raw) : 0;
+              if (hasValue && num > 0) {
+                out.push({
+                  id: idWk,
+                  room_id: rid,
+                  start_date: startVal,
+                  end_date: endVal,
+                  person,
+                  meal_type: mealId,
+                  amount: num,
+                  type: 'week_days'
+                });
+              } else if (idWk) {
+                out.push({
+                  id: idWk,
+                  room_id: rid,
+                  start_date: startVal,
+                  end_date: endVal,
+                  person,
+                  meal_type: mealId,
+                  amount: null,
+                  type: 'week_days'
+                });
+              }
             }
-            if (vWe && vWe.value !== null && vWe.value !== '') {
-              out.push({
-                id: idWe,
-                room_id: rid,
-                start_date: startVal,
-                end_date: endVal,
-                person,
-                meal_type: mealId,
-                amount: Number(vWe.value),
-                type: 'weekend_days'
-              });
+
+            if (vWe) {
+              const raw = vWe.value;
+              const hasValue = raw !== null && raw !== '';
+              const num = hasValue ? Number(raw) : 0;
+              if (hasValue && num > 0) {
+                out.push({
+                  id: idWe,
+                  room_id: rid,
+                  start_date: startVal,
+                  end_date: endVal,
+                  person,
+                  meal_type: mealId,
+                  amount: num,
+                  type: 'weekend_days'
+                });
+              } else if (idWe) {
+                out.push({
+                  id: idWe,
+                  room_id: rid,
+                  start_date: startVal,
+                  end_date: endVal,
+                  person,
+                  meal_type: mealId,
+                  amount: null,
+                  type: 'weekend_days'
+                });
+              }
             }
           }
         }

@@ -581,7 +581,7 @@
                 matInput
                 type="number"
                 min="1"
-                [value]="installments?.length || 1"
+                [value]="installments.length || 1"
                 (input)="onInstallmentCountInput($any($event.target).value)"
               />
             </mat-form-field>

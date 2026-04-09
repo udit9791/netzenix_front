@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div *ngIf="!isHotelType && segments.length === 0">
+    <div *ngIf="!isHotelType && !isItineraryType && segments.length === 0">
       <p class="text-sm text-gray-700">No flight segments found for this booking.</p>
     </div>
     <div *ngIf="isHotelType && hotelRooms.length === 0">
@@ -271,6 +271,54 @@
                       (ngModelChange)="toggleSelection(r.id, odid, $event)"
                     ></mat-checkbox>
                   </ng-container>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="isItineraryType && passengers.length">
+      <h2 class="text-sm font-semibold mb-2">Passengers</h2>
+      <div class="border rounded mb-4 p-3 bg-white">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-xs">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="border p-2 text-left">Name</th>
+                <th class="border p-2 text-left">Pax Type</th>
+                <th class="border p-2 text-left">Status</th>
+                <th class="border p-2 text-center" *ngIf="isOrderOwner">
+                  Cancel
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of passengers">
+                <td class="border p-2">
+                  {{ t.title }} {{ t.first_name }} {{ t.last_name }}
+                </td>
+                <td class="border p-2">
+                  {{ t.passanger_type || 'Adult' }}
+                </td>
+                <td class="border p-2">
+                  <ng-container
+                    *ngIf="getCancelStatus(0, t.id); else itineraryStatusTpl"
+                  >
+                    {{ getCancelStatus(0, t.id) }}
+                  </ng-container>
+                  <ng-template #itineraryStatusTpl>
+                    {{ t.status_name || 'Confirmed' }}
+                  </ng-template>
+                </td>
+                <td class="border p-2 text-center" *ngIf="isOrderOwner">
+                  <mat-checkbox
+                    *ngIf="canCancelItineraryPassenger(t)"
+                    [disabled]="submitting"
+                    [ngModel]="isSelected(0, t.id)"
+                    (ngModelChange)="toggleSelection(0, t.id, $event)"
+                  ></mat-checkbox>
                 </td>
               </tr>
             </tbody>

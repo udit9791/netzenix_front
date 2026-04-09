@@ -662,6 +662,15 @@
             Cancel Hotel Booking
           </button>
           <button
+            mat-flat-button
+            color="warn"
+            class="text-xs ml-2"
+            *ngIf="canShowItineraryCancelBooking()"
+            (click)="openBookingCancellation()"
+          >
+            Cancel Itinerary Booking
+          </button>
+          <button
             *ngIf="
               isTravelerUpdateWindowOpen() &&
               orderDetails?.update_passengers_detail == 0  &&

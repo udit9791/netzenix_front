@@ -9,7 +9,7 @@
   <meta content="width=device-width, initial-scale=1" name="viewport" />
   <link href="favicon.ico" rel="icon" type="image/x-icon" />
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
+  <script src="assets/env.js"></script>
 </head>
 <body dir="ltr">
 <style>
@@ -68,8 +68,8 @@
     var splashImg = document.querySelector('#vex-splash-screen img');
     if (!splashImg) return;
 
-    var apiBase = '/deploye/public/api';
-    var imgBase = '/deploye/public/';
+   var apiBase = (window.APP_ENV && window.APP_ENV.apiUrl) || '/deploye/public/api';
+  var imgBase = (window.APP_ENV && window.APP_ENV.imgUrl) || '/deploye/public/';
     var storageKey = 'tenant_logo_url';
     var titleKey = 'tenant_app_name';
 

@@ -1,7 +1,7 @@
 <div class="payment-container">
   <div class="header">
     <button mat-button (click)="backToHome()" class="back-button">
-      <mat-icon>arrow_back</mat-icon> Back To Home
+      <mat-icon>arrow_back</mat-icon> Back
     </button>
   </div>
 
@@ -11,7 +11,17 @@
     </div>
 
     <div class="session-info">
-      Session expires in <span class="time">{{timerDisplay}}</span> minutes
+      <ng-container *ngIf="freezeSecondsRemaining > 0 && !freezeExpired; else noHoldTpl">
+        Seat hold time remaining <span class="time">{{freezeCountdownDisplay}}</span>
+      </ng-container>
+      <ng-template #noHoldTpl>
+        <ng-container *ngIf="freezeExpired; else sessionTpl">
+          Hold time expired
+        </ng-container>
+        <ng-template #sessionTpl>
+          Session expires in <span class="time">{{timerDisplay}}</span> minutes
+        </ng-template>
+      </ng-template>
     </div>
 
     <div class="payment-section">
@@ -157,7 +167,7 @@
         mat-flat-button
         color="primary"
         class="pay-now-button"
-        [disabled]="(selectedPaymentMethod === 'deposit_wallet' && !hasEnoughBalance) || isProcessing"
+        [disabled]="(selectedPaymentMethod === 'deposit_wallet' && !hasEnoughBalance) || isProcessing || freezeExpired"
         (click)="processPayment()">
         <span *ngIf="!isProcessing">Pay now</span>
         <span *ngIf="isProcessing">Processing...</span>

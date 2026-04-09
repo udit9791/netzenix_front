@@ -68,6 +68,11 @@ export class PaymentComponent implements OnInit, OnDestroy {
   timerSubscription: Subscription | null = null;
   timerDisplay: string = '15:00';
 
+  freezeCountdownDisplay: string = '';
+  freezeSecondsRemaining: number = 0;
+  freezeExpired: boolean = false;
+  private freezeTimer: any = null;
+
   // Booking related properties
   bookingId: string = '';
   bookingDetails: any = null;
@@ -125,6 +130,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.timerSubscription) {
       this.timerSubscription.unsubscribe();
+    }
+    if (this.freezeTimer) {
+      clearInterval(this.freezeTimer);
+      this.freezeTimer = null;
     }
   }
 
@@ -219,7 +228,25 @@ export class PaymentComponent implements OnInit, OnDestroy {
               this.isSameState = true;
             }
 
-            // Fetch wallet balance
+            const anyResp: any = response;
+            const freeze = anyResp.freeze ?? null;
+            if (freeze) {
+              const seconds =
+                typeof freeze.seconds_remaining === 'number'
+                  ? freeze.seconds_remaining
+                  : null;
+              const expiresAt = freeze.expires_at || freeze.expiresAt || null;
+              if (seconds !== null && expiresAt) {
+                if (freeze.is_expired || seconds <= 0) {
+                  this.freezeSecondsRemaining = 0;
+                  this.freezeExpired = true;
+                  this.updateFreezeCountdownDisplay();
+                } else {
+                  this.startFreezeCountdown(seconds, expiresAt);
+                }
+              }
+            }
+
             this.fetchWalletBalance();
           } else {
             console.error('Failed to fetch booking details:', response.message);
@@ -290,6 +317,49 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   // All calculations are now handled by the backend API
+
+  private startFreezeCountdown(seconds: number, expiresAt: string): void {
+    if (this.freezeTimer) {
+      clearInterval(this.freezeTimer);
+      this.freezeTimer = null;
+    }
+    let remaining = Number(seconds || 0);
+    if (!isFinite(remaining) || remaining < 0) {
+      remaining = 0;
+    }
+    this.freezeSecondsRemaining = remaining;
+    this.freezeExpired = remaining <= 0;
+    this.updateFreezeCountdownDisplay();
+    if (this.freezeExpired) {
+      return;
+    }
+    this.freezeTimer = setInterval(() => {
+      if (this.freezeSecondsRemaining > 0) {
+        this.freezeSecondsRemaining -= 1;
+        this.updateFreezeCountdownDisplay();
+      } else {
+        this.freezeExpired = true;
+        this.updateFreezeCountdownDisplay();
+        if (this.freezeTimer) {
+          clearInterval(this.freezeTimer);
+          this.freezeTimer = null;
+        }
+      }
+    }, 1000);
+  }
+
+  private updateFreezeCountdownDisplay(): void {
+    if (this.freezeSecondsRemaining <= 0) {
+      this.freezeCountdownDisplay = '00:00';
+      return;
+    }
+    const total = this.freezeSecondsRemaining;
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    const mm = minutes.toString().padStart(2, '0');
+    const ss = seconds.toString().padStart(2, '0');
+    this.freezeCountdownDisplay = `${mm}:${ss}`;
+  }
 
   startTimer(): void {
     // Set timer for 15 minutes
@@ -425,6 +495,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   backToHome() {
-    this.router.navigate(['/dashboard']);
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
   }
 }

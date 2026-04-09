@@ -9,12 +9,19 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  login(data: { login_id: string; password: string }): Observable<any> {
-    return this.http.post(
-      `${this.apiUrl}/login
-      `,
-      data
-    );
+  login(data: {
+    login_id: string;
+    password: string;
+    otp: string;
+  }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, data);
+  }
+
+  requestLoginOtp(data: {
+    login_id: string;
+    password: string;
+  }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login/otp`, data);
   }
 
   logout(): Observable<any> {

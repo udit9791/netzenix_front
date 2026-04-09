@@ -18,6 +18,18 @@
         Back
       </button>
       <h2>Traveler Details</h2>
+      <div
+        *ngIf="!freezeExpired && freezeSecondsRemaining > 0"
+        class="freeze-timer text-secondary"
+        style="font-weight: 700; font-size: 20px;">
+        Seat hold time remaining: {{ freezeCountdownDisplay }}
+      </div>
+      <div
+        *ngIf="freezeExpired"
+        class="freeze-timer text-secondary"
+        style="font-weight: 700; font-size: 20px;">
+        Hold time expired
+      </div>
       <p class="instruction">Please enter names as per valid id proof and contact information for guests traveling on this trip.</p>
       
       <!-- Mobile number field (appears once for the entire booking) -->
@@ -181,11 +193,33 @@
       <div class="terms-section">
         <p>By proceeding to make payment, you agree to the <a href="#">terms and conditions</a>.</p>
         <div class="button-container" style="display: flex; gap: 10px; margin-top: 15px;">
-          <button mat-raised-button color="primary" class="payment-button" [disabled]="!isBookingAllowed()" (click)="openVerificationModal()">Proceed to payment</button>
-          <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" (click)="holdBooking()">Hold Booking</button>
+          <button
+            mat-raised-button
+            color="primary"
+            class="payment-button"
+            [disabled]="!isBookingAllowed() || freezeExpired"
+            (click)="openVerificationModal()">
+            Proceed to payment
+          </button>
+          <button
+            *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'"
+            mat-raised-button
+            color="accent"
+            class="hold-button"
+            [disabled]="freezeExpired"
+            (click)="holdBooking()">
+            Hold Booking
+          </button>
         </div>
-        <div *ngIf="freezeCountdownDisplay" style="margin-top: 10px; font-weight: 500;">
+        <div
+          *ngIf="!freezeExpired && freezeSecondsRemaining > 0"
+          style="margin-top: 10px; font-weight: 500;">
           Seat hold time remaining: {{ freezeCountdownDisplay }}
+        </div>
+        <div
+          *ngIf="freezeExpired"
+          style="margin-top: 10px; font-weight: 500;">
+          Hold time expired
         </div>
       </div>
     </div>
@@ -266,8 +300,23 @@
           </div>
           
           <div class="modal-actions" style="display: flex; gap: 10px; justify-content: center;">
-            <button mat-raised-button color="primary" class="proceed-button" [disabled]="isProceedDisabled()" (click)="proceedToPayment()">PROCEED TO PAYMENT</button>
-            <button *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'" mat-raised-button color="accent" class="hold-button" [disabled]="isLoading" (click)="holdBooking()">HOLD BOOKING</button>
+            <button
+              mat-raised-button
+              color="primary"
+              class="proceed-button"
+              [disabled]="isProceedDisabled()"
+              (click)="proceedToPayment()">
+              PROCEED TO PAYMENT
+            </button>
+            <button
+              *ngIf="isHoldBookingAllowed() && bookingType !== 'external_flight'"
+              mat-raised-button
+              color="accent"
+              class="hold-button"
+              [disabled]="isLoading || freezeExpired"
+              (click)="holdBooking()">
+              HOLD BOOKING
+            </button>
           </div>
         </div>
       </div>

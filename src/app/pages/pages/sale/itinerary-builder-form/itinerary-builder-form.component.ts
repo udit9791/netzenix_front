@@ -831,8 +831,50 @@ export class ItineraryBuilderFormComponent implements OnInit {
           inclusions: data.inclusions || '',
           exclusions: data.exclusions || '',
           terms: data.terms || '',
-          allowInstallmentPayment: !!data.allowInstallmentPayment
+          allowInstallmentPayment: !!data.allowInstallmentPayment,
+          allowHoldBooking: !!data.allow_hold_booking,
+          holdAmountType: data.hold_type === 'F' ? 'fixed' : 'percentage',
+          holdPercentage:
+            data.hold_value !== undefined && data.hold_value !== null
+              ? Number(data.hold_value)
+              : null,
+          holdCutoffDays:
+            data.hold_booking_days !== undefined &&
+            data.hold_booking_days !== null
+              ? Number(data.hold_booking_days)
+              : null,
+          holdLimitHours:
+            data.hold_booking_limit !== undefined &&
+            data.hold_booking_limit !== null
+              ? Number(data.hold_booking_limit)
+              : null,
+          refundPolicyType: data.is_refundable ? 'refundable' : 'non_refundable'
         });
+
+        while (this.refundRules.length) {
+          this.refundRules.removeAt(0);
+        }
+        if (data.is_refundable && Array.isArray(data.refund_rules)) {
+          data.refund_rules.forEach((rr: any) => {
+            const daysVal =
+              rr.days_before_checkin !== undefined &&
+              rr.days_before_checkin !== null
+                ? Number(rr.days_before_checkin)
+                : null;
+            const pctVal =
+              rr.percentage !== undefined && rr.percentage !== null
+                ? Number(rr.percentage)
+                : null;
+            this.refundRules.push(
+              this.fb.group({
+                daysBeforeDeparture: [daysVal, [Validators.min(0)]],
+                penaltyAmount: [pctVal, [Validators.min(0)]]
+              })
+            );
+          });
+        } else {
+          this.addRefundRule();
+        }
 
         while (this.groupDates.length) {
           this.groupDates.removeAt(0);

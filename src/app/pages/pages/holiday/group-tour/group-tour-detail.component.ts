@@ -464,7 +464,7 @@ export class GroupTourDetailComponent implements OnInit {
       const trimmed = bannerRaw.startsWith('/')
         ? bannerRaw.substring(1)
         : bannerRaw;
-      this.mainImage = `${environment.imgUrl}${trimmed}`;
+      this.mainImage = `${environment.imgUrl}/${trimmed}`;
     } else {
       this.mainImage = `https://picsum.photos/seed/itinerary-${id}/800/450`;
     }
@@ -476,7 +476,7 @@ export class GroupTourDetailComponent implements OnInit {
           day.images.forEach((img) => {
             if (img) {
               const trimmed = img.startsWith('/') ? img.substring(1) : img;
-              imgs.push(`${environment.imgUrl}${trimmed}`);
+              imgs.push(`${environment.imgUrl}/${trimmed}`);
             }
           });
         }
@@ -1754,7 +1754,7 @@ export class GroupTourDetailComponent implements OnInit {
       return null;
     }
     const trimmed = url.startsWith('/') ? url.substring(1) : url;
-    return `${environment.imgUrl}${trimmed}`;
+    return `${environment.imgUrl}/${trimmed}`;
   }
 
   private parseDate(value: string): Date | null {

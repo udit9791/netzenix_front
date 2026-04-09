@@ -291,7 +291,7 @@ export class GroupTourComponent implements OnInit {
       let thumbUrl = `https://picsum.photos/seed/itinerary-${id}/80`;
       if (banner) {
         const trimmed = banner.startsWith('/') ? banner.substring(1) : banner;
-        thumbUrl = `${environment.imgUrl}${trimmed}`;
+        thumbUrl = `${environment.imgUrl}/${trimmed}`;
       }
 
       return {
