@@ -135,6 +135,9 @@ export class GroupTourBookTripComponent implements OnInit {
     if (Array.isArray(sel.extraBeds) && sel.extraBeds.length > 0) {
       params['extra_beds[]'] = sel.extraBeds.map((f: any) => String(f));
     }
+    if (Array.isArray(sel.extraSeats) && sel.extraSeats.length > 0) {
+      params['extra_seats[]'] = sel.extraSeats.map((f: any) => String(f));
+    }
     if (sel.transportationType) {
       params.transportationType = sel.transportationType;
     }
@@ -460,6 +463,13 @@ export class GroupTourBookTripComponent implements OnInit {
         v === 1 || v === '1' || v === true || v === 'true' || v === 'TRUE'
     ).length;
     const extraBedAdults = 0;
+    const extraSeatFlags = Array.isArray(this.selection?.extraSeats)
+      ? this.selection.extraSeats
+      : [];
+    const extraSeatCount = extraSeatFlags.filter(
+      (v: any) =>
+        v === 1 || v === '1' || v === true || v === 'true' || v === 'TRUE'
+    ).length;
 
     if (
       !pricing.vehicles_selected ||
@@ -493,6 +503,7 @@ export class GroupTourBookTripComponent implements OnInit {
       children,
       extra_bed_adults: extraBedAdults,
       extra_bed_children: extraBedChildren,
+      extra_seat: extraSeatCount,
       pricing,
       sel_day_ids:
         Array.isArray(this.selection?.sel_day_ids) &&

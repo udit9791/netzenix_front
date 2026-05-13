@@ -30,6 +30,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AddMoneyDialogComponent } from './add-money-dialog/add-money-dialog.component';
 import { WalletService } from '../../../services/wallet.service';
 import { TenantService } from '../../../services/tenant.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'vex-toolbar',
@@ -125,7 +126,9 @@ export class ToolbarComponent implements OnInit {
     );
     this.tenantService.getAppInfo().subscribe((info) => {
       if (info && info.logoUrl) {
-        this.logoUrl = info.logoUrl;
+        const base = environment.imgUrl.replace(/\/+$/, '');
+        const path = String(info.logoUrl).replace(/^\/+/, '');
+        this.logoUrl = `${base}/${path}`;
       }
     });
     // Fetch wallet balance from API
@@ -208,6 +211,7 @@ export class ToolbarComponent implements OnInit {
   private loadWalletBalance(): void {
     this.walletService.getWalletBalance().subscribe({
       next: (response) => {
+        //alert(111);
         if (response.success && response.data) {
           this.walletAmount = response.data.balance;
           this.walletCreditBalance = response.data.credit_balance;

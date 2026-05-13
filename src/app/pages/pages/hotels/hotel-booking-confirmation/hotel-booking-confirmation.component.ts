@@ -39,6 +39,7 @@ type TravelerOption = {
   selector: 'vex-hotel-booking-confirmation',
   standalone: true,
   templateUrl: './hotel-booking-confirmation.component.html',
+  styleUrls: ['./hotel-booking-confirmation.component.scss'],
   imports: [
     CommonModule,
     RouterModule,

@@ -154,12 +154,52 @@ export interface TravelerDetailsDialogData {
     .traveler-details-dialog {
       min-width: 300px;
     }
-    .full-width { width: 100%; }
-    table { margin-top: 8px; }
-    th { text-transform: none; }
-    .requirements { display: flex; gap: 12px; padding: 0 24px; font-size: 12px; color: rgba(0,0,0,0.6); }
-    .group { margin-top: 12px; }
-    .group-title { margin: 12px 0 4px; font-weight: 600; opacity: 0.8; }
+    .full-width {
+      width: 100%;
+    }
+    table {
+      margin-top: 8px;
+      width: 100%;
+    }
+    th {
+      text-transform: none;
+    }
+    .requirements {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      padding: 0 24px;
+      font-size: 12px;
+      color: rgba(0,0,0,0.6);
+    }
+    .group {
+      margin-top: 12px;
+    }
+    .group-title {
+      margin: 12px 0 4px;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 600px) {
+      .traveler-details-dialog {
+        min-width: unset;
+        width: 100%;
+      }
+      .requirements {
+        padding: 0 12px;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .full-width {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      ::ng-deep .mat-mdc-dialog-content {
+        padding: 0 12px !important;
+      }
+    }
   `]
 })
 export class TravelerDetailsDialog {

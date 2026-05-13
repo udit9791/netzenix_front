@@ -124,6 +124,20 @@
             >
               Book Now
             </button>
+            <button
+              mat-stroked-button
+              color="primary"
+              class="panel-action"
+              [disabled]="isDownloadingItinerary"
+              (click)="openDownloadItineraryDialog()"
+            >
+              <ng-container *ngIf="!isDownloadingItinerary; else downloadingTpl">
+                Download Itinerary
+              </ng-container>
+              <ng-template #downloadingTpl>
+                Downloading...
+              </ng-template>
+            </button>
           </div>
         </mat-card-content>
       </mat-card>
@@ -199,12 +213,18 @@
                     </mat-option>
                   </mat-select>
                 </mat-form-field>
-                <div class="mt-1">
+                <div class="mt-1 flex flex-col gap-1">
                   <mat-checkbox
                     [checked]="room.extraBedFlags[j] || false"
                     (change)="toggleExtraBed(i, j, $event.checked)"
                   >
                     Extra bed
+                  </mat-checkbox>
+                  <mat-checkbox
+                    [checked]="room.extraSeatFlags?.[j] || false"
+                    (change)="toggleExtraSeat(i, j, $event.checked)"
+                  >
+                    Extra seat
                   </mat-checkbox>
                 </div>
               </div>
@@ -409,14 +429,6 @@
               {{ nightsText }}
             </div>
           </div>
-          <button
-            mat-stroked-button
-            color="primary"
-            class="panel-action"
-            (click)="openDownloadItineraryDialog()"
-          >
-            Download Itinerary
-          </button>
         </div>
 
         <div class="itinerary-list">
@@ -767,14 +779,13 @@
           <div class="info-header">
             <div class="info-title">Inclusions</div>
           </div>
-          <div class="info-body">
-            <p>
-              {{
-                detail.inclusions
-                  || 'Inclusions as per final package and itinerary shared with the customer.'
-              }}
-            </p>
-          </div>
+          <div
+            class="info-body"
+            [innerHTML]="
+              detail.inclusions
+                || 'Inclusions as per final package and itinerary shared with the customer.'
+            "
+          ></div>
         </div>
       </section>
 
@@ -783,14 +794,13 @@
           <div class="info-header">
             <div class="info-title">Exclusions</div>
           </div>
-          <div class="info-body">
-            <p>
-              {{
-                detail.exclusions
-                  || 'Anything not mentioned in the inclusions, personal expenses and taxes as applicable.'
-              }}
-            </p>
-          </div>
+          <div
+            class="info-body"
+            [innerHTML]="
+              detail.exclusions
+                || 'Anything not mentioned in the inclusions, personal expenses and taxes as applicable.'
+            "
+          ></div>
         </div>
       </section>
 
@@ -799,14 +809,13 @@
           <div class="info-header">
             <div class="info-title">Terms &amp; Conditions</div>
           </div>
-          <div class="info-body">
-            <p>
-              {{
-                detail.terms
-                  || 'All packages are subject to availability and standard booking terms.'
-              }}
-            </p>
-          </div>
+          <div
+            class="info-body"
+            [innerHTML]="
+              detail.terms
+                || 'All packages are subject to availability and standard booking terms.'
+            "
+          ></div>
         </div>
       </section>
     </div>

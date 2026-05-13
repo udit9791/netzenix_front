@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════
+   Hotel Booking Confirmation — Mobile Responsive
+   ═══════════════════════════════════════════════ */
+
+/* ─── Outer container padding ──────────────────── */
+.container {
+  padding: 16px;
+
+  @media (max-width: 600px) {
+    padding: 8px;
+  }
+}
+
+/* ─── Main two-column layout (form + price sidebar)
+       Tailwind handles md:grid-cols-3 for desktop.
+       Below we force single-column on mobile.       */
+@media (max-width: 767px) {
+  /* The Tailwind grid wrapper — stack columns */
+  .grid.grid-cols-1 {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px;
+  }
+
+  /* Price Breakup card — move it ABOVE the form on mobile */
+  .grid.grid-cols-1 > div:last-child {
+    order: -1;
+  }
+}
+
+/* ─── Hotel header: name + photo row ───────────── */
+@media (max-width: 600px) {
+  /* Stack hotel name/info and thumbnail vertically */
+  .flex.items-start.justify-between.gap-4 {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+
+    img {
+      width: 100% !important;
+      height: 180px !important;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+  }
+}
+
+/* ─── Guest Details form: 3-column → 1 column ──── */
+@media (max-width: 600px) {
+  /* Tailwind md:grid-cols-3 doesn't apply below md (768px),
+     but the grid itself may still layout weirdly — enforce column */
+  form.grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  /* Address textarea: full span */
+  .md\:col-span-3 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ─── Other Guests: fetch row ──────────────────── */
+@media (max-width: 600px) {
+  /* Mobile number + Fetch button + required text */
+  .grid.grid-cols-1.md\:grid-cols-3.gap-3.items-end {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+
+    button {
+      width: 100%;
+    }
+
+    .text-xs {
+      text-align: left !important;
+    }
+  }
+}
+
+/* ─── Add Guest manual form: 5-column → column ─── */
+@media (max-width: 600px) {
+  .grid.grid-cols-1.md\:grid-cols-5 {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+
+    .flex.gap-2 {
+      flex-direction: row;
+      justify-content: flex-start;
+      margin-top: 4px;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+}
+
+/* ─── Saved traveler picker: 2-col → 1-col ─────── */
+@media (max-width: 600px) {
+  .grid.grid-cols-1.md\:grid-cols-2.gap-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── Action buttons row ────────────────────────── */
+@media (max-width: 600px) {
+  .flex.justify-end.gap-2.mt-4 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+/* ─── Price Breakup sidebar card ────────────────── */
+/* Already stacked via order:-1 above.
+   Ensure inner rows don't overflow:            */
+.flex.justify-between.text-sm {
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/* ─── Room breakdown rows ───────────────────────── */
+@media (max-width: 600px) {
+  .flex.justify-between {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+/* ─── Star rating row ───────────────────────────── */
+@media (max-width: 600px) {
+  .flex.items-center.gap-2.mt-2 {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* ─── mat-card padding on mobile ────────────────── */
+@media (max-width: 600px) {
+  ::ng-deep .mat-mdc-card {
+    padding: 12px !important;
+  }
+}
+
+/* ─── Hold button accent color helper ───────────── */
+.hold-button {
+  background-color: #ff9800;
+  color: #fff;
+}

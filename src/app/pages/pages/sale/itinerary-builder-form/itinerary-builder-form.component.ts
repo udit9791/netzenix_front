@@ -34,6 +34,8 @@ import {
   map
 } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
+import * as ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 interface ItineraryDay {
   title: string;
@@ -75,12 +77,14 @@ interface ItineraryDay {
     MatSelectModule,
     MatAutocompleteModule,
     MatCheckboxModule,
-    RouterModule
+    RouterModule,
+    CKEditorModule
   ],
   templateUrl: './itinerary-builder-form.component.html',
   styleUrls: ['./itinerary-builder-form.component.scss']
 })
 export class ItineraryBuilderFormComponent implements OnInit {
+  Editor: any = ClassicEditor;
   form: FormGroup;
   countries: any[] = [];
   states: any[] = [];
@@ -171,6 +175,10 @@ export class ItineraryBuilderFormComponent implements OnInit {
       sicVehicles: [[]],
       privateVehicles: [[]],
       vehicles: [[], Validators.required],
+      adultAgeLimit: [null],
+      freeChildAge: [null],
+      childSeatFromAge: [null],
+      childSeatToAge: [null],
       markup: [null, [Validators.min(0)]],
       inclusions: [''],
       exclusions: [''],
@@ -217,6 +225,10 @@ export class ItineraryBuilderFormComponent implements OnInit {
     this.addRefundRule();
   }
 
+  adultAgeOptions: number[] = Array.from({ length: 17 }).map((_, i) => i + 1);
+  freeChildAgeOptions: number[] = [];
+  childSeatAgeOptions: number[] = [];
+
   ngOnInit(): void {
     this.loadCountries();
     this.loadVehicles();
@@ -245,6 +257,42 @@ export class ItineraryBuilderFormComponent implements OnInit {
 
   get refundRules(): FormArray {
     return this.form.get('refundRules') as FormArray;
+  }
+
+  onAdultAgeChange(): void {
+    const adult = Number(this.form.get('adultAgeLimit')?.value || 0);
+    if (adult > 0) {
+      this.freeChildAgeOptions = this.adultAgeOptions.filter((a) => a < adult);
+      this.childSeatAgeOptions = this.adultAgeOptions.filter((a) => a <= adult);
+    } else {
+      this.freeChildAgeOptions = [...this.adultAgeOptions];
+      this.childSeatAgeOptions = [...this.adultAgeOptions];
+    }
+
+    const freeChildCtrl = this.form.get('freeChildAge');
+    if (
+      freeChildCtrl &&
+      adult > 0 &&
+      !this.freeChildAgeOptions.includes(Number(freeChildCtrl.value || 0))
+    ) {
+      freeChildCtrl.setValue(null);
+    }
+
+    const fromCtrl = this.form.get('childSeatFromAge');
+    if (
+      fromCtrl &&
+      !this.childSeatAgeOptions.includes(Number(fromCtrl.value || 0))
+    ) {
+      fromCtrl.setValue(null);
+    }
+
+    const toCtrl = this.form.get('childSeatToAge');
+    if (
+      toCtrl &&
+      !this.childSeatAgeOptions.includes(Number(toCtrl.value || 0))
+    ) {
+      toCtrl.setValue(null);
+    }
   }
 
   getInstallmentsTotalPercentage(): number {
@@ -798,6 +846,16 @@ export class ItineraryBuilderFormComponent implements OnInit {
         if (!data) {
           return;
         }
+        const daysData = Array.isArray(data.days) ? data.days : [];
+        const firstDay = daysData.length ? daysData[0] : null;
+        const adultAgeFromData =
+          firstDay && firstDay.adult_age !== undefined
+            ? firstDay.adult_age
+            : null;
+        const freeChildAgeFromData =
+          firstDay && firstDay.free_child_age !== undefined
+            ? firstDay.free_child_age
+            : null;
         this.form.patchValue({
           name: data.name || '',
           description: data.description || '',
@@ -825,8 +883,17 @@ export class ItineraryBuilderFormComponent implements OnInit {
           fitStart: data.fitStart || null,
           fitEnd: data.fitEnd || null,
           markup:
-            data.markup !== undefined && data.markup !== null
-              ? Number(data.markup) || 0
+            data.markup_percentage !== undefined &&
+            data.markup_percentage !== null
+              ? Number(data.markup_percentage) || 0
+              : null,
+          adultAgeLimit:
+            adultAgeFromData !== undefined && adultAgeFromData !== null
+              ? Number(adultAgeFromData) || null
+              : null,
+          freeChildAge:
+            freeChildAgeFromData !== undefined && freeChildAgeFromData !== null
+              ? Number(freeChildAgeFromData) || null
               : null,
           inclusions: data.inclusions || '',
           exclusions: data.exclusions || '',
@@ -850,6 +917,8 @@ export class ItineraryBuilderFormComponent implements OnInit {
               : null,
           refundPolicyType: data.is_refundable ? 'refundable' : 'non_refundable'
         });
+
+        this.onAdultAgeChange();
 
         while (this.refundRules.length) {
           this.refundRules.removeAt(0);
@@ -1978,6 +2047,22 @@ export class ItineraryBuilderFormComponent implements OnInit {
       depart_from: this.departFromList,
       vehicle_ids: vehicleIds,
       vehicle_prices: vehiclePrices,
+      adult_age_limit:
+        value.adultAgeLimit !== null && value.adultAgeLimit !== undefined
+          ? Number(value.adultAgeLimit) || null
+          : null,
+      free_child_age:
+        value.freeChildAge !== null && value.freeChildAge !== undefined
+          ? Number(value.freeChildAge) || null
+          : null,
+      child_seat_age_from:
+        value.childSeatFromAge !== null && value.childSeatFromAge !== undefined
+          ? Number(value.childSeatFromAge) || null
+          : null,
+      child_seat_age_to:
+        value.childSeatToAge !== null && value.childSeatToAge !== undefined
+          ? Number(value.childSeatToAge) || null
+          : null,
       markup:
         value.markup !== null && value.markup !== undefined
           ? Number(value.markup) || 0
@@ -2061,6 +2146,33 @@ export class ItineraryBuilderFormComponent implements OnInit {
     }
     if (payload.fitEnd) {
       formData.append('fitEnd', normalizeDate(payload.fitEnd));
+    }
+    if (
+      payload.adult_age_limit !== null &&
+      payload.adult_age_limit !== undefined
+    ) {
+      formData.append('adult_age_limit', String(payload.adult_age_limit));
+    }
+    if (
+      payload.free_child_age !== null &&
+      payload.free_child_age !== undefined
+    ) {
+      formData.append('free_child_age', String(payload.free_child_age));
+    }
+    if (
+      payload.child_seat_age_from !== null &&
+      payload.child_seat_age_from !== undefined
+    ) {
+      formData.append(
+        'child_seat_age_from',
+        String(payload.child_seat_age_from)
+      );
+    }
+    if (
+      payload.child_seat_age_to !== null &&
+      payload.child_seat_age_to !== undefined
+    ) {
+      formData.append('child_seat_age_to', String(payload.child_seat_age_to));
     }
     if (Array.isArray(payload.groupDates)) {
       payload.groupDates.forEach((gd: any, idx: number) => {

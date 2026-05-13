@@ -620,6 +620,15 @@ export const appRoutes: VexRoutes = [
               )
           },
           {
+            path: 'plugins',
+            loadComponent: () =>
+              import('./pages/pages/masters/plugins/plugin-list/plugin-list.component').then(
+                (m) => m.PluginListComponent
+              ),
+            canActivate: [PermissionGuard],
+            data: { permission: 'view_plugins' }
+          },
+          {
             path: '',
             pathMatch: 'full',
             redirectTo: 'airline'
@@ -664,6 +673,22 @@ export const appRoutes: VexRoutes = [
           ),
         canActivate: [PermissionGuard],
         data: { permission: 'view_my_booking' }
+      },
+      {
+        path: 'payment-processing',
+        loadComponent: () =>
+          import('./pages/payment-processing/payment-processing.component').then(
+            (m) => m.PaymentProcessingComponent
+          )
+      },
+      {
+        path: 'plan-billing',
+        loadComponent: () =>
+          import('./pages/plan-billing/plan-billing.component').then(
+            (m) => m.PlanBillingComponent
+          ),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_plan_billing' }
       }
     ]
   },
@@ -672,6 +697,13 @@ export const appRoutes: VexRoutes = [
     loadComponent: () =>
       import('./pages/pages/auth/login/login.component').then(
         (m) => m.LoginComponent
+      )
+  },
+  {
+    path: 'maintenance',
+    loadComponent: () =>
+      import('./pages/maintenance/maintenance.component').then(
+        (m) => m.MaintenanceComponent
       )
   },
   {

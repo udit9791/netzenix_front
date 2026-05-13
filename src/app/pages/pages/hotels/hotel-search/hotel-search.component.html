@@ -105,82 +105,284 @@
   </div>
   </ng-template>
 
-<div class="p-6 container" *ngIf="loading">
-  <div class="flex items-center gap-2 text-gray-600">
+<!-- ── Loading ───────────────────────────────────────────── -->
+<div class="p-4 container" *ngIf="loading">
+  <div class="flex items-center gap-2 text-gray-600 mb-2">
     <mat-icon>sync</mat-icon>
     <span>Searching hotels...</span>
   </div>
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
 </div>
 
-<div class="p-6 container" *ngIf="!loading && errorMsg">
+<!-- ── Error ─────────────────────────────────────────────── -->
+<div class="p-4 container" *ngIf="!loading && errorMsg">
   <div class="flex items-center gap-2 text-red-600">
     <mat-icon>error</mat-icon>
     <span>{{ errorMsg }}</span>
   </div>
 </div>
 
-<div class="p-6 container" *ngIf="!loading && !errorMsg">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <mat-card class="hotel-card cursor-pointer" *ngFor="let h of results" (click)="openHotelDetail(h)">
-      <div class="card-top">
-        <img [src]="fullImgUrl(h.photo_url)" alt="Hotel image" class="top-image" />
-        <div class="top-badges">
-          <!-- <span class="badge badge-yellow">SUPER SAVER</span>
-          <span class="badge badge-dark">GST ASSURED</span> -->
+<!-- ── Results Layout ─────────────────────────────────────── -->
+<div class="results-outer" *ngIf="!loading && !errorMsg && results.length > 0">
+
+  <!-- Mobile: filter toggle bar -->
+  <div class="mobile-filter-bar">
+    <button mat-stroked-button class="filter-toggle-btn" (click)="toggleFiltersDrawer()">
+      <mat-icon>tune</mat-icon>
+      Filters
+      <span class="filter-badge" *ngIf="activeFilterCount > 0">{{ activeFilterCount }}</span>
+    </button>
+    <div class="view-toggle">
+      <button mat-icon-button [class.active]="isListView" (click)="setViewMode('list')" matTooltip="List view">
+        <mat-icon>view_list</mat-icon>
+      </button>
+      <button mat-icon-button [class.active]="!isListView" (click)="setViewMode('grid')" matTooltip="Grid view">
+        <mat-icon>grid_view</mat-icon>
+      </button>
+    </div>
+    <div class="results-count-mobile">{{ totalFiltered }} hotels</div>
+  </div>
+
+  <!-- Mobile filter drawer overlay -->
+  <div class="filter-drawer-overlay" [class.open]="filtersOpen" (click)="filtersOpen = false"></div>
+
+  <div class="results-layout">
+
+    <!-- ── Sidebar Filters ──────────────────────────────── -->
+    <aside class="filters-sidebar" [class.open]="filtersOpen">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <mat-icon>tune</mat-icon>
+          Filters
+          <span class="filter-badge" *ngIf="activeFilterCount > 0">{{ activeFilterCount }}</span>
         </div>
-      </div>
-      <div class="card-body">
-        <div class="card-row">
-          <div class="rating-wrap" *ngIf="h.star_rating">
-            <span class="rating-chip">
-              {{ h.star_rating }}★
-            </span>
-            <span class="rating-text">
-              {{ h.star_rating >= 4 ? 'Excellent' : (h.star_rating >= 3 ? 'Good' : 'Average') }}
-            </span>
-          </div>
-          <button mat-stroked-button class="share-btn">
-            <mat-icon>share</mat-icon>
-            Share
+        <div class="sidebar-actions">
+          <button mat-button color="warn" *ngIf="activeFilterCount > 0" (click)="clearAllFilters()">Clear All</button>
+          <button mat-icon-button class="sidebar-close-btn" (click)="filtersOpen = false">
+            <mat-icon>close</mat-icon>
           </button>
         </div>
-        <div class="hotel-title">{{ h.name }}</div>
-        <div class="stars">
-          <mat-icon *ngFor="let i of [0,1,2,3,4]" class="star" [class.muted]="i >= h.star_rating">grade</mat-icon>
-        </div>
-        <a class="hotel-location" *ngIf="h.city">{{ h.city }}</a>
-        <!-- <div class="chips">
-          <span class="chip">Swimming Pool</span>
-          <span class="chip">Restaurant</span>
-        </div> -->
-        <ul class="feature-list">
-          <li>
-            <mat-icon>check_circle</mat-icon>
-            <span [ngStyle]="{ color: h.refundable ? '' : 'red' }">
-              {{ h.refundable ? 'Refundable' : 'Non Refundable' }}
+      </div>
+
+      <!-- Star Rating Filter -->
+      <mat-expansion-panel expanded class="filter-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Star Rating</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="star-filter-options">
+          <button
+            *ngFor="let s of [5,4,3,2,1]"
+            class="star-filter-btn"
+            [class.selected]="filterStars.has(s)"
+            (click)="toggleStarFilter(s)">
+            <span *ngFor="let i of [1,2,3,4,5]">
+              <mat-icon class="star-icon" [class.lit]="i <= s">grade</mat-icon>
             </span>
-          </li>
-          <!-- <li><mat-icon>check_circle</mat-icon><span>Free stay for the kid</span></li> -->
-          <!-- <li><mat-icon>check_circle</mat-icon><span>Enjoy Happy Hours with 1+1 offer</span></li> -->
-        </ul>
-      </div>
-      <div class="bottom-bar">
-        <div class="left">
-          For {{ h.nights }} Nights & {{ h.rooms }} Room
-          <span class="muted">with tax.</span>
+          </button>
         </div>
-        <div class="right" *ngIf="h.price_total !== null">
-          ₹ {{ h.price_total | number:'1.0-0' }}
+      </mat-expansion-panel>
+
+      <!-- Price Range Filter -->
+      <mat-expansion-panel expanded class="filter-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Price Range</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="price-range-wrap">
+          <div class="price-labels">
+            <span>₹{{ priceMin | number:'1.0-0' }}</span>
+            <span>₹{{ priceMax | number:'1.0-0' }}</span>
+          </div>
+          <div class="price-inputs">
+            <mat-form-field appearance="outline" class="price-input">
+              <mat-label>Min</mat-label>
+              <input matInput type="number" [value]="priceMin"
+                (change)="onPriceChange('min', +$any($event.target).value)"
+                [min]="priceRangeMin" [max]="priceMax" />
+            </mat-form-field>
+            <span class="price-sep">—</span>
+            <mat-form-field appearance="outline" class="price-input">
+              <mat-label>Max</mat-label>
+              <input matInput type="number" [value]="priceMax"
+                (change)="onPriceChange('max', +$any($event.target).value)"
+                [min]="priceMin" [max]="priceRangeMax" />
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Property Facilities Filter -->
+      <mat-expansion-panel expanded class="filter-panel" *ngIf="availableFacilities.length > 0">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Property Facilities</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="checkbox-list">
+          <mat-checkbox
+            *ngFor="let fac of availableFacilities"
+            [checked]="filterFacilities.has(fac)"
+            (change)="toggleFacilityFilter(fac)">
+            {{ fac }}
+          </mat-checkbox>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Bed Type Filter -->
+      <mat-expansion-panel class="filter-panel" *ngIf="availableBedTypes.length > 0">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Bed Type</mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="checkbox-list">
+          <mat-checkbox
+            *ngFor="let bed of availableBedTypes"
+            [checked]="filterBedTypes.has(bed)"
+            (change)="toggleBedTypeFilter(bed)">
+            {{ bed }}
+          </mat-checkbox>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Mobile Apply button -->
+      <div class="sidebar-apply-row">
+        <button mat-flat-button color="primary" class="w-full" (click)="filtersOpen = false">
+          Show {{ totalFiltered }} Hotels
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Results Content ──────────────────────────────── -->
+    <div class="results-content">
+
+      <!-- Results header bar -->
+      <div class="results-header">
+        <div class="results-count">
+          <span class="count-num">{{ totalFiltered }}</span> hotels found
+          <span class="filtered-note" *ngIf="activeFilterCount > 0">(filtered from {{ results.length }})</span>
+        </div>
+        <div class="view-toggle desktop-only">
+          <button mat-icon-button [class.active]="isListView" (click)="setViewMode('list')" matTooltip="List view">
+            <mat-icon>view_list</mat-icon>
+          </button>
+          <button mat-icon-button [class.active]="!isListView" (click)="setViewMode('grid')" matTooltip="Grid view">
+            <mat-icon>grid_view</mat-icon>
+          </button>
         </div>
       </div>
-      <div class="action-row">
-        <!-- <button mat-stroked-button color="primary">Book Now &#64; ₹0</button> -->
-        <!-- <button mat-flat-button class="package-btn">Super Package</button> -->
+
+      <!-- Active filter chips -->
+      <div class="active-chips" *ngIf="activeFilterCount > 0">
+        <span class="chip active-chip" *ngFor="let s of filterStars">
+          {{ s }}★
+          <mat-icon class="chip-remove" (click)="toggleStarFilter(s)">close</mat-icon>
+        </span>
+        <span class="chip active-chip" *ngFor="let f of filterFacilities">
+          {{ f }}
+          <mat-icon class="chip-remove" (click)="toggleFacilityFilter(f)">close</mat-icon>
+        </span>
+        <span class="chip active-chip" *ngFor="let b of filterBedTypes">
+          {{ b }}
+          <mat-icon class="chip-remove" (click)="toggleBedTypeFilter(b)">close</mat-icon>
+        </span>
+        <button mat-button color="warn" class="clear-chip" (click)="clearAllFilters()">Clear all</button>
       </div>
-    </mat-card>
-  </div>
-  <div class="text-center text-gray-600 mt-4" *ngIf="results.length === 0">
-    No hotels found for your criteria.
-  </div>
+
+      <!-- No results after filter -->
+      <div class="no-results" *ngIf="totalFiltered === 0">
+        <mat-icon>hotel</mat-icon>
+        <p>No hotels match your filters.</p>
+        <button mat-stroked-button (click)="clearAllFilters()">Clear Filters</button>
+      </div>
+
+      <!-- ── LIST VIEW (≤3 results OR user chose list) ── -->
+      <div class="list-view" *ngIf="isListView && totalFiltered > 0">
+        <div class="list-card" *ngFor="let h of pagedResults" (click)="openHotelDetail(h)">
+          <div class="list-image-wrap">
+            <img [src]="fullImgUrl(h.photo_url)" alt="Hotel" class="list-image" />
+          </div>
+          <div class="list-body">
+            <div class="list-top">
+              <div class="hotel-title">{{ h.name }}</div>
+              <div class="stars">
+                <mat-icon *ngFor="let i of [0,1,2,3,4]" class="star" [class.muted]="i >= h.star_rating">grade</mat-icon>
+              </div>
+              <div class="hotel-location" *ngIf="h.city">
+                <mat-icon class="loc-icon">location_on</mat-icon>
+                {{ h.city }}
+              </div>
+              <div class="list-meta">
+                <span class="rating-chip" *ngIf="h.star_rating">{{ h.star_rating }}★</span>
+                <span class="meta-text">{{ h.star_rating >= 4 ? 'Excellent' : (h.star_rating >= 3 ? 'Good' : 'Average') }}</span>
+              </div>
+            </div>
+            <ul class="feature-list">
+              <li>
+                <mat-icon>{{ h.refundable ? 'check_circle' : 'cancel' }}</mat-icon>
+                <span [ngStyle]="{ color: h.refundable ? '#047857' : 'red' }">
+                  {{ h.refundable ? 'Refundable' : 'Non Refundable' }}
+                </span>
+              </li>
+            </ul>
+          </div>
+          <div class="list-price-panel">
+            <div class="nights-label">For {{ h.nights }} Night{{ h.nights !== 1 ? 's' : '' }} · {{ h.rooms }} Room</div>
+            <div class="list-price" *ngIf="h.price_total !== null">₹ {{ h.price_total | number:'1.0-0' }}</div>
+            <div class="price-note">with tax</div>
+            <button mat-flat-button color="primary" class="book-btn" (click)="openHotelDetail(h); $event.stopPropagation()">
+              View Rooms
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── GRID VIEW (>3 results AND user chose grid) ── -->
+      <div class="grid-view" *ngIf="!isListView && totalFiltered > 0">
+        <mat-card class="hotel-card cursor-pointer" *ngFor="let h of pagedResults" (click)="openHotelDetail(h)">
+          <div class="card-top">
+            <img [src]="fullImgUrl(h.photo_url)" alt="Hotel image" class="top-image" />
+            <div class="top-badges"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-row">
+              <div class="rating-wrap" *ngIf="h.star_rating">
+                <span class="rating-chip">{{ h.star_rating }}★</span>
+                <span class="rating-text">{{ h.star_rating >= 4 ? 'Excellent' : (h.star_rating >= 3 ? 'Good' : 'Average') }}</span>
+              </div>
+            </div>
+            <div class="hotel-title">{{ h.name }}</div>
+            <div class="stars">
+              <mat-icon *ngFor="let i of [0,1,2,3,4]" class="star" [class.muted]="i >= h.star_rating">grade</mat-icon>
+            </div>
+            <a class="hotel-location" *ngIf="h.city">{{ h.city }}</a>
+            <ul class="feature-list">
+              <li>
+                <mat-icon>{{ h.refundable ? 'check_circle' : 'cancel' }}</mat-icon>
+                <span [ngStyle]="{ color: h.refundable ? '' : 'red' }">{{ h.refundable ? 'Refundable' : 'Non Refundable' }}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="bottom-bar">
+            <div class="left">{{ h.nights }} Nights · {{ h.rooms }} Room <span class="muted">with tax.</span></div>
+            <div class="right" *ngIf="h.price_total !== null">₹ {{ h.price_total | number:'1.0-0' }}</div>
+          </div>
+        </mat-card>
+      </div>
+
+      <!-- ── Pagination ──────────────────────────────────── -->
+      <div class="pagination-wrap" *ngIf="totalFiltered > pageSize">
+        <mat-paginator
+          [length]="totalFiltered"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[5, 10, 20, 50]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      </div>
+
+    </div><!-- /results-content -->
+  </div><!-- /results-layout -->
+</div><!-- /results-outer -->
+
+<!-- No results at all -->
+<div class="p-6 container text-center text-gray-600 mt-4"
+  *ngIf="!loading && !errorMsg && results.length === 0">
+  No hotels found for your criteria.
 </div>

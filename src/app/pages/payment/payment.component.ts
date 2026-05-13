@@ -4,12 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { PaymentService } from '../../services/payment.service';
 import { FormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatChipsModule } from '@angular/material/chips';
+import { Subscription, interval } from 'rxjs';
 
 @Component({
   selector: 'vex-payment',
@@ -20,6 +22,7 @@ import { MatChipsModule } from '@angular/material/chips';
     MatIconModule,
     MatCardModule,
     MatDividerModule,
+    MatProgressSpinnerModule,
     RouterModule,
     FormsModule,
     MatInputModule,
@@ -61,9 +64,19 @@ export class PaymentComponent implements OnInit, OnDestroy {
   // Timer display properties
   remainingTime: number = 0; // in seconds
   timerDisplay: string = '10:00';
+
+  // Vegaah online payment polling state
+  isVegaahPolling = false;
+  vegaahPollCountdown = 300; // 5 minutes in seconds
+  vegaahCountdownDisplay = '05:00';
+  vegaahPaymentSuccess = false;
+  vegaahPaymentTimedOut = false;
+  private vegaahWalletTxId: number | null = null;
+  private vegaahPollSub: Subscription | null = null;
+  private vegaahCountdownSub: Subscription | null = null;
   
   constructor(
-    private router: Router,
+    public router: Router,
     private route: ActivatedRoute,
     private paymentService: PaymentService
   ) {}
@@ -80,14 +93,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
   
   ngOnDestroy() {
-    // Clear timeout when component is destroyed
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-    }
-    // Clear interval when component is destroyed
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-    }
+    if (this.timeoutId) clearTimeout(this.timeoutId);
+    if (this.intervalId) clearInterval(this.intervalId);
+    this.vegaahPollSub?.unsubscribe();
+    this.vegaahCountdownSub?.unsubscribe();
   }
   
   private loadAmountFromSession() {
@@ -223,37 +232,72 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
   
   payNow() {
-    console.log('Processing payment of ₹' + this.amount + ' via ' + this.selectedPaymentMethod);
-
-    // Find the selected payment method object to get its ID
-    const selectedMethodObj = this.paymentMethods.find(method => 
+    const selectedMethodObj = this.paymentMethods.find(method =>
       method.name.toLowerCase().replace(' ', '_') === this.selectedPaymentMethod
     );
 
-    // Determine which remarks to use based on payment method
-    let finalRemarks = '';
-    if (this.selectedPaymentMethod === 'cash') {
-      finalRemarks = this.cashRemarks;
-    } else {
-      finalRemarks = this.remarks;
+    // Vegaah online payment — open in new tab, poll on current page
+    if (selectedMethodObj?.id === 1 || selectedMethodObj?.name?.toLowerCase().includes('vegaah')) {
+      this.paymentService.initiateVegaahTopUp(this.amount).subscribe({
+        next: (res) => {
+          this.vegaahWalletTxId = res.wallet_transaction_id;
+          window.open(res.payment_url, '_blank');
+          this.startVegaahPolling();
+        },
+        error: () => { alert('Failed to initiate payment. Please try again.'); }
+      });
+      return;
     }
 
-    // Use the new createPaymentTransaction method that handles file uploads
+    let finalRemarks = this.selectedPaymentMethod === 'cash' ? this.cashRemarks : this.remarks;
+
     this.paymentService.createPaymentTransaction(
-      this.amount, 
-      1, // wallet_id 
-      finalRemarks, 
+      this.amount,
+      1,
+      finalRemarks,
       this.selectedFile || undefined,
-      selectedMethodObj?.id // Pass the payment method ID
+      selectedMethodObj?.id
     ).subscribe({
-      next: (response) => {
-        console.log('Payment transaction created successfully:', response);
-        this.router.navigate(['/wallet']);
-      },
-      error: (err) => {
-        console.error('Failed to create payment transaction', err);
-        alert('Failed to add payment. Please try again.');
+      next: () => { this.router.navigate(['/wallet']); },
+      error: () => { alert('Failed to add payment. Please try again.'); }
+    });
+  }
+
+  private startVegaahPolling(): void {
+    this.isVegaahPolling = true;
+    this.vegaahPollCountdown = 300;
+    this.updateVegaahCountdownDisplay();
+
+    // Countdown every second
+    this.vegaahCountdownSub = interval(1000).subscribe(() => {
+      this.vegaahPollCountdown--;
+      this.updateVegaahCountdownDisplay();
+      if (this.vegaahPollCountdown <= 0) {
+        this.vegaahCountdownSub?.unsubscribe();
+        this.vegaahPollSub?.unsubscribe();
+        this.vegaahPaymentTimedOut = true;
       }
     });
+
+    // Poll every 4 seconds
+    this.vegaahPollSub = interval(4000).subscribe(() => {
+      if (!this.vegaahWalletTxId || this.vegaahPaymentTimedOut) return;
+      this.paymentService.getWalletTxStatus(this.vegaahWalletTxId).subscribe({
+        next: (res) => {
+          if (res?.payment_status === 1) {
+            this.vegaahPollSub?.unsubscribe();
+            this.vegaahCountdownSub?.unsubscribe();
+            this.vegaahPaymentSuccess = true;
+            setTimeout(() => this.router.navigate(['/wallet']), 2000);
+          }
+        }
+      });
+    });
+  }
+
+  private updateVegaahCountdownDisplay(): void {
+    const m = Math.floor(this.vegaahPollCountdown / 60).toString().padStart(2, '0');
+    const s = (this.vegaahPollCountdown % 60).toString().padStart(2, '0');
+    this.vegaahCountdownDisplay = `${m}:${s}`;
   }
 }

@@ -120,4 +120,14 @@ export class PaymentService {
       map(response => response.data || [])
     );
   }
+
+  initiateVegaahTopUp(amount: number, bookingId?: string): Observable<any> {
+    const payload: any = { amount, payment_method_id: 1 };
+    if (bookingId) payload.booking_id = bookingId;
+    return this.http.post(`${this.apiUrl}/payment-transactions`, payload);
+  }
+
+  getWalletTxStatus(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/payment-transactions/${id}/payment-status`);
+  }
 }

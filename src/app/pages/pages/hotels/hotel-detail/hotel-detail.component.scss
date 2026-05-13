@@ -1,22 +1,53 @@
+/* ─── Container ─────────────────────────────────────────── */
+.container {
+  padding: 16px;
+
+  @media (max-width: 600px) {
+    padding: 8px;
+  }
+}
+
+/* ─── Hero Card ─────────────────────────────────────────── */
 .hero {
   padding: 12px;
   margin-bottom: 16px;
 }
+
 .hero-grid {
   display: grid;
   grid-template-columns: 2fr 2fr 1fr;
   gap: 16px;
   align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
+
 .hero-image-wrap {
   position: relative;
+
+  @media (max-width: 900px) {
+    grid-column: 1 / -1; /* full width on tablet */
+  }
 }
+
 .hero-image {
   width: 100%;
   height: 240px;
   object-fit: cover;
   border-radius: 8px;
+
+  @media (max-width: 600px) {
+    height: 200px;
+  }
 }
+
 .hero-photo-badge {
   position: absolute;
   left: 12px;
@@ -31,57 +62,128 @@
   font-size: 12px;
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+  .arrow {
+    font-size: 16px;
+  }
 }
-.hero-photo-badge .arrow {
-  font-size: 16px;
+
+/* ─── Hero Info ──────────────────────────────────────────── */
+.hero-info {
+  .title {
+    font-size: 20px;
+    font-weight: 600;
+
+    @media (max-width: 600px) {
+      font-size: 17px;
+    }
+  }
+
+  .rating mat-icon {
+    color: #ffcc00;
+  }
+
+  .rating mat-icon.muted {
+    color: #ddd;
+  }
 }
-.hero-info .title {
-  font-size: 20px;
-  font-weight: 600;
+
+/* ─── Hero Price ─────────────────────────────────────────── */
+.hero-price {
+  @media (max-width: 900px) {
+    grid-column: 2 / 3; /* keep beside info on tablet */
+  }
+
+  @media (max-width: 600px) {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 10px 12px;
+    background: #f0f7ff;
+    border-radius: 8px;
+  }
+
+  .label {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .price {
+    font-size: 22px;
+    font-weight: 700;
+
+    @media (max-width: 600px) {
+      font-size: 20px;
+    }
+  }
+
+  .muted {
+    font-size: 11px;
+    color: #999;
+  }
 }
-.hero-info .rating mat-icon {
-  color: #ffcc00;
-}
-.hero-info .rating mat-icon.muted {
-  color: #ddd;
-}
-.hero-price .label {
-  font-size: 12px;
-  color: #666;
-}
-.hero-price .price {
-  font-size: 22px;
-  font-weight: 700;
-}
-.hero-price .muted {
-  font-size: 11px;
-  color: #999;
-}
+
+/* ─── Section Card ───────────────────────────────────────── */
 .section {
   padding: 12px;
+
+  @media (max-width: 600px) {
+    padding: 10px;
+  }
 }
+
 .section-title {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 }
+
+/* ─── Availability date chips ────────────────────────────── */
+/* Tailwind handles these via utility classes; ensure wrapping */
+.card {
+  @media (max-width: 600px) {
+    padding: 10px !important;
+  }
+}
+
+/* ─── Room Card ──────────────────────────────────────────── */
 .rooms-list .room-card {
   display: grid;
-  grid-template-columns: 160px 1fr 220px;
-  align-items: center;
+  grid-template-columns: 160px 1fr;
+  align-items: start;
   gap: 16px;
   padding: 12px 0;
   border-bottom: 1px solid #eee;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
+
 .room-left {
   position: relative;
 }
+
 .room-image {
   width: 160px;
   height: 120px;
   object-fit: cover;
   border-radius: 6px;
+
+  @media (max-width: 600px) {
+    width: 100%;
+    height: 180px;
+  }
 }
+
 .room-photo-badge {
   position: absolute;
   left: 8px;
@@ -96,48 +198,80 @@
   font-size: 11px;
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+  .arrow {
+    font-size: 14px;
+  }
 }
-.room-photo-badge .arrow {
-  font-size: 14px;
-}
+
 .room-title {
   font-size: 16px;
   font-weight: 600;
 }
+
 .room-meta {
   font-size: 12px;
   color: #666;
   margin-top: 4px;
 }
+
 .room-attributes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: 24px;
+  column-gap: 16px;
   row-gap: 4px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  mat-icon {
+    font-size: 16px;
+  }
 }
-.room-attributes span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.room-attributes mat-icon {
-  font-size: 16px;
-}
+
 .room-features {
   font-size: 12px;
   color: #444;
   margin-top: 6px;
 }
+
 .room-price .price {
   font-size: 18px;
   font-weight: 700;
 }
 
+/* ─── Room Options (booking rows) ────────────────────────── */
 .room-options-full {
   grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 12px;
+
+  /* The booking option row — fix price + button overflow on mobile */
+  .border.rounded {
+    @media (max-width: 600px) {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+      padding: 12px !important;
+    }
+  }
+
+  /* Price + Book Now container */
+  .min-w-\[220px\] {
+    @media (max-width: 600px) {
+      min-width: unset !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+  }
 }
 
+/* ─── Room Amenities (dialog panel) ──────────────────────── */
 .room-amenities-list {
   display: flex;
   flex-wrap: wrap;
@@ -146,9 +280,42 @@
 
 .room-amenity-chip {
   font-size: 11px;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 99px;
+  color: #374151;
 }
 
+/* ─── Location Map placeholder ───────────────────────────── */
 .section .location-map {
   background-size: cover;
   background-position: center;
+}
+
+/* ─── Photo Gallery Dialog ───────────────────────────────── */
+.hotel-photos-tabs {
+  @media (max-width: 600px) {
+    ::ng-deep .mat-mdc-tab-labels {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+    }
+  }
+}
+
+/* ─── Global utility: prevent any child overflowing page ─── */
+@media (max-width: 600px) {
+  .p-6 {
+    padding: 8px !important;
+  }
+
+  /* Make room-option rows stack */
+  .flex.items-start.justify-between {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Available dates: ensure chips wrap */
+  .flex.flex-wrap.gap-2 {
+    flex-wrap: wrap !important;
+  }
 }

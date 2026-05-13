@@ -196,4 +196,19 @@ export class PlanService {
       payload
     );
   }
+
+  getSubscriptionStatus(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/subscriptions/status/${id}`);
+  }
+
+  getMyCurrent(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/subscriptions/my/current`);
+  }
+
+  getMyBillingHistory(page = 1, perPage = 15): Observable<any> {
+    const params = new HttpParams()
+      .set('page', String(page))
+      .set('per_page', String(perPage));
+    return this.http.get(`${this.apiUrl}/subscriptions/my/billing-history`, { params });
+  }
 }

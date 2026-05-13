@@ -1,3 +1,31 @@
+<!-- Vegaah payment polling overlay -->
+<div *ngIf="isVegaahPolling" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center gap-6 p-8">
+
+  <ng-container *ngIf="vegaahPaymentSuccess">
+    <mat-icon style="font-size:64px;width:64px;height:64px;color:#16a34a">check_circle</mat-icon>
+    <h2 style="font-size:1.5rem;font-weight:700;color:#16a34a">Payment Successful!</h2>
+    <p style="color:#6b7280">Your wallet has been topped up. Redirecting…</p>
+  </ng-container>
+
+  <ng-container *ngIf="vegaahPaymentTimedOut && !vegaahPaymentSuccess">
+    <mat-icon style="font-size:64px;width:64px;height:64px;color:#f59e0b">schedule</mat-icon>
+    <h2 style="font-size:1.25rem;font-weight:600;color:#374151">Payment not confirmed yet</h2>
+    <p style="color:#6b7280;font-size:0.875rem">Your payment may still be processing. Check your wallet balance.</p>
+    <button mat-raised-button color="primary" (click)="router.navigate(['/wallet'])">Go to Wallet</button>
+  </ng-container>
+
+  <ng-container *ngIf="!vegaahPaymentSuccess && !vegaahPaymentTimedOut">
+    <mat-spinner diameter="56"></mat-spinner>
+    <h2 style="font-size:1.25rem;font-weight:600;color:#374151">Waiting for payment confirmation…</h2>
+    <p style="color:#6b7280;font-size:0.875rem">Complete the payment in the tab that just opened.</p>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <span style="font-size:2rem;font-family:monospace;font-weight:700;color:#2563eb">{{ vegaahCountdownDisplay }}</span>
+      <span style="font-size:0.75rem;color:#9ca3af">remaining</span>
+    </div>
+  </ng-container>
+
+</div>
+
 <div class="payment-container">
   <div class="header">
     <button mat-button (click)="backToHome()" class="back-button">

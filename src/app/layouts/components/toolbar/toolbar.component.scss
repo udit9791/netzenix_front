@@ -43,3 +43,63 @@
 a {
   text-decoration: none;
 }
+
+/* ─── Mobile Toolbar Overflow Fix ───────────────────────────
+   Prevents wallet + Add Money from pushing user icon off-screen
+   ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  /* Shrink horizontal padding on the whole toolbar */
+  .toolbar {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Hide wallet rupee amount text — keep icon only */
+  .wallet-button .wallet-amount {
+    display: none !important;
+  }
+
+  /* Tighten wallet button padding */
+  .wallet-button {
+    padding: 0 4px !important;
+    min-width: unset !important;
+  }
+
+  /* Hide "Add Money" label — keep + icon only */
+  .px-1 button[color="primary"] span:not(.mat-icon) {
+    display: none !important;
+  }
+
+  /* Tighten Add Money button */
+  .px-1 button[color="primary"] {
+    min-width: unset !important;
+    padding: 0 8px !important;
+  }
+
+  /* Reduce gap between toolbar items */
+  .-mx-1.flex.items-center {
+    gap: 0 !important;
+  }
+
+  .px-1 {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+}
+
+/* Extra tight on very small phones (≤ 400px) */
+@media (max-width: 400px) {
+  .toolbar {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .wallet-button {
+    padding: 0 2px !important;
+  }
+
+  .px-1 button[color="primary"] {
+    padding: 0 6px !important;
+  }
+}

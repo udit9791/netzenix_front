@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WalletService } from '../../../../services/wallet.service';
 import { SpecialFlightService } from '../../../../services/special-flight.service';
+import { PaymentService } from '../../../../services/payment.service';
 import { interval, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 
 interface WalletResponse {
@@ -32,7 +34,7 @@ interface BookingDetailsResponse {
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.scss'],
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, FormsModule]
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, FormsModule]
 })
 export class PaymentComponent implements OnInit, OnDestroy {
   // Order related properties
@@ -95,16 +97,27 @@ export class PaymentComponent implements OnInit, OnDestroy {
   // Payment processing status
   isProcessing: boolean = false;
 
+  // Vegaah online payment polling state
+  isVegaahPolling = false;
+  vegaahPollCountdown = 300;
+  vegaahCountdownDisplay = '05:00';
+  vegaahPaymentSuccess = false;
+  vegaahPaymentTimedOut = false;
+  private vegaahWalletTxId: number | null = null;
+  private vegaahPollSub: Subscription | null = null;
+  private vegaahCountdownSub: Subscription | null = null;
+
   allowInstallments: boolean = false;
   installmentPayments: any[] = [];
   currentInstallmentAmount: number = 0;
   selectedInstallmentId: number | null = null;
 
   constructor(
+    public router: Router,
     private route: ActivatedRoute,
-    private router: Router,
     private walletService: WalletService,
-    private specialFlightService: SpecialFlightService
+    private specialFlightService: SpecialFlightService,
+    private paymentService: PaymentService
   ) {}
 
   ngOnInit(): void {
@@ -128,13 +141,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.timerSubscription) {
-      this.timerSubscription.unsubscribe();
-    }
-    if (this.freezeTimer) {
-      clearInterval(this.freezeTimer);
-      this.freezeTimer = null;
-    }
+    if (this.timerSubscription) this.timerSubscription.unsubscribe();
+    if (this.freezeTimer) { clearInterval(this.freezeTimer); this.freezeTimer = null; }
+    this.vegaahPollSub?.unsubscribe();
+    this.vegaahCountdownSub?.unsubscribe();
   }
 
   fetchBookingDetails(): void {
@@ -453,29 +463,54 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   submitOnlinePayment(): void {
-    // Implement online payment gateway integration here
-    const paymentData: any = {
-      booking_id: this.bookingId,
-      amount: this.totalAmount,
-      payment_method: 'online'
-    };
-
-    paymentData.allow_installments = this.allowInstallments ? 1 : 0;
-    if (this.allowInstallments && this.selectedInstallmentId != null) {
-      paymentData.installment_payment_id = this.selectedInstallmentId;
-    }
-
-    this.specialFlightService.processPayment(paymentData).subscribe(
-      (response: any) => {
+    this.paymentService.initiateVegaahTopUp(this.totalAmount, this.bookingId).subscribe({
+      next: (res) => {
         this.isProcessing = false;
-        this.handlePaymentResponse(response);
+        this.vegaahWalletTxId = res.wallet_transaction_id;
+        window.open(res.payment_url, '_blank');
+        this.startVegaahPolling();
       },
-      (error: Error) => {
-        console.error('Error processing online payment:', error);
+      error: () => {
         this.isProcessing = false;
-        alert('Payment failed. Please try again.');
+        alert('Failed to initiate payment. Please try again.');
       }
-    );
+    });
+  }
+
+  private startVegaahPolling(): void {
+    this.isVegaahPolling = true;
+    this.vegaahPollCountdown = 300;
+    this.updateVegaahCountdownDisplay();
+
+    this.vegaahCountdownSub = interval(1000).subscribe(() => {
+      this.vegaahPollCountdown--;
+      this.updateVegaahCountdownDisplay();
+      if (this.vegaahPollCountdown <= 0) {
+        this.vegaahCountdownSub?.unsubscribe();
+        this.vegaahPollSub?.unsubscribe();
+        this.vegaahPaymentTimedOut = true;
+      }
+    });
+
+    this.vegaahPollSub = interval(4000).subscribe(() => {
+      if (!this.vegaahWalletTxId || this.vegaahPaymentTimedOut) return;
+      this.paymentService.getWalletTxStatus(this.vegaahWalletTxId).subscribe({
+        next: (res) => {
+          if (res?.payment_status === 1) {
+            this.vegaahPollSub?.unsubscribe();
+            this.vegaahCountdownSub?.unsubscribe();
+            this.vegaahPaymentSuccess = true;
+            setTimeout(() => this.router.navigate(['/wallet']), 2000);
+          }
+        }
+      });
+    });
+  }
+
+  private updateVegaahCountdownDisplay(): void {
+    const m = Math.floor(this.vegaahPollCountdown / 60).toString().padStart(2, '0');
+    const s = (this.vegaahPollCountdown % 60).toString().padStart(2, '0');
+    this.vegaahCountdownDisplay = `${m}:${s}`;
   }
 
   handlePaymentResponse(response: any): void {

@@ -20,6 +20,11 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatChipsModule } from '@angular/material/chips';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import {
   Observable,
@@ -73,6 +78,11 @@ const HOTEL_DATE_FORMATS = {
     MatProgressBarModule,
     MatDialogModule,
     RouterModule,
+    MatSliderModule,
+    MatExpansionModule,
+    MatPaginatorModule,
+    MatSidenavModule,
+    MatChipsModule,
     HotelSearchBarComponent,
     VexSecondaryToolbarComponent,
     VexBreadcrumbsComponent,
@@ -112,6 +122,74 @@ export class HotelSearchComponent {
   selectedHotelId: number | null = null;
   selectedInventoryId: number | null = null;
   locationSearchType: 'city' | 'hotel' | null = null;
+
+  // ── View Mode ──────────────────────────────────────────
+  viewMode: 'grid' | 'list' = 'grid';
+
+  // ── Filters ────────────────────────────────────────────
+  filterStars: Set<number> = new Set();
+  filterFacilities: Set<string> = new Set();
+  filterBedTypes: Set<string> = new Set();
+  priceMin: number = 0;
+  priceMax: number = 50000;
+  priceRangeMin: number = 0;
+  priceRangeMax: number = 50000;
+
+  availableFacilities: string[] = [];
+  availableBedTypes: string[] = [];
+
+  filtersOpen: boolean = false;
+
+  // ── Pagination ─────────────────────────────────────────
+  pageSize: number = 10;
+  pageIndex: number = 0;
+
+  // ── Active filter count (for badge) ───────────────────
+  get activeFilterCount(): number {
+    return this.filterStars.size +
+      this.filterFacilities.size +
+      this.filterBedTypes.size +
+      (this.priceMin > this.priceRangeMin || this.priceMax < this.priceRangeMax ? 1 : 0);
+  }
+
+  get filteredResults(): any[] {
+    let r = this.results;
+    if (this.filterStars.size > 0) {
+      r = r.filter(h => this.filterStars.has(Math.round(h.star_rating || 0)));
+    }
+    if (this.filterFacilities.size > 0) {
+      r = r.filter(h => {
+        const amenities: string[] = h.amenities || h.facilities || [];
+        return [...this.filterFacilities].some(f =>
+          amenities.some((a: string) => a.toLowerCase().includes(f.toLowerCase()))
+        );
+      });
+    }
+    if (this.filterBedTypes.size > 0) {
+      r = r.filter(h => {
+        const bed = (h.bed_type || '').toLowerCase();
+        return [...this.filterBedTypes].some(b => bed.includes(b.toLowerCase()));
+      });
+    }
+    r = r.filter(h => {
+      const p = h.price_total ?? h.price ?? 0;
+      return p >= this.priceMin && p <= this.priceMax;
+    });
+    return r;
+  }
+
+  get pagedResults(): any[] {
+    const start = this.pageIndex * this.pageSize;
+    return this.filteredResults.slice(start, start + this.pageSize);
+  }
+
+  get totalFiltered(): number {
+    return this.filteredResults.length;
+  }
+
+  get isListView(): boolean {
+    return this.viewMode === 'list' || this.filteredResults.length <= 3;
+  }
 
   fullImgUrl(path: string | null | undefined): string {
     const fallback = '/storage/hotel/default.jpg';
@@ -614,6 +692,7 @@ export class HotelSearchComponent {
               ? res
               : [];
           this.results = rows;
+          this.initFiltersFromResults();
           this.loading = false;
         },
         error: () => {
@@ -820,5 +899,86 @@ export class HotelSearchComponent {
       .filter((d) => countMap[d] > 0)
       .sort()
       .map((d) => ({ date: d, total: countMap[d] }));
+  }
+
+  private initFiltersFromResults(): void {
+    this.viewMode = this.results.length <= 3 ? 'list' : 'grid';
+    this.pageIndex = 0;
+
+    const prices = this.results
+      .map(h => h.price_total ?? h.price ?? 0)
+      .filter(p => p > 0);
+    if (prices.length) {
+      this.priceRangeMin = Math.floor(Math.min(...prices));
+      this.priceRangeMax = Math.ceil(Math.max(...prices));
+      this.priceMin = this.priceRangeMin;
+      this.priceMax = this.priceRangeMax;
+    }
+
+    const facSet = new Set<string>();
+    this.results.forEach(h => {
+      const amenities: string[] = h.amenities || h.facilities || [];
+      amenities.forEach((a: string) => facSet.add(a));
+    });
+    const commonFacilities = ['Swimming Pool', 'WiFi', 'Gym', 'Restaurant', 'Parking', 'Spa', 'Bar'];
+    this.availableFacilities = commonFacilities.filter(f =>
+      [...facSet].some(a => a.toLowerCase().includes(f.toLowerCase()))
+    );
+    if (this.availableFacilities.length === 0 && facSet.size > 0) {
+      this.availableFacilities = [...facSet].slice(0, 8);
+    }
+
+    const bedSet = new Set<string>();
+    this.results.forEach(h => { if (h.bed_type) bedSet.add(h.bed_type); });
+    this.availableBedTypes = bedSet.size > 0
+      ? [...bedSet]
+      : ['King', 'Twin', 'Double', 'Single'];
+  }
+
+  toggleStarFilter(star: number): void {
+    if (this.filterStars.has(star)) { this.filterStars.delete(star); } else { this.filterStars.add(star); }
+    this.filterStars = new Set(this.filterStars);
+    this.pageIndex = 0;
+  }
+
+  toggleFacilityFilter(fac: string): void {
+    if (this.filterFacilities.has(fac)) { this.filterFacilities.delete(fac); } else { this.filterFacilities.add(fac); }
+    this.filterFacilities = new Set(this.filterFacilities);
+    this.pageIndex = 0;
+  }
+
+  toggleBedTypeFilter(bed: string): void {
+    if (this.filterBedTypes.has(bed)) { this.filterBedTypes.delete(bed); } else { this.filterBedTypes.add(bed); }
+    this.filterBedTypes = new Set(this.filterBedTypes);
+    this.pageIndex = 0;
+  }
+
+  onPriceChange(which: 'min' | 'max', value: number): void {
+    if (which === 'min') this.priceMin = value;
+    else this.priceMax = value;
+    this.pageIndex = 0;
+  }
+
+  clearAllFilters(): void {
+    this.filterStars = new Set();
+    this.filterFacilities = new Set();
+    this.filterBedTypes = new Set();
+    this.priceMin = this.priceRangeMin;
+    this.priceMax = this.priceRangeMax;
+    this.pageIndex = 0;
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  toggleFiltersDrawer(): void {
+    this.filtersOpen = !this.filtersOpen;
+  }
+
+  setViewMode(mode: 'grid' | 'list'): void {
+    this.viewMode = mode;
   }
 }

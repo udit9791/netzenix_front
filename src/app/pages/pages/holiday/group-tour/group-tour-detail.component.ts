@@ -26,6 +26,7 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatDividerModule } from '@angular/material/divider';
 import { environment } from 'src/environments/environment';
+import { finalize } from 'rxjs/operators';
 
 interface GroupTourMealPlan {
   id: number;
@@ -184,7 +185,16 @@ export class GroupTourDetailComponent implements OnInit {
     children: number;
     childAges: number[];
     extraBedFlags: boolean[];
-  }[] = [{ adults: 1, children: 0, childAges: [], extraBedFlags: [] }];
+    extraSeatFlags: boolean[];
+  }[] = [
+    {
+      adults: 1,
+      children: 0,
+      childAges: [],
+      extraBedFlags: [],
+      extraSeatFlags: []
+    }
+  ];
   childAgeOptions: number[] = Array.from({ length: 18 }, (_, i) => i);
   petFriendly = false;
   departureMonthFilters: { key: string; label: string }[] = [];
@@ -201,6 +211,7 @@ export class GroupTourDetailComponent implements OnInit {
   downloadShowPrice = true;
   downloadShowCompanyDetails = true;
   private downloadDialogRef: any = null;
+  isDownloadingItinerary = false;
   leavingDateFilter = (date: Date | null): boolean => {
     if (!date) {
       return false;
@@ -439,23 +450,28 @@ export class GroupTourDetailComponent implements OnInit {
       }
     }
 
-    this.http.get(url, { responseType: 'blob', params }).subscribe({
-      next: (blob) => {
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `itinerary-${this.itineraryId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-      },
-      error: () => {
-        this.snackBar.open('Failed to download itinerary PDF', 'Close', {
-          duration: 3000
-        });
-      }
-    });
+    this.isDownloadingItinerary = true;
+
+    this.http
+      .get(url, { responseType: 'blob', params })
+      .pipe(finalize(() => (this.isDownloadingItinerary = false)))
+      .subscribe({
+        next: (blob) => {
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `itinerary-${this.itineraryId}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(blobUrl);
+        },
+        error: () => {
+          this.snackBar.open('Failed to download itinerary PDF', 'Close', {
+            duration: 3000
+          });
+        }
+      });
   }
 
   private prepareImages(id: number, data: GroupTourDetailPayload): void {
@@ -965,6 +981,7 @@ export class GroupTourDetailComponent implements OnInit {
         children: number;
         childAges: number[];
         extraBedFlags: boolean[];
+        extraSeatFlags: boolean[];
       }[] = [];
       let remainingAdults = adultsTotal;
       let remainingChildren = childrenTotal;
@@ -986,6 +1003,7 @@ export class GroupTourDetailComponent implements OnInit {
           roomsLeft > 0 ? Math.floor(remainingChildren / roomsLeft) : 0;
         const roomChildAges: number[] = [];
         const roomExtraBeds: boolean[] = [];
+        const roomExtraSeats: boolean[] = [];
         for (let j = 0; j < childrenForRoom; j++) {
           let age = 5;
           if (childIdx < childAgesFlat.length) {
@@ -1003,13 +1021,15 @@ export class GroupTourDetailComponent implements OnInit {
             flag = raw === '1' || raw === 'true' || raw === 'TRUE';
           }
           roomExtraBeds.push(flag);
+          roomExtraSeats.push(false);
           bedIdx++;
         }
         cfg.push({
           adults: adultsForRoom,
           children: childrenForRoom,
           childAges: roomChildAges,
-          extraBedFlags: roomExtraBeds
+          extraBedFlags: roomExtraBeds,
+          extraSeatFlags: roomExtraSeats
         });
         remainingAdults -= adultsForRoom;
         remainingChildren -= childrenForRoom;
@@ -1268,7 +1288,8 @@ export class GroupTourDetailComponent implements OnInit {
       adults: 2,
       children: 0,
       childAges: [],
-      extraBedFlags: []
+      extraBedFlags: [],
+      extraSeatFlags: []
     });
     this.canBook = false;
   }
@@ -1316,6 +1337,7 @@ export class GroupTourDetailComponent implements OnInit {
     room.children += 1;
     room.childAges.push(5);
     room.extraBedFlags.push(false);
+    room.extraSeatFlags.push(false);
     this.canBook = false;
   }
 
@@ -1330,6 +1352,7 @@ export class GroupTourDetailComponent implements OnInit {
     room.children -= 1;
     room.childAges.pop();
     room.extraBedFlags.pop();
+    room.extraSeatFlags.pop();
     this.canBook = false;
   }
 
@@ -1355,6 +1378,22 @@ export class GroupTourDetailComponent implements OnInit {
       room.extraBedFlags = Array.from({ length: room.children }, () => false);
     }
     room.extraBedFlags[childIndex] = checked;
+    this.canBook = false;
+  }
+
+  toggleExtraSeat(
+    roomIndex: number,
+    childIndex: number,
+    checked: boolean
+  ): void {
+    const room = this.roomsConfig[roomIndex];
+    if (!room) {
+      return;
+    }
+    if (!room.extraSeatFlags || room.extraSeatFlags.length !== room.children) {
+      room.extraSeatFlags = Array.from({ length: room.children }, () => false);
+    }
+    room.extraSeatFlags[childIndex] = checked;
     this.canBook = false;
   }
 
@@ -1432,6 +1471,12 @@ export class GroupTourDetailComponent implements OnInit {
         extraBeds.push(flag ? '1' : '0');
       });
     });
+    const extraSeats: string[] = [];
+    this.roomsConfig.forEach((room) => {
+      (room.extraSeatFlags || []).forEach((flag) => {
+        extraSeats.push(flag ? '1' : '0');
+      });
+    });
     const transportType =
       (this.transportationType && this.transportationType.trim()) || 'SIC';
     query.transportationType = transportType;
@@ -1440,6 +1485,9 @@ export class GroupTourDetailComponent implements OnInit {
     }
     if (extraBeds.length > 0) {
       query['extra_beds[]'] = extraBeds;
+    }
+    if (extraSeats.length > 0) {
+      query['extra_seats[]'] = extraSeats;
     }
     if (transportType === 'Private') {
       this.updateVehicleCapacityError();
@@ -1571,6 +1619,7 @@ export class GroupTourDetailComponent implements OnInit {
       children: Number(query.children ?? this.totalChildren),
       childAges: query['child_ages[]'] || [],
       extraBeds: query['extra_beds[]'] || [],
+      extraSeats: query['extra_seats[]'] || [],
       transportationType: query.transportationType ?? null,
       vehicles: query.vehicles ? JSON.parse(String(query.vehicles)) : null,
       vehicle_id: query.vehicle_id ? Number(query.vehicle_id) : null,

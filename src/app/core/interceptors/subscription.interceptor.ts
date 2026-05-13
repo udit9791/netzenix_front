@@ -9,10 +9,16 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
 
 @Injectable()
 export class SubscriptionInterceptor implements HttpInterceptor {
-  constructor(private router: Router) {}
+  private maintenanceShown = false;
+
+  constructor(
+    private router: Router,
+    private toastr: ToastrService
+  ) {}
 
   intercept(
     req: HttpRequest<any>,
@@ -23,9 +29,14 @@ export class SubscriptionInterceptor implements HttpInterceptor {
         if (error && error.status === 402) {
           this.router.navigate(['/subscription-pending']);
         }
+
+        if (error && error.status === 503 && !this.maintenanceShown) {
+          this.maintenanceShown = true;
+          this.router.navigate(['/maintenance']);
+        }
+
         return throwError(() => error);
       })
     );
   }
 }
-

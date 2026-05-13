@@ -292,7 +292,8 @@ export class NavigationLoaderService {
       this.hasPermission('view_airport') ||
       this.hasPermission('view_amenities') ||
       this.hasPermission('view_hotel_option') ||
-      this.hasPermission('view_hotel_master')
+      this.hasPermission('view_hotel_master') ||
+      this.hasPermission('view_plugins')
     ) {
       nav.push({
         type: 'subheading',
@@ -352,19 +353,35 @@ export class NavigationLoaderService {
             route: '/masters/hotel',
             icon: 'mat:hotel'
           },
-          this.hasPermission('view_amenities') && {
-            type: 'link',
-            label: 'Settings',
-            route: '/masters/settings',
-            icon: 'mat:settings'
-          },
           this.hasPermission('view_commission_master') && {
             type: 'link',
             label: 'Commission',
             route: '/masters/commission',
             icon: 'mat:attach_money'
+          },
+          this.hasPermission('view_plugins') && {
+            type: 'link',
+            label: 'Plugins',
+            route: '/masters/plugins',
+            icon: 'mat:extension'
           }
         ].filter(Boolean) as NavigationItem[]
+      });
+    }
+
+    // ✅ Settings (separate section)
+    if (this.hasPermission('view_amenities')) {
+      nav.push({
+        type: 'subheading',
+        label: 'Settings',
+        children: [
+          {
+            type: 'link',
+            label: 'Settings',
+            route: '/masters/settings',
+            icon: 'mat:settings'
+          }
+        ] as NavigationItem[]
       });
     }
 
@@ -375,6 +392,22 @@ export class NavigationLoaderService {
         label: 'My Bookings',
         route: '/my-bookings',
         icon: 'mat:book_online'
+      });
+    }
+
+    // Billing & Plan section
+    if (this.hasPermission('view_plan_billing')) {
+      nav.push({
+        type: 'subheading',
+        label: 'Billing & Plan',
+        children: [
+          {
+            type: 'link',
+            label: 'Plan & Billing',
+            route: '/plan-billing',
+            icon: 'mat:receipt_long'
+          }
+        ] as NavigationItem[]
       });
     }
 

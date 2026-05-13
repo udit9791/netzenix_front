@@ -396,9 +396,8 @@ export class UpdatePricingComponent implements OnInit {
               (this.priceIdByRoom[rid]?.weekendDays?.[rangeKey] || {})[
                 catKey
               ] || undefined;
-            const isConfirm = this.currentType === 'confirm';
-            const startVal = isConfirm ? this.normalizeDateStr(from) : null;
-            const endVal = isConfirm ? this.normalizeDateStr(to) : null;
+            const startVal = this.normalizeDateStr(from) || null;
+            const endVal = this.normalizeDateStr(to) || null;
 
             if (vWk) {
               const raw = vWk.value;

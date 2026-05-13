@@ -399,7 +399,7 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Markup</mat-label>
+        <mat-label>Markup(%)</mat-label>
         <input
           matInput
           type="number"
@@ -409,41 +409,56 @@
         />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Inclusions</mat-label>
-        <textarea
-          matInput
-          rows="3"
-          formControlName="inclusions"
-          placeholder="Enter package inclusions"
-        ></textarea>
-      </mat-form-field>
+      <div class="full-width">
+        <label class="block mb-2 text-sm font-medium">Inclusions</label>
+        <ckeditor [editor]="Editor" formControlName="inclusions"></ckeditor>
+      </div>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Exclusions</mat-label>
-        <textarea
-          matInput
-          rows="3"
-          formControlName="exclusions"
-          placeholder="Enter package exclusions"
-        ></textarea>
-      </mat-form-field>
+      <div class="full-width">
+        <label class="block mb-2 text-sm font-medium">Exclusions</label>
+        <ckeditor [editor]="Editor" formControlName="exclusions"></ckeditor>
+      </div>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Terms &amp; Conditions</mat-label>
-        <textarea
-          matInput
-          rows="3"
-          formControlName="terms"
-          placeholder="Enter terms and conditions"
-        ></textarea>
-      </mat-form-field>
+      <div class="full-width">
+        <label class="block mb-2 text-sm font-medium">Terms &amp; Conditions</label>
+        <ckeditor [editor]="Editor" formControlName="terms"></ckeditor>
+      </div>
 
         <div
           *ngIf="departFromList.length && (form.get('vehicles')?.value || []).length"
           class="full-width mt-4"
         >
         <h3>Departure Wise Vehicle Price</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 mt-2">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Adult Min Age</mat-label>
+            <mat-select
+              formControlName="adultAgeLimit"
+              (selectionChange)="onAdultAgeChange()"
+            >
+              <mat-option
+                *ngFor="let age of adultAgeOptions"
+                [value]="age"
+              >
+                {{ age }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Free Child Max Age</mat-label>
+            <mat-select formControlName="freeChildAge">
+              <mat-option
+                *ngFor="let age of freeChildAgeOptions"
+                [value]="age"
+              >
+                {{ age }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+         
+        </div>
         <div
           class="border rounded p-2 mb-3"
           *ngFor="let d of departFromList"
