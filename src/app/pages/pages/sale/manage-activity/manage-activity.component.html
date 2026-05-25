@@ -3,343 +3,529 @@
 </vex-secondary-toolbar>
 
 <div class="p-6 container">
-  <form [formGroup]="activityForm" (ngSubmit)="submit()" class="grid gap-6">
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Basic Information</mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <mat-form-field appearance="outline">
-          <mat-label>Country</mat-label>
-          <mat-select formControlName="country_id" required>
-            <mat-option [value]="null">Select Country</mat-option>
-            <mat-option *ngFor="let c of countries" [value]="c.id">
-              {{ c.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+  <mat-stepper #stepper [linear]="true" labelPosition="bottom" class="bg-transparent">
 
-        <mat-form-field appearance="outline">
-          <mat-label>State</mat-label>
-          <mat-select formControlName="state_id" required>
-            <mat-option *ngFor="let s of states" [value]="s.id">
-              {{ s.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+    <!-- ============ STEP 1: BASICS & CONTENT ============ -->
+    <mat-step [stepControl]="basicsForm" label="Basics & Media">
+      <form [formGroup]="basicsForm" class="grid gap-6 mt-4">
 
-        <mat-form-field appearance="outline">
-          <mat-label>City</mat-label>
-          <mat-select formControlName="city_id" required>
-            <mat-option *ngFor="let c of cities" [value]="c.id">
-              {{ c.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="md:col-span-3">
-          <mat-label>Activity Title</mat-label>
-          <input matInput formControlName="title" maxlength="255" />
-        </mat-form-field>
-
-        <div class="md:col-span-3">
-          <label class="block mb-2 text-sm font-medium">Description</label>
-          <textarea
-            class="w-full border rounded px-3 py-2"
-            rows="5"
-            formControlName="description"
-          ></textarea>
-        </div>
-
-        <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block mb-2 text-sm font-medium">Cover Image</label>
-            <input type="file" accept="image/jpeg,image/png" (change)="onCoverImageChange($event)" />
-            <div class="mt-2 w-24 h-24 rounded overflow-hidden border" *ngIf="coverPreviewUrl || currentCoverImagePath">
-              <img
-                [src]="coverPreviewUrl || (imgBaseUrl + currentCoverImagePath)"
-                class="w-full h-full object-cover"
-                alt="Cover image"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="block mb-2 text-sm font-medium">Gallery Images</label>
-            <input type="file" multiple accept="image/jpeg,image/png" (change)="onImagesChange($event)" />
-            <div class="mt-2 flex flex-wrap gap-2">
-              <div
-                *ngFor="let img of existingImages"
-                class="relative w-24 h-24 rounded overflow-hidden border"
-              >
-                <img
-                  [src]="imgBaseUrl + img.image_path"
-                  class="w-full h-full object-cover"
-                  alt="Gallery image"
-                />
-                <button
-                  type="button"
-                  mat-icon-button
-                  color="warn"
-                  class="absolute top-0 right-0 bg-white/70"
-                  (click)="removeExistingImage(img)"
-                >
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-              <div
-                *ngFor="let preview of galleryPreviews; let i = index"
-                class="relative w-24 h-24 rounded overflow-hidden border"
-              >
-                <img
-                  [src]="preview.url"
-                  class="w-full h-full object-cover"
-                  alt="New gallery image"
-                />
-                <button
-                  type="button"
-                  mat-icon-button
-                  color="warn"
-                  class="absolute top-0 right-0 bg-white/70"
-                  (click)="removeNewImage(i)"
-                >
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Activity Rules</mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 items-center">
-        <mat-checkbox formControlName="has_time_slot">
-          Has Time Slot
-        </mat-checkbox>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Max Adults</mat-label>
-          <input matInput type="number" formControlName="max_adults" min="1" />
-        </mat-form-field>
-
-        <mat-checkbox formControlName="allow_child">
-          Allow Child
-        </mat-checkbox>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Max Children</mat-label>
-          <input matInput type="number" formControlName="max_children" min="0" />
-        </mat-form-field>
-
-        <mat-checkbox formControlName="has_transportation">
-          Has Transportation
-        </mat-checkbox>
-
-        <mat-form-field appearance="outline" class="md:col-span-3">
-          <mat-label>Transportation Description</mat-label>
-          <textarea
-            matInput
-            rows="3"
-            formControlName="transportation_description"
-          ></textarea>
-        </mat-form-field>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Availability & Pricing</mat-card-title>
-      </mat-card-header>
-      <mat-card-content class="grid gap-4 mt-4">
-        <div class="flex justify-between items-center">
-          <div>
-            <div class="text-sm text-gray-600">
-              Minimum date is today. Add one or more dates.
-            </div>
-          </div>
-          <!-- <button mat-stroked-button color="primary" type="button" (click)="addDate()">
-            <mat-icon>add</mat-icon>
-            <span class="ml-1">Add Date</span>
-          </button> -->
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div class="text-sm font-medium mb-2">
-              select a date range
-            </div>
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Date range</mat-label>
-              <mat-date-range-input [rangePicker]="rangePicker">
-                <input
-                  matStartDate
-                  matInput
-                  placeholder="Start date"
-                  formControlName="rangeStart"
-                  [min]="minDate"
-                  (dateChange)="onRangeChange()"
-                />
-                <input
-                  matEndDate
-                  matInput
-                  placeholder="End date"
-                  formControlName="rangeEnd"
-                  [min]="minDate"
-                  (dateChange)="onRangeChange()"
-                />
-              </mat-date-range-input>
-              <mat-datepicker-toggle matSuffix [for]="rangePicker"></mat-datepicker-toggle>
-              <mat-date-range-picker #rangePicker></mat-date-range-picker>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Location & Title</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <mat-form-field appearance="outline">
+              <mat-label>Country</mat-label>
+              <mat-select formControlName="country_id" required
+                (openedChange)="$event ? (countryFilter = '') : null">
+                <div class="select-search-box" (click)="$event.stopPropagation()">
+                  <input matInput type="text" placeholder="Search country..."
+                    [(ngModel)]="countryFilter" [ngModelOptions]="{ standalone: true }"
+                    (keydown)="$event.stopPropagation()" />
+                </div>
+                <mat-option [value]="null">Select country</mat-option>
+                <mat-option *ngFor="let c of filteredCountries" [value]="c.id">{{ c.name }}</mat-option>
+              </mat-select>
             </mat-form-field>
-          </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>State</mat-label>
+              <mat-select formControlName="state_id" required
+                (openedChange)="$event ? (stateFilter = '') : null">
+                <div class="select-search-box" (click)="$event.stopPropagation()">
+                  <input matInput type="text" placeholder="Search state..."
+                    [(ngModel)]="stateFilter" [ngModelOptions]="{ standalone: true }"
+                    (keydown)="$event.stopPropagation()" />
+                </div>
+                <mat-option *ngFor="let s of filteredStates" [value]="s.id">{{ s.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>City</mat-label>
+              <mat-select formControlName="city_id" required
+                (openedChange)="$event ? (cityFilter = '') : null">
+                <div class="select-search-box" (click)="$event.stopPropagation()">
+                  <input matInput type="text" placeholder="Search city..."
+                    [(ngModel)]="cityFilter" [ngModelOptions]="{ standalone: true }"
+                    (keydown)="$event.stopPropagation()" />
+                </div>
+                <mat-option *ngFor="let c of filteredCities" [value]="c.id">{{ c.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>Activity Title</mat-label>
+              <input matInput formControlName="title" maxlength="255"
+                placeholder="e.g. At The Top - Burj Khalifa Observation Deck Ticket" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>Short description (highlights)</mat-label>
+              <textarea matInput rows="3" formControlName="short_description"
+                placeholder="One bullet per line — appears at the top of the activity page"></textarea>
+              <mat-hint>Shown as bullet highlights to agents</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>What to expect (full description)</mat-label>
+              <textarea matInput rows="6" formControlName="description"
+                placeholder="Detailed description of the experience"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>Good to know</mat-label>
+              <textarea matInput rows="3" formControlName="good_to_know"
+                placeholder="Important tips, what to bring, age restrictions etc."></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>Meeting point</mat-label>
+              <input matInput formControlName="meeting_point"
+                placeholder="Where guests should arrive" />
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Operational details</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <mat-form-field appearance="outline">
+              <mat-label>Duration (minutes)</mat-label>
+              <input matInput type="number" formControlName="duration_minutes" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Language</mat-label>
+              <input matInput formControlName="language" placeholder="e.g. English" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Voucher type</mat-label>
+              <mat-select formControlName="voucher_type">
+                <mat-option *ngFor="let v of voucherTypes" [value]="v.value">{{ v.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Confirmation</mat-label>
+              <mat-select formControlName="confirmation_type">
+                <mat-option *ngFor="let c of confirmationTypes" [value]="c.value">{{ c.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Lead time (hours before)</mat-label>
+              <input matInput type="number" formControlName="lead_time_hours" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Booking cutoff (hours)</mat-label>
+              <input matInput type="number" formControlName="cutoff_hours" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cancellation policy</mat-label>
+              <mat-select formControlName="cancellation_policy_type">
+                <mat-option *ngFor="let p of cancellationTypes" [value]="p.value">{{ p.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="md:col-span-2">
+              <mat-label>Cancellation policy text</mat-label>
+              <input matInput formControlName="cancellation_policy_text"
+                placeholder="e.g. Free cancellation up to 72 hours" />
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Markup</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <mat-form-field appearance="outline">
+              <mat-label>Markup type</mat-label>
+              <mat-select formControlName="markup_type">
+                <mat-option [value]="null">None</mat-option>
+                <mat-option value="flat">Flat (per person)</mat-option>
+                <mat-option value="percentage">Percentage</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Markup value</mat-label>
+              <input matInput type="number" formControlName="markup_value" min="0" />
+              <mat-hint *ngIf="basicsForm.get('markup_type')?.value === 'percentage'">Value in %</mat-hint>
+              <mat-hint *ngIf="basicsForm.get('markup_type')?.value === 'flat'">₹ per traveler</mat-hint>
+            </mat-form-field>
+            <div class="md:col-span-2 text-xs text-gray-500">
+              Markup is added to the base price when the agent is charged. Leave blank to sell at base price.
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Photos</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div>
+              <label class="block mb-2 text-sm font-medium">Cover image</label>
+              <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onCoverImageChange($event)" />
+              <div class="mt-3 w-40 h-40 rounded overflow-hidden border" *ngIf="coverPreviewUrl || currentCoverImagePath">
+                <img [src]="coverPreviewUrl || (imgBaseUrl + currentCoverImagePath)"
+                  class="w-full h-full object-cover" alt="Cover" />
+              </div>
+            </div>
+            <div>
+              <label class="block mb-2 text-sm font-medium">Gallery images</label>
+              <input type="file" multiple accept="image/jpeg,image/png,image/webp" (change)="onImagesChange($event)" />
+              <div class="mt-3 flex flex-wrap gap-2">
+                <div *ngFor="let img of existingImages" class="relative w-24 h-24 rounded overflow-hidden border">
+                  <img [src]="imgBaseUrl + img.image_path" class="w-full h-full object-cover" alt="" />
+                  <button type="button" mat-icon-button color="warn"
+                    class="absolute top-0 right-0 bg-white/70"
+                    (click)="removeExistingImage(img)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+                <div *ngFor="let p of galleryPreviews; let i = index" class="relative w-24 h-24 rounded overflow-hidden border">
+                  <img [src]="p.url" class="w-full h-full object-cover" alt="" />
+                  <button type="button" mat-icon-button color="warn"
+                    class="absolute top-0 right-0 bg-white/70"
+                    (click)="removeNewImage(i)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="flex justify-end">
+          <button mat-flat-button color="primary" matStepperNext type="button">
+            Next: Inclusions & FAQs
+            <mat-icon class="ml-1">arrow_forward</mat-icon>
+          </button>
         </div>
+      </form>
+    </mat-step>
 
-        <div formArrayName="dates" class="grid gap-4">
-          <div
-            *ngFor="let dateGroup of dates.controls; let i = index"
-            [formGroupName]="i"
-            class="border rounded p-4 grid gap-4"
-          >
-            <div class="flex items-center gap-4">
-              <mat-form-field appearance="outline">
-                <mat-label>Date</mat-label>
-                <input
-                  matInput
-                  [matDatepicker]="picker"
-                  formControlName="date"
-                  [min]="minDate"
-                />
-                <mat-datepicker-toggle
-                  matSuffix
-                  [for]="picker"
-                ></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
+    <!-- ============ STEP 2: INCLUSIONS / EXCLUSIONS / FAQ ============ -->
+    <mat-step [stepControl]="contentForm" label="Inclusions & FAQs">
+      <form [formGroup]="contentForm" class="grid gap-6 mt-4">
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>What's included</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid gap-3 mt-4">
+            <div class="flex gap-2">
+              <mat-form-field appearance="outline" class="flex-1">
+                <mat-label>Add inclusion</mat-label>
+                <input matInput [(ngModel)]="newInclusion" [ngModelOptions]="{ standalone: true }"
+                  (keydown.enter)="$event.preventDefault(); addInclusion(newInclusion)"
+                  placeholder="e.g. Entry to Burj Khalifa level 124 & 125" />
               </mat-form-field>
-
-              <button
-                *ngIf="!dateGroup.get('id')?.value"
-                mat-icon-button
-                color="warn"
-                type="button"
-                (click)="removeDate(i)"
-                [disabled]="dates.length === 1"
-              >
-                <mat-icon>delete</mat-icon>
+              <button mat-stroked-button color="primary" type="button"
+                (click)="addInclusion(newInclusion)">
+                <mat-icon>add</mat-icon> Add
               </button>
             </div>
+            <mat-chip-set>
+              <mat-chip *ngFor="let inc of inclusions.controls; let i = index"
+                (removed)="removeInclusion(i)">
+                {{ inc.get('text')?.value }}
+                <button matChipRemove><mat-icon>cancel</mat-icon></button>
+              </mat-chip>
+            </mat-chip-set>
+            <div *ngIf="!inclusions.length" class="text-sm text-gray-500">No inclusions added yet.</div>
+          </mat-card-content>
+        </mat-card>
 
-            <ng-container *ngIf="!hasTimeSlot()">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <mat-form-field appearance="outline">
-                  <mat-label>Adult Price</mat-label>
-                  <input matInput type="number" formControlName="adult_price" min="0" />
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Child Price</mat-label>
-                  <input matInput type="number" formControlName="child_price" min="0" />
-                </mat-form-field>
-                <div *ngIf="i === 0 && dates.length > 1" class="flex items-center">
-                  <mat-checkbox (change)="applyPricesToAllDates()">
-                    Apply to all dates
-                  </mat-checkbox>
-                </div>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>What's not included</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid gap-3 mt-4">
+            <div class="flex gap-2">
+              <mat-form-field appearance="outline" class="flex-1">
+                <mat-label>Add exclusion</mat-label>
+                <input matInput [(ngModel)]="newExclusion" [ngModelOptions]="{ standalone: true }"
+                  (keydown.enter)="$event.preventDefault(); addExclusion(newExclusion)"
+                  placeholder="e.g. Food & beverages" />
+              </mat-form-field>
+              <button mat-stroked-button color="primary" type="button"
+                (click)="addExclusion(newExclusion)">
+                <mat-icon>add</mat-icon> Add
+              </button>
+            </div>
+            <mat-chip-set>
+              <mat-chip *ngFor="let exc of exclusions.controls; let i = index"
+                (removed)="removeExclusion(i)">
+                {{ exc.get('text')?.value }}
+                <button matChipRemove><mat-icon>cancel</mat-icon></button>
+              </mat-chip>
+            </mat-chip-set>
+            <div *ngIf="!exclusions.length" class="text-sm text-gray-500">No exclusions added yet.</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header class="flex flex-row items-center justify-between">
+            <mat-card-title>FAQs</mat-card-title>
+            <button mat-stroked-button color="primary" type="button" (click)="addFaq()">
+              <mat-icon>add</mat-icon> Add FAQ
+            </button>
+          </mat-card-header>
+          <mat-card-content class="grid gap-4 mt-4" formArrayName="faqs">
+            <div *ngFor="let faq of faqs.controls; let i = index"
+              [formGroupName]="i"
+              class="border rounded p-4 grid gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">FAQ #{{ i + 1 }}</span>
+                <button mat-icon-button color="warn" type="button" (click)="removeFaq(i)">
+                  <mat-icon>delete</mat-icon>
+                </button>
               </div>
-            </ng-container>
+              <mat-form-field appearance="outline">
+                <mat-label>Question</mat-label>
+                <input matInput formControlName="question" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Answer</mat-label>
+                <textarea matInput rows="2" formControlName="answer"></textarea>
+              </mat-form-field>
+            </div>
+            <div *ngIf="!faqs.length" class="text-sm text-gray-500">No FAQs added yet.</div>
+          </mat-card-content>
+        </mat-card>
 
-            <ng-container *ngIf="hasTimeSlot()">
-              <div formArrayName="slots" class="grid gap-3">
-                <div class="flex justify-between items-center mb-2">
-                  <div class="font-medium text-sm">Time Slots</div>
-                  <div class="flex items-center gap-3">
-                    <button
-                      mat-stroked-button
-                      color="primary"
-                      type="button"
-                      (click)="addSlot(i)"
-                    >
-                      <mat-icon>add</mat-icon>
-                      <span class="ml-1">Add Slot</span>
-                    </button>
-                    <mat-checkbox *ngIf="i === 0 && dates.length > 1" (change)="applySlotsToAllDates()">
-                      Apply slots to all dates
-                    </mat-checkbox>
-                  </div>
-                </div>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Refund Policy</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid gap-4 mt-4">
+            <mat-radio-group formControlName="isRefundable" class="flex gap-6">
+              <mat-radio-button value="refundable">Refundable</mat-radio-button>
+              <mat-radio-button value="non-refundable">Non-Refundable</mat-radio-button>
+            </mat-radio-group>
 
+            <div *ngIf="isRefundable()" class="grid gap-3">
+              <div class="text-sm font-medium">Fare Rules</div>
+
+              <div formArrayName="refund_rules" class="grid gap-3 border rounded p-3 bg-gray-50">
                 <div
-                  *ngFor="let slot of getSlots(i).controls; let j = index"
-                  [formGroupName]="j"
-                  class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
-                >
-                  <mat-form-field appearance="outline">
-                    <mat-label>Start Time</mat-label>
-                    <mat-select formControlName="start_time">
-                      <mat-option *ngFor="let t of timeOptions" [value]="t">
-                        {{ t }}
-                      </mat-option>
-                    </mat-select>
+                  *ngFor="let rule of refundRules.controls; let i = index"
+                  [formGroupName]="i"
+                  class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                  <mat-form-field appearance="outline" class="md:col-span-5">
+                    <mat-label>Days before check-in</mat-label>
+                    <input matInput type="number" formControlName="days_before_checkin" min="1" />
                   </mat-form-field>
-
-                  <mat-form-field appearance="outline">
-                    <mat-label>End Time</mat-label>
-                    <mat-select formControlName="end_time">
-                      <mat-option *ngFor="let t of getEndTimeOptions(i, j)" [value]="t">
-                        {{ t }}
-                      </mat-option>
-                    </mat-select>
+                  <mat-form-field appearance="outline" class="md:col-span-6">
+                    <mat-label>Penalty (%)</mat-label>
+                    <input matInput type="number" formControlName="percentage" min="0" max="100" />
+                    <mat-hint>% of booking total kept by supplier</mat-hint>
                   </mat-form-field>
-
-                  <mat-form-field appearance="outline">
-                    <mat-label>Max Capacity</mat-label>
-                    <input
-                      matInput
-                      type="number"
-                      formControlName="max_capacity"
-                      min="1"
-                    />
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline">
-                    <mat-label>Adult Price</mat-label>
-                    <input matInput type="number" formControlName="adult_price" min="0" />
-                  </mat-form-field>
-
-                  <div class="flex items-center gap-2">
-                    <mat-form-field appearance="outline" class="flex-1">
-                      <mat-label>Child Price</mat-label>
-                      <input
-                        matInput
-                        type="number"
-                        formControlName="child_price"
-                        min="0"
-                      />
-                    </mat-form-field>
-                    <button
-                      *ngIf="!slot.get('id')?.value"
-                      mat-icon-button
-                      color="warn"
-                      type="button"
-                      (click)="removeSlot(i, j)"
-                    >
+                  <div class="md:col-span-1 flex justify-end">
+                    <button mat-icon-button color="warn" type="button" (click)="removeRefundRule(i)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
                 </div>
-              </div>
-            </ng-container>
-          </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
 
-    <div class="flex justify-end">
-      <button mat-flat-button color="primary" type="submit">
-        <mat-icon>save</mat-icon>
-        <span class="ml-1">Save Activity</span>
-      </button>
-    </div>
-  </form>
+                <div *ngIf="!refundRules.length" class="text-sm text-gray-500 italic text-center py-2">
+                  No refund rules added yet. Add at least one rule.
+                </div>
+
+                <div>
+                  <button mat-stroked-button color="primary" type="button" (click)="addRefundRule()">
+                    <mat-icon>add</mat-icon> Add Refund Rule
+                  </button>
+                </div>
+              </div>
+              <div class="text-xs text-gray-500">
+                Penalty % is what the supplier keeps when the agent cancels within the given window. The rest is refunded.
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="flex justify-between">
+          <button mat-stroked-button matStepperPrevious type="button">
+            <mat-icon class="mr-1">arrow_back</mat-icon> Back
+          </button>
+          <button mat-flat-button color="primary" matStepperNext type="button">
+            Next: Availability & Pricing
+            <mat-icon class="ml-1">arrow_forward</mat-icon>
+          </button>
+        </div>
+      </form>
+    </mat-step>
+
+    <!-- ============ STEP 3: AVAILABILITY & PRICING ============ -->
+    <mat-step [stepControl]="availabilityForm" label="Availability & Pricing">
+      <form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="grid gap-6 mt-4">
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Rules & capacity</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 items-center">
+            <mat-checkbox formControlName="has_time_slot">Has time slot</mat-checkbox>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Max adults per booking</mat-label>
+              <input matInput type="number" formControlName="max_adults" min="1" />
+            </mat-form-field>
+
+            <mat-checkbox formControlName="allow_child">Allow child</mat-checkbox>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Max children per booking</mat-label>
+              <input matInput type="number" formControlName="max_children" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Child min age</mat-label>
+              <input matInput type="number" formControlName="child_min_age" min="0" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Child max age</mat-label>
+              <input matInput type="number" formControlName="child_max_age" min="0" />
+            </mat-form-field>
+
+            <mat-checkbox formControlName="has_transportation">Has transportation</mat-checkbox>
+
+            <mat-form-field appearance="outline" class="md:col-span-3">
+              <mat-label>Transportation description</mat-label>
+              <textarea matInput rows="2" formControlName="transportation_description"></textarea>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Dates & pricing</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="grid gap-4 mt-4">
+            <div class="text-sm text-gray-600">Minimum date is today. Pick a date range to auto-generate dates.</div>
+
+            <mat-form-field appearance="outline" class="md:w-1/2">
+              <mat-label>Date range</mat-label>
+              <mat-date-range-input [rangePicker]="rangePicker">
+                <input matStartDate matInput placeholder="Start date" formControlName="rangeStart"
+                  [min]="minDate" (dateChange)="onRangeChange()" />
+                <input matEndDate matInput placeholder="End date" formControlName="rangeEnd"
+                  [min]="minDate" (dateChange)="onRangeChange()" />
+              </mat-date-range-input>
+              <mat-datepicker-toggle matSuffix [for]="rangePicker"></mat-datepicker-toggle>
+              <mat-date-range-picker #rangePicker></mat-date-range-picker>
+            </mat-form-field>
+
+            <div formArrayName="dates" class="grid gap-4">
+              <div *ngFor="let dateGroup of dates.controls; let i = index"
+                [formGroupName]="i"
+                class="border rounded p-4 grid gap-4">
+                <div class="flex items-center gap-4">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Date</mat-label>
+                    <input matInput [matDatepicker]="picker" formControlName="date" [min]="minDate" />
+                    <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                    <mat-datepicker #picker></mat-datepicker>
+                  </mat-form-field>
+                  <button *ngIf="!dateGroup.get('id')?.value" mat-icon-button color="warn" type="button"
+                    (click)="removeDate(i)" [disabled]="dates.length === 1">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+
+                <ng-container *ngIf="!hasTimeSlot()">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Adult price</mat-label>
+                      <input matInput type="number" formControlName="adult_price" min="0" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline">
+                      <mat-label>Child price</mat-label>
+                      <input matInput type="number" formControlName="child_price" min="0" />
+                    </mat-form-field>
+                    <div *ngIf="i === 0 && dates.length > 1" class="flex items-center">
+                      <mat-checkbox (change)="applyPricesToAllDates()">Apply to all dates</mat-checkbox>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <ng-container *ngIf="hasTimeSlot()">
+                  <div formArrayName="slots" class="grid gap-3">
+                    <div class="flex justify-between items-center mb-2">
+                      <div class="font-medium text-sm">Time slots</div>
+                      <div class="flex items-center gap-3">
+                        <button mat-stroked-button color="primary" type="button" (click)="addSlot(i)">
+                          <mat-icon>add</mat-icon><span class="ml-1">Add slot</span>
+                        </button>
+                        <mat-checkbox *ngIf="i === 0 && dates.length > 1" (change)="applySlotsToAllDates()">
+                          Apply slots to all dates
+                        </mat-checkbox>
+                      </div>
+                    </div>
+
+                    <div *ngFor="let slot of getSlots(i).controls; let j = index"
+                      [formGroupName]="j"
+                      class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Start</mat-label>
+                        <mat-select formControlName="start_time">
+                          <mat-option *ngFor="let t of timeOptions" [value]="t">{{ t }}</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>End</mat-label>
+                        <mat-select formControlName="end_time">
+                          <mat-option *ngFor="let t of getEndTimeOptions(i, j)" [value]="t">{{ t }}</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Max capacity</mat-label>
+                        <input matInput type="number" formControlName="max_capacity" min="1" />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Adult price</mat-label>
+                        <input matInput type="number" formControlName="adult_price" min="0" />
+                      </mat-form-field>
+                      <div class="flex items-center gap-2">
+                        <mat-form-field appearance="outline" class="flex-1">
+                          <mat-label>Child price</mat-label>
+                          <input matInput type="number" formControlName="child_price" min="0" />
+                        </mat-form-field>
+                        <button *ngIf="!slot.get('id')?.value" mat-icon-button color="warn" type="button"
+                          (click)="removeSlot(i, j)">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="flex justify-between">
+          <button mat-stroked-button matStepperPrevious type="button">
+            <mat-icon class="mr-1">arrow_back</mat-icon> Back
+          </button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="isSubmitting">
+            <mat-icon class="mr-1">save</mat-icon>
+            {{ isEditMode ? 'Update activity' : 'Save activity' }}
+          </button>
+        </div>
+      </form>
+    </mat-step>
+
+  </mat-stepper>
 </div>

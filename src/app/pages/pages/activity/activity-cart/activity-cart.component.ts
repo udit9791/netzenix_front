@@ -7,13 +7,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { VexSecondaryToolbarComponent } from '@vex/components/vex-secondary-toolbar/vex-secondary-toolbar.component';
 import { VexBreadcrumbsComponent } from '@vex/components/vex-breadcrumbs/vex-breadcrumbs.component';
-import { VexPageLayoutComponent } from '@vex/components/vex-page-layout/vex-page-layout.component';
-import { VexPageLayoutHeaderDirective } from '@vex/components/vex-page-layout/vex-page-layout-header.directive';
-import { VexPageLayoutContentDirective } from '@vex/components/vex-page-layout/vex-page-layout-content.directive';
 import {
   ActivityCartItem,
   ActivityCartService
 } from 'src/app/core/services/activity-cart.service';
+import { ActivityService } from 'src/app/core/services/activity.service';
 
 @Component({
   selector: 'vex-activity-cart',
@@ -28,10 +26,7 @@ import {
     MatButtonModule,
     MatDividerModule,
     VexSecondaryToolbarComponent,
-    VexBreadcrumbsComponent,
-    VexPageLayoutComponent,
-    VexPageLayoutHeaderDirective,
-    VexPageLayoutContentDirective
+    VexBreadcrumbsComponent
   ]
 })
 export class ActivityCartComponent implements OnInit {
@@ -40,6 +35,7 @@ export class ActivityCartComponent implements OnInit {
 
   constructor(
     private cartService: ActivityCartService,
+    private activityService: ActivityService,
     private router: Router
   ) {}
 
@@ -52,9 +48,7 @@ export class ActivityCartComponent implements OnInit {
   }
 
   proceedToBooking(): void {
-    if (!this.items.length) {
-      return;
-    }
+    if (!this.items.length) return;
     this.router.navigate(['/activities/checkout']);
   }
 
@@ -62,20 +56,16 @@ export class ActivityCartComponent implements OnInit {
     const item = this.items[index];
     if (!item) return;
     const maxA = item.maxAdults;
-    const nextAdults = item.adults + 1;
-    if (maxA !== null && maxA !== undefined && nextAdults > maxA) {
-      return;
-    }
-    this.cartService.updateCounts(index, nextAdults, item.children);
+    const next = item.adults + 1;
+    if (maxA != null && next > maxA) return;
+    this.cartService.updateCounts(index, next, item.children);
     this.reload();
   }
 
   decrementAdult(index: number): void {
     const item = this.items[index];
-    if (!item) return;
-    if (item.adults <= 1) return;
-    const nextAdults = item.adults - 1;
-    this.cartService.updateCounts(index, nextAdults, item.children);
+    if (!item || item.adults <= 1) return;
+    this.cartService.updateCounts(index, item.adults - 1, item.children);
     this.reload();
   }
 
@@ -83,25 +73,26 @@ export class ActivityCartComponent implements OnInit {
     const item = this.items[index];
     if (!item) return;
     const maxC = item.maxChildren;
-    const nextChildren = item.children + 1;
-    if (maxC !== null && maxC !== undefined && nextChildren > maxC) {
-      return;
-    }
-    this.cartService.updateCounts(index, item.adults, nextChildren);
+    const next = item.children + 1;
+    if (maxC != null && next > maxC) return;
+    this.cartService.updateCounts(index, item.adults, next);
     this.reload();
   }
 
   decrementChild(index: number): void {
     const item = this.items[index];
-    if (!item) return;
-    if (item.children <= 0) return;
-    const nextChildren = item.children - 1;
-    this.cartService.updateCounts(index, item.adults, nextChildren);
+    if (!item || item.children <= 0) return;
+    this.cartService.updateCounts(index, item.adults, item.children - 1);
     this.reload();
   }
 
   removeItem(index: number): void {
-    this.cartService.removeItem(index);
+    const removed = this.cartService.popItem(index);
+    if (removed?.lockId) {
+      this.activityService
+        .releaseInventory({ lock_id: removed.lockId })
+        .subscribe({ next: () => {}, error: () => {} });
+    }
     this.reload();
   }
 

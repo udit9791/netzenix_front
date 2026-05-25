@@ -338,6 +338,15 @@ export const appRoutes: VexRoutes = [
         data: { permission: 'view_flight_inventory' }
       },
       {
+        path: 'sale/activity-bookings',
+        loadComponent: () =>
+          import(
+            './pages/pages/sale/manage-activity/activity-bookings.component'
+          ).then((m) => m.ActivityBookingsComponent),
+        canActivate: [PermissionGuard],
+        data: { permission: 'view_activity' }
+      },
+      {
         path: 'sale/manage-fd-bookings',
         loadComponent: () =>
           import(

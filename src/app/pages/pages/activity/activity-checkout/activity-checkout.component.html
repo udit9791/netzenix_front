@@ -1,179 +1,211 @@
-<vex-secondary-toolbar current="Activity details">
-  <vex-breadcrumbs [crumbs]="['Activities', 'Details']"></vex-breadcrumbs>
+<vex-secondary-toolbar current="Checkout">
+  <vex-breadcrumbs [crumbs]="['Activities', 'Cart', 'Checkout']"></vex-breadcrumbs>
 </vex-secondary-toolbar>
 
-<vex-page-layout>
-  <vex-page-layout-content>
-    <div class="p-6 container" *ngIf="items.length; else emptyState">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-4">
-          <mat-card class="p-4 space-y-4">
-            <div class="text-base font-semibold">Enter info</div>
-            <mat-divider></mat-divider>
+<mat-progress-bar mode="indeterminate" *ngIf="submitting"></mat-progress-bar>
 
-            <div class="text-sm font-semibold">Contact info</div>
-            <div class="text-xs text-gray-600 mb-2">
-              We will contact you if there are any updates to your booking.
-            </div>
+<div class="p-6 container-fluid">
+  <div *ngIf="!items.length" class="text-center py-12 text-gray-500">
+    Your cart is empty.
+    <button mat-stroked-button class="ml-2" (click)="backToCart()">Back to cart</button>
+  </div>
 
-            <form [formGroup]="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <mat-form-field appearance="outline">
-                <mat-label>First name</mat-label>
-                <input matInput formControlName="firstName" />
-              </mat-form-field>
+  <div *ngIf="items.length" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- ===== Left: forms ===== -->
+    <div class="lg:col-span-2 grid gap-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold">Enter booking info</h1>
+        <button mat-stroked-button (click)="backToCart()">
+          <mat-icon class="mr-1">arrow_back</mat-icon> Back to cart
+        </button>
+      </div>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Last name</mat-label>
-                <input matInput formControlName="lastName" />
-              </mat-form-field>
+      <!-- Quick lookup by mobile -->
+      <mat-card>
+        <mat-card-content class="py-4">
+          <div class="text-base font-semibold mb-2">Quick fill by mobile</div>
+          <div class="flex gap-2 items-start flex-wrap">
+            <mat-form-field appearance="outline" class="flex-1 min-w-[200px]" subscriptSizing="dynamic">
+              <mat-label>Customer mobile</mat-label>
+              <input matInput [formControl]="mobileNumberControl" />
+            </mat-form-field>
+            <button mat-stroked-button color="primary" (click)="fetchTravelersByMobile()" class="mt-1">
+              <mat-icon class="mr-1">search</mat-icon> Fetch
+            </button>
+          </div>
+          <div *ngIf="travelerError" class="text-sm text-red-600 mt-2">{{ travelerError }}</div>
+          <div *ngIf="travelerSuccess" class="text-sm text-green-600 mt-2">{{ travelerSuccess }}</div>
+        </mat-card-content>
+      </mat-card>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Phone number</mat-label>
-                <input matInput formControlName="phone" />
-              </mat-form-field>
+      <!-- Contact info -->
+      <mat-card>
+        <mat-card-content class="py-4">
+          <div class="text-base font-semibold mb-1">Contact info</div>
+          <div class="text-xs text-gray-500 mb-3">We'll contact you only if there's any update to your booking.</div>
+          <form [formGroup]="contactForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <mat-form-field appearance="outline">
+              <mat-label>First name</mat-label>
+              <input matInput formControlName="firstName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Last name</mat-label>
+              <input matInput formControlName="lastName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Phone number</mat-label>
+              <input matInput formControlName="phone" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="email" />
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+      </mat-card>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Email address</mat-label>
-                <input matInput formControlName="email" />
-              </mat-form-field>
-            </form>
-
-            <mat-divider></mat-divider>
-
-            <div class="text-sm font-semibold mt-2">Traveler details</div>
-            <div class="text-xs text-gray-600 mb-2">
-              Add adult and child names for this activity booking.
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-[2fr_auto] gap-4 items-end mb-2">
-              <mat-form-field appearance="outline">
-                <mat-label>Fetch by mobile number</mat-label>
-                <input matInput [formControl]="mobileNumberControl" />
-              </mat-form-field>
-              <button
-                mat-stroked-button
-                color="primary"
-                type="button"
-                (click)="fetchTravelersByMobile()">
-                Fetch details
-              </button>
-            </div>
-
-            <div *ngIf="travelerError" class="text-xs text-red-600">
-              {{ travelerError }}
-            </div>
-            <div *ngIf="travelerSuccess" class="text-xs text-green-600">
-              {{ travelerSuccess }}
-            </div>
-
-            <form [formGroup]="travelersForm" class="space-y-4 mt-4">
-              <div
-                *ngFor="let travelerCtrl of travelersArray.controls; let i = index"
+      <!-- Travelers -->
+      <mat-card>
+        <mat-card-content class="py-4">
+          <div class="text-base font-semibold mb-3">Travelers</div>
+          <form [formGroup]="travelersForm">
+            <div formArrayName="travelers" class="grid gap-3">
+              <div *ngFor="let traveler of travelersArray.controls; let i = index"
                 [formGroupName]="i"
-                class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <mat-form-field appearance="outline">
-                  <mat-label>Type</mat-label>
-                  <mat-select formControlName="type" [disabled]="true">
-                    <mat-option value="Adult">Adult</mat-option>
-                    <mat-option value="Child">Child</mat-option>
-                  </mat-select>
-                </mat-form-field>
-
+                class="border rounded p-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
+                <div class="md:col-span-4 flex items-center gap-2">
+                  <mat-icon class="text-primary-600">person</mat-icon>
+                  <span class="text-sm font-medium">
+                    Traveler #{{ i + 1 }} <span class="text-xs text-gray-500">({{ traveler.get('type')?.value }})</span>
+                  </span>
+                </div>
                 <mat-form-field appearance="outline">
                   <mat-label>Title</mat-label>
                   <mat-select formControlName="title">
                     <mat-option value="Mr">Mr</mat-option>
-                    <mat-option value="Mrs">Mrs</mat-option>
                     <mat-option value="Ms">Ms</mat-option>
+                    <mat-option value="Mrs">Mrs</mat-option>
                     <mat-option value="Master">Master</mat-option>
                     <mat-option value="Miss">Miss</mat-option>
                   </mat-select>
                 </mat-form-field>
-
-                <mat-form-field appearance="outline">
+                <mat-form-field appearance="outline" class="md:col-span-2">
                   <mat-label>First name</mat-label>
                   <input matInput formControlName="firstName" />
                 </mat-form-field>
-
                 <mat-form-field appearance="outline">
                   <mat-label>Last name</mat-label>
                   <input matInput formControlName="lastName" />
                 </mat-form-field>
               </div>
-            </form>
-          </mat-card>
-        </div>
-
-        <div class="lg:col-span-1 space-y-4">
-          <mat-card class="p-4 space-y-3">
-            <div class="text-sm font-semibold">
-              Booking summary
             </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
 
-            <div
-              *ngFor="let item of items"
-              class="border rounded p-3 text-xs text-gray-700 space-y-1">
-              <div class="font-semibold text-sm">
-                {{ item.title }}
-              </div>
-              <div>
-                {{ item.date }}
-                <span *ngIf="item.startTime">
-                  • {{ item.startTime }}
-                  <span *ngIf="item.endTime">- {{ item.endTime }}</span>
-                </span>
-              </div>
-              <div>
-                Adult x {{ item.adults }}
-                <span *ngIf="item.children > 0">
-                  • Child x {{ item.children }}
-                </span>
-              </div>
-              <div class="flex justify-between text-sm font-semibold mt-1">
-                <span>Total</span>
-                <span>₹ {{ item.totalPrice || 0 | number: '1.0-0' }}</span>
+    <!-- ===== Right: summary ===== -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-4">
+        <mat-card>
+          <mat-card-content class="py-4">
+            <div class="text-base font-semibold mb-3">Booking summary</div>
+            <div class="grid gap-4 mb-3 text-sm">
+              <div *ngFor="let item of items" class="pb-3 border-b last:border-b-0 last:pb-0">
+                <div class="flex gap-3">
+                  <div class="w-20 h-20 flex-shrink-0 rounded overflow-hidden bg-gray-100 border">
+                    <img *ngIf="item.coverImage"
+                      [src]="item.coverImage"
+                      [alt]="item.title"
+                      class="w-full h-full object-cover" />
+                    <div *ngIf="!item.coverImage"
+                      class="w-full h-full flex items-center justify-center text-gray-300">
+                      <mat-icon>image</mat-icon>
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium leading-snug">{{ item.title }}</div>
+                    <div class="text-xs text-gray-500 mt-0.5" *ngIf="item.cityName">
+                      <mat-icon class="align-middle" style="font-size:12px;width:12px;height:12px">place</mat-icon>
+                      {{ item.cityName }}
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">
+                      <mat-icon class="align-middle" style="font-size:12px;width:12px;height:12px">event</mat-icon>
+                      {{ item.date }}
+                      <span *ngIf="item.startTime">
+                        • {{ item.startTime?.substring(0, 5) }}-{{ item.endTime?.substring(0, 5) }}
+                      </span>
+                    </div>
+                    <div class="text-xs text-gray-600">
+                      Adults: {{ item.adults }}
+                      <span *ngIf="item.children > 0">• Children: {{ item.children }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="item.shortDescription"
+                  class="text-xs text-gray-600 mt-2 line-clamp-3 whitespace-pre-line">
+                  {{ item.shortDescription }}
+                </div>
+                <div class="text-sm font-medium text-primary-600 mt-2 text-right"
+                  *ngIf="item.totalPrice !== null">
+                  ₹ {{ item.totalPrice }}
+                </div>
               </div>
             </div>
 
             <mat-divider></mat-divider>
 
-            <div class="flex items-center justify-between text-sm font-semibold">
-              <div>Subtotal</div>
-              <div>₹ {{ subtotal | number: '1.0-0' }}</div>
+            <!-- Price breakup (matches hotel/flight pattern) -->
+            <div class="mt-3 mb-4">
+              <div class="text-base font-semibold mb-2">Price Breakup</div>
+              <div class="p-3 rounded border text-sm">
+                <div class="flex justify-between py-1">
+                  <span>Base Price</span>
+                  <span>₹ {{ (charges?.total_base_fare ?? subtotal) | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges">
+                  <span>Service Fee</span>
+                  <span>₹ {{ charges.service_fee | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges?.is_same_state">
+                  <span>CGST</span>
+                  <span>₹ {{ charges?.cgst | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges?.is_same_state">
+                  <span>SGST</span>
+                  <span>₹ {{ charges?.sgst | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges && !charges.is_same_state">
+                  <span>IGST</span>
+                  <span>₹ {{ charges.igst | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges">
+                  <span>Commission</span>
+                  <span>- ₹ {{ charges.commission | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between py-1" *ngIf="charges">
+                  <span>TDS on Commission</span>
+                  <span>₹ {{ charges.tds_on_commission | number:'1.2-2' }}</span>
+                </div>
+                <mat-divider class="my-2"></mat-divider>
+                <div class="flex justify-between font-semibold py-1">
+                  <span>Total Amount to be paid</span>
+                  <span>₹ {{ (charges?.final_total ?? subtotal) | number:'1.2-2' }}</span>
+                </div>
+              </div>
             </div>
 
-            <button
-              mat-flat-button
-              color="primary"
-              class="w-full"
-              type="button"
-              (click)="proceedToPayment()">
-              Go to payment
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded p-2 mb-3">
+              Once submitted, booking info cannot be changed. Please double-check before proceeding.
+            </div>
+
+            <button mat-flat-button color="primary" class="w-full"
+              (click)="proceedToPayment()" [disabled]="submitting || chargesLoading">
+              {{ submitting ? 'Submitting...' : 'Confirm booking' }}
             </button>
-            <button
-              mat-stroked-button
-              class="w-full"
-              type="button"
-              (click)="backToCart()">
-              Back to cart
-            </button>
-          </mat-card>
-        </div>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
-
-    <ng-template #emptyState>
-      <div class="p-6 container">
-        <div class="flex flex-col items-center gap-3 py-12">
-          <div class="text-lg font-semibold">No activities in cart</div>
-          <div class="text-sm text-gray-600">
-            Add an activity from the detail page to review it here.
-          </div>
-          <button mat-flat-button color="primary" [routerLink]="['/activities/search']">
-            Browse activities
-          </button>
-        </div>
-      </div>
-    </ng-template>
-  </vex-page-layout-content>
-</vex-page-layout>
+  </div>
+</div>

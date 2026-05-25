@@ -93,6 +93,14 @@ export class CancelRequestProceedComponent implements OnInit {
     percentage: number;
     date: string;
   }> = [];
+  activityRefundRules: any[] = [];
+  activityRefundRulesView: Array<{
+    days: number;
+    percentage: number;
+    date: string;
+  }> = [];
+  activityDetails: any = null;
+  activityAdditional: any = null;
   rejectNote: string = '';
   cancelRequestId: number | null = null;
   orderId: number | null = null;
@@ -179,6 +187,9 @@ export class CancelRequestProceedComponent implements OnInit {
         } else if (this.isItineraryType()) {
           this.requestColumns = ['traveler', 'status', 'penalty'];
           this.loadItineraryRefundRules();
+        } else if (this.isActivityType()) {
+          this.requestColumns = ['traveler', 'status', 'penalty'];
+          this.loadActivityRefundRules();
         } else {
           this.requestColumns = [...this.flightRequestColumns];
           this.buildRequestDetailsView();
@@ -412,6 +423,95 @@ export class CancelRequestProceedComponent implements OnInit {
           finalAmount
         };
       });
+    } else if (this.isActivityType()) {
+      const tripDate = this.getActivityEarliestDate();
+      let diffDays = 0;
+      if (tripDate) {
+        const today = new Date();
+        const startOfToday = new Date(today.toDateString());
+        const ms = tripDate.getTime() - startOfToday.getTime();
+        diffDays = Math.floor(ms / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) {
+          diffDays = 0;
+        }
+      }
+
+      const rules = Array.isArray(this.activityRefundRules)
+        ? [...this.activityRefundRules]
+        : [];
+      rules.sort(
+        (a: any, b: any) =>
+          Number(b?.days_before_checkin ?? 0) -
+          Number(a?.days_before_checkin ?? 0)
+      );
+
+      let selectedPct = 0;
+      let selectedAmt = 0;
+      for (const r of rules) {
+        const days = Number(r?.days_before_checkin ?? 0);
+        if (diffDays >= days) {
+          selectedAmt = Number(r?.amount ?? 0);
+          selectedPct = Number(r?.percentage ?? 0);
+          break;
+        }
+      }
+
+      this.requestDetailsView = this.requestDetails.map((d) => {
+        const detailId = Number(
+          d.order_detail_id ?? d.detail_id ?? d.orderDetailId ?? 0
+        );
+        const detail = this.orderDetails.find(
+          (od) => Number(od.id) === detailId
+        );
+        const traveler = detail
+          ? `${detail.first_name || ''} ${detail.last_name || ''}`.trim()
+          : String(detailId || '');
+        const travelerTypeRaw =
+          detail?.passanger_type ?? detail?.passenger_type ?? '';
+        const travelerType = travelerTypeRaw
+          ? String(travelerTypeRaw).charAt(0).toUpperCase() +
+            String(travelerTypeRaw).slice(1).toLowerCase()
+          : '';
+        const statusRaw = d.status_name ?? d.status ?? '';
+        const status = statusRaw != null ? String(statusRaw) : '';
+        const baseRaw =
+          detail?.base_price ??
+          detail?.basePrice ??
+          detail?.base_fare ??
+          detail?.baseFare ??
+          detail?.price ??
+          0;
+        const baseAmount = Number(baseRaw || 0);
+
+        let penaltyAmount = 0;
+        if (selectedAmt > 0) {
+          penaltyAmount = selectedAmt;
+        } else if (selectedPct > 0 && baseAmount > 0) {
+          penaltyAmount = Math.round((baseAmount * selectedPct) / 100);
+        } else {
+          const penaltyRaw =
+            d.penalty_amount ??
+            d.penaltyAmount ??
+            d.refund_amount ??
+            d.refundAmount ??
+            d.final_amount ??
+            d.finalAmount ??
+            d.amount ??
+            0;
+          penaltyAmount = Number(penaltyRaw || 0);
+        }
+        const finalAmount = penaltyAmount;
+
+        return {
+          segmentId: 0,
+          traveler,
+          travelerType,
+          status,
+          baseAmount,
+          penaltyAmount,
+          finalAmount
+        };
+      });
     } else if (this.isItineraryType()) {
       const itOrder: any = this.order?.itinerary_order || {};
       const travelDateStr: string | undefined = itOrder?.travel_date;
@@ -586,6 +686,20 @@ export class CancelRequestProceedComponent implements OnInit {
       return sum + (isNaN(v) ? 0 : v);
     }, 0);
     this.amount = total > 0 ? total : 0;
+  }
+
+  refundForRow(r: { baseAmount: number; finalAmount: number }): number {
+    const base = Number(r?.baseAmount || 0);
+    const penalty = Number(r?.finalAmount || 0);
+    const refund = base - penalty;
+    return refund > 0 ? refund : 0;
+  }
+
+  get totalRefundToUser(): number {
+    return this.requestDetailsView.reduce(
+      (sum, r) => sum + this.refundForRow(r),
+      0
+    );
   }
 
   confirm(): void {
@@ -797,6 +911,103 @@ export class CancelRequestProceedComponent implements OnInit {
         dateText = d.toLocaleDateString('en-IN');
       } else if (!isNaN(days)) {
         dateText = `${days} days before check-in`;
+      }
+      const pctRaw = r?.percentage;
+      const pct =
+        typeof pctRaw === 'number'
+          ? pctRaw
+          : pctRaw != null
+            ? Number(pctRaw)
+            : 0;
+      return {
+        days,
+        percentage: pct,
+        date: dateText
+      };
+    });
+  }
+
+  isActivityType(): boolean {
+    const t = this.order?.type ?? this.request?.type ?? '';
+    return String(t).toLowerCase() === 'activity';
+  }
+
+  private getActivityEarliestDate(): Date | null {
+    try {
+      let additional = this.activityAdditional;
+      if (!additional) {
+        const raw = this.order?.additional_data;
+        if (raw) {
+          additional = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          this.activityAdditional = additional;
+        }
+      }
+      const items = additional?.items;
+      if (!Array.isArray(items) || !items.length) return null;
+      let earliest: Date | null = null;
+      for (const it of items) {
+        const ds = it?.date;
+        if (!ds) continue;
+        const d = new Date(ds);
+        if (isNaN(d.getTime())) continue;
+        if (earliest === null || d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+      return earliest;
+    } catch {
+      return null;
+    }
+  }
+
+  private loadActivityRefundRules(): void {
+    const activityId = Number(this.order?.type_id ?? 0);
+    if (!activityId) {
+      this.activityRefundRules = [];
+      this.buildActivityRefundRulesView();
+      this.buildRequestDetailsView();
+      return;
+    }
+    this.http
+      .get<any>(`${environment.apiUrl}/activities/${activityId}`)
+      .subscribe({
+        next: (res: any) => {
+          const data = res && res.data ? res.data : res;
+          this.activityDetails = data;
+          this.activityRefundRules = Array.isArray(data?.refund_rules)
+            ? data.refund_rules
+            : [];
+          this.buildActivityRefundRulesView();
+          this.buildRequestDetailsView();
+        },
+        error: () => {
+          this.activityRefundRules = [];
+          this.buildActivityRefundRulesView();
+          this.buildRequestDetailsView();
+        }
+      });
+  }
+
+  private buildActivityRefundRulesView(): void {
+    const rules = Array.isArray(this.activityRefundRules)
+      ? this.activityRefundRules
+      : [];
+    const tripDate = this.getActivityEarliestDate();
+    this.activityRefundRulesView = rules.map((r: any) => {
+      const daysRaw = r?.days_before_checkin;
+      const days =
+        typeof daysRaw === 'number'
+          ? daysRaw
+          : daysRaw != null
+            ? Number(daysRaw)
+            : 0;
+      let dateText = '';
+      if (tripDate && !isNaN(days)) {
+        const d = new Date(tripDate);
+        d.setDate(d.getDate() - days);
+        dateText = d.toLocaleDateString('en-IN');
+      } else if (!isNaN(days)) {
+        dateText = `${days} days before activity`;
       }
       const pctRaw = r?.percentage;
       const pct =

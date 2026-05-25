@@ -16,6 +16,13 @@ export interface ActivityCartItem {
   totalPrice: number | null;
   maxAdults: number | null;
   maxChildren: number | null;
+  // Display metadata for cart/checkout summary
+  coverImage?: string | null;
+  shortDescription?: string | null;
+  cityName?: string | null;
+  // Inventory lock metadata (Phase 3)
+  lockId?: number | null;
+  lockExpiresAt?: string | null;
 }
 
 @Injectable({
@@ -23,11 +30,43 @@ export interface ActivityCartItem {
 })
 export class ActivityCartService {
   private storageKey = 'activity_cart';
+  private sessionKey = 'activity_cart_session';
   private countSubject = new BehaviorSubject<number>(0);
   count$ = this.countSubject.asObservable();
 
   constructor() {
     this.countSubject.next(this.loadItems().length);
+  }
+
+  /** Stable random token for the current browser session — identifies the cart server-side. */
+  getSessionToken(): string {
+    let t = '';
+    try {
+      t = localStorage.getItem(this.sessionKey) || '';
+    } catch {
+      /* ignore */
+    }
+    if (!t) {
+      t = this.randomToken();
+      try {
+        localStorage.setItem(this.sessionKey, t);
+      } catch {
+        /* ignore */
+      }
+    }
+    return t;
+  }
+
+  private randomToken(): string {
+    const arr = new Uint8Array(24);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(arr);
+    } else {
+      for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256);
+    }
+    return Array.from(arr)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   getItems(): ActivityCartItem[] {
@@ -43,12 +82,8 @@ export class ActivityCartService {
   ): boolean {
     const items = this.loadItems();
     return items.some((item) => {
-      if (item.activityId !== activityId) {
-        return false;
-      }
-      if (item.date !== date) {
-        return false;
-      }
+      if (item.activityId !== activityId) return false;
+      if (item.date !== date) return false;
       const itemSlot = item.slotId ?? null;
       const targetSlot = slotId ?? null;
       if (itemSlot !== null || targetSlot !== null) {
@@ -70,9 +105,7 @@ export class ActivityCartService {
 
   updateCounts(index: number, adults: number, children: number): void {
     const items = this.loadItems();
-    if (index < 0 || index >= items.length) {
-      return;
-    }
+    if (index < 0 || index >= items.length) return;
     const current = items[index];
     const safeAdults = adults < 0 ? 0 : adults;
     const safeChildren = children < 0 ? 0 : children;
@@ -88,15 +121,23 @@ export class ActivityCartService {
     this.saveItems(items);
   }
 
-  removeItem(index: number): void {
+  setItemLock(index: number, lockId: number | null, expiresAt: string | null): void {
     const items = this.loadItems();
-    if (index < 0 || index >= items.length) {
-      return;
-    }
-    items.splice(index, 1);
+    if (index < 0 || index >= items.length) return;
+    items[index] = { ...items[index], lockId, lockExpiresAt: expiresAt };
     this.saveItems(items);
   }
 
+  /** Pops and returns the item at index (caller is responsible for releasing its lock). */
+  popItem(index: number): ActivityCartItem | null {
+    const items = this.loadItems();
+    if (index < 0 || index >= items.length) return null;
+    const removed = items.splice(index, 1)[0] || null;
+    this.saveItems(items);
+    return removed;
+  }
+
+  /** Clears local items (caller is responsible for releasing locks server-side). */
   clear(): void {
     this.saveItems([]);
   }
@@ -104,14 +145,9 @@ export class ActivityCartService {
   private loadItems(): ActivityCartItem[] {
     try {
       const raw = localStorage.getItem(this.storageKey);
-      if (!raw) {
-        return [];
-      }
+      if (!raw) return [];
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed as ActivityCartItem[];
+      return Array.isArray(parsed) ? (parsed as ActivityCartItem[]) : [];
     } catch {
       return [];
     }
@@ -120,7 +156,9 @@ export class ActivityCartService {
   private saveItems(items: ActivityCartItem[]): void {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(items));
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     this.countSubject.next(items.length);
   }
 }

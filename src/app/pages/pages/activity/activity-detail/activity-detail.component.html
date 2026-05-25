@@ -1,273 +1,328 @@
 <vex-secondary-toolbar [current]="activity?.title || 'Activity Detail'">
-  <vex-breadcrumbs [crumbs]="['Activities', activity?.title || 'Detail']"></vex-breadcrumbs>
+  <vex-breadcrumbs [crumbs]="['Activities', activity?.country_name || '', activity?.title || 'Detail']"></vex-breadcrumbs>
 </vex-secondary-toolbar>
 
-<vex-page-layout>
-  <vex-page-layout-header>
-    <div class="p-6 container">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold mb-1">
-            {{ activity?.title || 'Activity' }}
-          </h1>
-          <div class="flex flex-wrap gap-2 text-xs text-gray-700 mb-2">
-            <span class="px-2 py-1 rounded-full bg-gray-100" *ngIf="activity?.has_time_slot">
-              With time slots
-            </span>
-            <span class="px-2 py-1 rounded-full bg-gray-100" *ngIf="activity?.allow_child">
-              Child allowed
-            </span>
-            <span class="px-2 py-1 rounded-full bg-gray-100" *ngIf="activity?.has_transportation">
-              Includes transportation
-            </span>
-          </div>
-          <div class="flex items-center gap-2 text-sm text-gray-600">
-            <mat-icon>place</mat-icon>
-            <span>
-              {{ activity?.city_id && activity?.city_name ? activity.city_name : '' }}
-            </span>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <button mat-icon-button>
-            <mat-icon>favorite_border</mat-icon>
-          </button>
-        </div>
+<mat-progress-bar mode="indeterminate" *ngIf="loading"></mat-progress-bar>
+
+<div *ngIf="error" class="p-6">
+  <div class="bg-red-50 border border-red-200 text-red-700 rounded p-4">{{ error }}</div>
+  <button mat-stroked-button class="mt-4" (click)="backToSearch()">Back to search</button>
+</div>
+
+<div *ngIf="!loading && !error && activity" class="p-6 container-fluid">
+
+  <!-- ===== Hero gallery (Klook 1 big + 4 small) ===== -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-6 rounded-lg overflow-hidden" style="min-height: 380px">
+    <div class="md:col-span-2 md:row-span-2 relative bg-gray-100 cursor-pointer h-full min-h-[260px]"
+      (click)="openImageSlider(0)">
+      <img *ngIf="primaryImage" [src]="primaryImage" [alt]="activity.title"
+        class="absolute inset-0 w-full h-full object-cover" />
+      <div *ngIf="!primaryImage" class="absolute inset-0 flex items-center justify-center text-gray-300">
+        <mat-icon class="text-6xl">image</mat-icon>
       </div>
     </div>
-  </vex-page-layout-header>
+    <div *ngFor="let img of galleryImages.slice(0, 4); let i = index"
+      class="relative bg-gray-100 cursor-pointer h-32 md:h-auto md:min-h-[125px]"
+      (click)="openImageSlider(i + 1)">
+      <img [src]="img" [alt]="activity.title" class="absolute inset-0 w-full h-full object-cover" />
+      <div *ngIf="i === 3 && galleryImages.length > 4"
+        class="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-sm font-medium">
+        +{{ galleryImages.length - 4 }} more
+      </div>
+    </div>
+  </div>
 
-  <vex-page-layout-content>
-    <div class="p-6 container">
-      <mat-card>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-2">
-            <div class="flex flex-col lg:flex-row gap-3">
-              <div class="flex-1">
-                <img
-                  class="w-full rounded-lg object-cover max-h-[360px] cursor-pointer"
-                  [src]="primaryImage || fullImgUrl(null)"
-                  [alt]="activity?.title || 'Activity'"
-                  (click)="openImageSlider(0)" />
-              </div>
-              <div class="w-full lg:w-48 flex flex-col gap-2">
-                <img
-                  *ngFor="let img of galleryImages; let i = index"
-                  class="w-full h-24 rounded-lg object-cover cursor-pointer"
-                  [src]="img"
-                  [alt]="activity?.title || 'Activity'"
-                  (click)="openImageSlider(i + 1)" />
-              </div>
-            </div>
-          </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <div class="lg:col-span-1 border-t lg:border-t-0 lg:border-l border-gray-200 pt-4 lg:pt-0 lg:pl-4 flex flex-col justify-between">
-            <div>
-              <div class="text-sm text-gray-600 mb-1">
-                From
-              </div>
-              <div class="text-3xl font-semibold text-gray-900 mb-2">
-                ₹ {{ minPriceLabel }}
-              </div>
-              <div class="text-xs text-gray-500">
-                Price per person
-              </div>
-            </div>
-            <div class="mt-4 flex flex-col gap-2">
-              <button mat-flat-button color="primary" class="w-full" (click)="selectOptions()">
-                Select options
-              </button>
-              <button mat-stroked-button class="w-full" (click)="backToSearch()">
-                Back to search
-              </button>
-            </div>
-          </div>
+    <!-- ===== Left column ===== -->
+    <div class="lg:col-span-2 grid gap-6">
+
+      <!-- Title + meta -->
+      <div>
+        <h1 class="text-2xl md:text-3xl font-semibold mb-2">{{ activity.title }}</h1>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
+          <span class="flex items-center gap-1">
+            <mat-icon class="text-base">place</mat-icon>
+            {{ activity.city_name || activity.state_name }}{{ activity.country_name ? ', ' + activity.country_name : '' }}
+          </span>
+          <span class="flex items-center gap-1" *ngIf="durationLabel()">
+            <mat-icon class="text-base">schedule</mat-icon>
+            {{ durationLabel() }}
+          </span>
+          <span class="flex items-center gap-1" *ngIf="activity.language">
+            <mat-icon class="text-base">translate</mat-icon>
+            {{ activity.language }}
+          </span>
         </div>
-
-        <mat-divider class="my-6"></mat-divider>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2">
-            <div class="text-lg font-semibold mb-3">
-              About this activity
-            </div>
-            <div class="text-sm text-gray-800 whitespace-pre-line">
-              {{ activity?.description }}
-            </div>
-          </div>
-          <div class="lg:col-span-1">
-            <div class="text-sm font-semibold mb-2">
-              Available dates
-            </div>
-            <div class="space-y-2 max-h-64 overflow-y-auto">
-              <div
-                class="border rounded px-3 py-2 text-xs flex items-center justify-between"
-                *ngFor="let d of dates">
-                <div>
-                  <div class="font-medium">
-                    {{ d.activity_date | date: 'dd MMM yyyy' }}
-                  </div>
-                  <div class="text-gray-500" *ngIf="d.pricing">
-                    Adult: ₹{{ d.pricing.adult_price }} • Child: ₹{{ d.pricing.child_price }}
-                  </div>
-                </div>
-                <div class="text-[10px] text-green-600" *ngIf="d.is_active">
-                  Active
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="flex flex-wrap gap-2">
+          <span *ngIf="activity.confirmation_type === 'instant'"
+            class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">
+            ✓ Instant confirmation
+          </span>
+          <span *ngIf="activity.confirmation_type === 'request'"
+            class="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs">
+            On request
+          </span>
+          <span *ngIf="activity.voucher_type"
+            class="px-2 py-1 rounded-full bg-blue-50 text-blue-800 text-xs">
+            {{ activity.voucher_type === 'mobile' ? 'Mobile voucher' :
+               activity.voucher_type === 'printed' ? 'Printed voucher' : 'Mobile or printed' }}
+          </span>
+          <span *ngIf="activity.cancellation_policy_type === 'free'"
+            class="px-2 py-1 rounded-full bg-green-50 text-green-800 text-xs">
+            Free cancellation
+          </span>
+          <span *ngIf="activity.has_transportation"
+            class="px-2 py-1 rounded-full bg-purple-50 text-purple-800 text-xs">
+            Transportation included
+          </span>
         </div>
+      </div>
+
+      <!-- Highlights -->
+      <mat-card *ngIf="highlightLines.length">
+        <mat-card-content class="py-4">
+          <ul class="grid gap-2">
+            <li *ngFor="let line of highlightLines" class="flex items-start gap-2 text-sm">
+              <mat-icon class="text-primary-600 flex-shrink-0">check_circle</mat-icon>
+              <span>{{ line }}</span>
+            </li>
+          </ul>
+        </mat-card-content>
       </mat-card>
 
-      <div class="mt-4" *ngIf="loading">
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      </div>
-      <div class="mt-4 text-red-600" *ngIf="!loading && error">
-        {{ error }}
+      <!-- What to expect -->
+      <mat-card *ngIf="activity.description">
+        <mat-card-header><mat-card-title>What to expect</mat-card-title></mat-card-header>
+        <mat-card-content class="mt-2">
+          <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700">{{ activity.description }}</p>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Inclusions / Exclusions -->
+      <mat-card *ngIf="inclusions.length || exclusions.length">
+        <mat-card-header><mat-card-title>What's included</mat-card-title></mat-card-header>
+        <mat-card-content class="grid md:grid-cols-2 gap-4 mt-2">
+          <div *ngIf="inclusions.length">
+            <div class="text-sm font-medium mb-2 text-green-700">Included</div>
+            <ul class="grid gap-1.5">
+              <li *ngFor="let inc of inclusions" class="flex items-start gap-2 text-sm">
+                <mat-icon class="text-green-600 flex-shrink-0" style="font-size:18px;width:18px;height:18px">check</mat-icon>
+                <span>{{ inc.text }}</span>
+              </li>
+            </ul>
+          </div>
+          <div *ngIf="exclusions.length">
+            <div class="text-sm font-medium mb-2 text-red-700">Not included</div>
+            <ul class="grid gap-1.5">
+              <li *ngFor="let exc of exclusions" class="flex items-start gap-2 text-sm">
+                <mat-icon class="text-red-600 flex-shrink-0" style="font-size:18px;width:18px;height:18px">close</mat-icon>
+                <span>{{ exc.text }}</span>
+              </li>
+            </ul>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Good to know -->
+      <mat-card *ngIf="activity.good_to_know || activity.meeting_point">
+        <mat-card-header><mat-card-title>Good to know</mat-card-title></mat-card-header>
+        <mat-card-content class="mt-2 grid gap-3 text-sm text-gray-700">
+          <div *ngIf="activity.meeting_point" class="flex items-start gap-2">
+            <mat-icon class="text-primary-600 flex-shrink-0">place</mat-icon>
+            <div>
+              <div class="font-medium">Meeting point</div>
+              <div>{{ activity.meeting_point }}</div>
+            </div>
+          </div>
+          <div *ngIf="activity.good_to_know" class="whitespace-pre-line">{{ activity.good_to_know }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Cancellation policy -->
+      <mat-card *ngIf="activity.cancellation_policy_text || activity.cancellation_policy_type">
+        <mat-card-header><mat-card-title>Cancellation policy</mat-card-title></mat-card-header>
+        <mat-card-content class="mt-2 text-sm text-gray-700">
+          <div class="font-medium mb-1">
+            {{ activity.cancellation_policy_type === 'free' ? 'Free cancellation' :
+               activity.cancellation_policy_type === 'non_refundable' ? 'Non-refundable' :
+               'Conditional refund' }}
+          </div>
+          <div *ngIf="activity.cancellation_policy_text">{{ activity.cancellation_policy_text }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Transportation -->
+      <mat-card *ngIf="activity.has_transportation && activity.transportation_description">
+        <mat-card-header><mat-card-title>Transportation</mat-card-title></mat-card-header>
+        <mat-card-content class="mt-2 text-sm text-gray-700 whitespace-pre-line">
+          {{ activity.transportation_description }}
+        </mat-card-content>
+      </mat-card>
+
+      <!-- FAQs -->
+      <mat-card *ngIf="faqs.length">
+        <mat-card-header><mat-card-title>FAQs</mat-card-title></mat-card-header>
+        <mat-card-content class="mt-2">
+          <mat-accordion>
+            <mat-expansion-panel *ngFor="let faq of faqs">
+              <mat-expansion-panel-header>
+                <mat-panel-title class="text-sm font-medium">{{ faq.question }}</mat-panel-title>
+              </mat-expansion-panel-header>
+              <p class="text-sm text-gray-700 whitespace-pre-line">{{ faq.answer }}</p>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- ===== Right column (sticky booking panel) ===== -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-4">
+        <mat-card>
+          <mat-card-content class="py-4">
+            <div class="text-xs text-gray-500">From</div>
+            <div class="text-3xl font-semibold text-primary-600 mb-3">
+              ₹ {{ minPriceLabel || '—' }}
+            </div>
+            <div class="text-xs text-gray-500 mb-3" *ngIf="dates.length">
+              {{ dates.length }} {{ dates.length === 1 ? 'date' : 'dates' }} available
+            </div>
+            <button mat-flat-button color="primary" class="w-full" (click)="selectOptions()"
+              [disabled]="!dates.length">
+              Select options
+            </button>
+            <button mat-stroked-button class="w-full mt-2" (click)="backToSearch()">
+              Back to list
+            </button>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
-  </vex-page-layout-content>
-</vex-page-layout>
+  </div>
+</div>
 
+<!-- ============ PACKAGE OPTIONS DIALOG ============ -->
 <ng-template #packageOptionsTpl>
-  <div class="p-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+  <div class="p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
     <div class="flex items-center justify-between mb-3">
-      <div class="font-medium text-base">Select date & quantity</div>
+      <div class="font-medium text-base">{{ activity?.title || 'Select options' }}</div>
       <button mat-icon-button (click)="closePackageOptions()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid md:grid-cols-2 gap-5">
+      <!-- Calendar -->
       <div>
-        <div class="text-sm text-gray-700 mb-2">Please select a visit date</div>
-        <mat-card>
-          <mat-calendar
-            [dateFilter]="dateFilter"
-            [(selected)]="selectedDate"
-            (selectedChange)="onDateSelected($event)">
-          </mat-calendar>
-        </mat-card>
+        <div class="text-sm font-medium mb-2">Select date</div>
+        <mat-calendar
+          [selected]="selectedDate"
+          (selectedChange)="onDateSelected($event)"
+          [dateFilter]="dateFilter">
+        </mat-calendar>
       </div>
 
+      <!-- Slot + qty -->
       <div>
-        <div class="text-sm text-gray-700 mb-2">Select options</div>
-        <div *ngIf="selectedDateData; else noDateSelected">
-          <div class="mb-3 text-xs text-gray-600">
-            Selected: {{ selectedDate | date: 'dd MMM yyyy' }}
-          </div>
-
+        <div *ngIf="selectedDate; else noDateSelected">
           <ng-container *ngIf="hasTimeSlotForSelectedDate; else noTimeSlots">
-            <div class="space-y-2">
-              <div
-                *ngFor="let slot of getSlotsForSelectedDate(); let i = index"
-                class="flex items-center justify-between border rounded px-3 py-2"
+            <div class="text-sm font-medium mb-2">Select time slot</div>
+            <div class="grid gap-2 max-h-44 overflow-y-auto pr-1">
+              <div *ngFor="let slot of getSlotsForSelectedDate(); let i = index"
+                class="border rounded p-2 flex items-center justify-between gap-2 cursor-pointer"
                 [class.border-blue-500]="i === selectedSlotIndex"
-              >
+                [class.bg-blue-50]="i === selectedSlotIndex"
+                (click)="selectSlot(i)">
                 <div>
-                  <div class="font-medium text-sm">
+                  <div class="text-sm font-medium">
                     {{ formatSlotTime(slot.start_time) }} - {{ formatSlotTime(slot.end_time) }}
                   </div>
                   <div class="text-xs text-gray-600" *ngIf="slot.pricing">
-                    Adult: ₹{{ slot.pricing.adult_price }}
-                    <span *ngIf="slot.pricing.child_price != null">
-                      • Child: ₹{{ slot.pricing.child_price }}
-                    </span>
+                    Adult ₹{{ slot.pricing.adult_price }}
+                    <span *ngIf="slot.pricing.child_price != null">• Child ₹{{ slot.pricing.child_price }}</span>
                   </div>
                 </div>
-                <button
-                  mat-stroked-button
-                  color="primary"
-                  (click)="selectSlot(i)"
-                >
-                  {{ i === selectedSlotIndex ? 'Selected' : 'Select' }}
-                </button>
+                <mat-icon *ngIf="i === selectedSlotIndex" class="text-blue-600">check_circle</mat-icon>
               </div>
             </div>
           </ng-container>
 
           <ng-template #noTimeSlots>
-            <div class="text-sm text-gray-600">
-              No time slots for this date.
-              <span *ngIf="selectedDateData?.pricing">
-                Price:
-                Adult: ₹{{ selectedDateData.pricing.adult_price }}
+            <div class="text-sm text-gray-600 border rounded p-3 mb-3">
+              <div class="font-medium mb-1">Open all day</div>
+              <div *ngIf="selectedDateData?.pricing">
+                Adult ₹{{ selectedDateData.pricing.adult_price }}
                 <span *ngIf="selectedDateData.pricing.child_price != null">
-                  • Child: ₹{{ selectedDateData.pricing.child_price }}
+                  • Child ₹{{ selectedDateData.pricing.child_price }}
                 </span>
-              </span>
+              </div>
             </div>
           </ng-template>
 
-          <div class="mt-4">
-            <div class="text-sm font-medium mb-2">Select quantity</div>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-medium">Adult</div>
-                  <div class="text-xs text-gray-500">
-                    <span *ngIf="maxAdults !== null">
-                      Max {{ maxAdults }} per booking
-                    </span>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    mat-mini-fab
-                    color="primary"
-                    (click)="decrementAdult()"
-                    [disabled]="adultCount <= 0">
-                    <mat-icon>remove</mat-icon>
-                  </button>
-                  <div class="min-w-[2rem] text-center">
-                    {{ adultCount }}
-                  </div>
-                  <button
-                    mat-mini-fab
-                    color="primary"
-                    (click)="incrementAdult()">
-                    <mat-icon>add</mat-icon>
-                  </button>
+          <mat-divider class="my-3"></mat-divider>
+
+          <div *ngIf="liveCapacityLeft !== -1 && liveCapacityLeft !== null"
+            class="text-xs px-2 py-1.5 rounded mb-3"
+            [class.bg-amber-50]="liveCapacityLeft <= 3"
+            [class.text-amber-800]="liveCapacityLeft <= 3"
+            [class.bg-gray-50]="liveCapacityLeft > 3"
+            [class.text-gray-700]="liveCapacityLeft > 3">
+            <mat-icon class="text-sm align-middle" style="font-size:14px;width:14px;height:14px">
+              {{ liveCapacityLeft <= 3 ? 'warning' : 'info' }}
+            </mat-icon>
+            {{ liveCapacityLeft === 0 ? 'Sold out' :
+               liveCapacityLeft === 1 ? 'Only 1 spot left' :
+               liveCapacityLeft + ' spots left' }}
+          </div>
+
+          <div class="text-sm font-medium mb-2">Quantity</div>
+          <div class="grid gap-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-medium">Adult</div>
+                <div class="text-xs text-gray-500" *ngIf="previewAdultPrice != null">
+                  ₹{{ previewAdultPrice }}
                 </div>
               </div>
-
-              <div
-                class="flex items-center justify-between"
-                *ngIf="allowChild">
-                <div>
-                  <div class="text-sm font-medium">Child</div>
-                  <div class="text-xs text-gray-500">
-                    <span *ngIf="maxChildren !== null">
-                      Max {{ maxChildren }} per booking
-                    </span>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    mat-mini-fab
-                    color="primary"
-                    (click)="decrementChild()"
-                    [disabled]="childCount <= 0">
-                    <mat-icon>remove</mat-icon>
-                  </button>
-                  <div class="min-w-[2rem] text-center">
-                    {{ childCount }}
-                  </div>
-                  <button
-                    mat-mini-fab
-                    color="primary"
-                    (click)="incrementChild()">
-                    <mat-icon>add</mat-icon>
-                  </button>
-                </div>
+              <div class="flex items-center gap-2">
+                <button mat-mini-fab color="primary" (click)="decrementAdult()" [disabled]="adultCount <= 0">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <div class="min-w-[2rem] text-center font-medium">{{ adultCount }}</div>
+                <button mat-mini-fab color="primary" (click)="incrementAdult()">
+                  <mat-icon>add</mat-icon>
+                </button>
               </div>
             </div>
+
+            <div class="flex items-center justify-between" *ngIf="allowChild">
+              <div>
+                <div class="text-sm font-medium">Child</div>
+                <div class="text-xs text-gray-500" *ngIf="previewChildPrice != null">
+                  ₹{{ previewChildPrice }}
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button mat-mini-fab color="primary" (click)="decrementChild()" [disabled]="childCount <= 0">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <div class="min-w-[2rem] text-center font-medium">{{ childCount }}</div>
+                <button mat-mini-fab color="primary" (click)="incrementChild()">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="previewTotal != null" class="mt-4 pt-3 border-t flex items-center justify-between">
+            <span class="text-sm text-gray-600">Total</span>
+            <span class="text-xl font-semibold text-primary-600">₹ {{ previewTotal }}</span>
           </div>
         </div>
 
         <ng-template #noDateSelected>
-          <div class="text-sm text-gray-600">
+          <div class="text-sm text-gray-600 border rounded p-4 text-center">
             Please select a date from the calendar.
           </div>
         </ng-template>
@@ -276,38 +331,32 @@
 
     <div class="mt-4 flex justify-end gap-2">
       <button mat-stroked-button (click)="closePackageOptions()">Close</button>
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="!isQuantityValid"
-        (click)="confirmPackageSelection()">
-        Continue
+      <button mat-stroked-button color="primary" [disabled]="!isQuantityValid"
+        (click)="confirmPackageSelection(true)">
+        Add to cart
+      </button>
+      <button mat-flat-button color="primary" [disabled]="!isQuantityValid" (click)="bookNow()">
+        Book now
       </button>
     </div>
   </div>
 </ng-template>
 
+<!-- ============ IMAGE SLIDER DIALOG ============ -->
 <ng-template #imageSliderTpl>
   <div class="p-4 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
     <div class="flex items-center justify-between mb-3">
-      <div class="font-medium text-base">
-        {{ activity?.title || 'Activity Photos' }}
-      </div>
+      <div class="font-medium text-base">{{ activity?.title || 'Photos' }}</div>
       <button mat-icon-button (click)="closeImageSlider()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
     <div class="flex flex-col items-center gap-3">
-      <img
-        *ngIf="sliderImages.length"
+      <img *ngIf="sliderImages.length"
         [src]="sliderImages[activeSliderIndex]"
         class="w-full max-h-[420px] object-cover rounded"
-        [alt]="activity?.title || 'Activity'"
-      />
-      <div
-        class="flex items-center justify-between w-full"
-        *ngIf="sliderImages.length > 1"
-      >
+        [alt]="activity?.title || 'Activity'" />
+      <div class="flex items-center justify-between w-full" *ngIf="sliderImages.length > 1">
         <button mat-icon-button (click)="prevImage()">
           <mat-icon>chevron_left</mat-icon>
         </button>
@@ -318,18 +367,13 @@
           <mat-icon>chevron_right</mat-icon>
         </button>
       </div>
-      <div
-        class="flex gap-2 mt-2 w-full overflow-x-auto"
-        *ngIf="sliderImages.length > 1"
-      >
-        <img
-          *ngFor="let img of sliderImages; let i = index"
+      <div class="flex gap-2 mt-2 w-full overflow-x-auto" *ngIf="sliderImages.length > 1">
+        <img *ngFor="let img of sliderImages; let i = index"
           [src]="img"
           (click)="activeSliderIndex = i"
           class="h-16 w-24 object-cover rounded border cursor-pointer"
           [class.border-blue-500]="i === activeSliderIndex"
-          [alt]="activity?.title || 'Activity'"
-        />
+          [alt]="activity?.title || 'Activity'" />
       </div>
     </div>
   </div>

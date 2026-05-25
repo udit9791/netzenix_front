@@ -128,6 +128,51 @@
       </div>
     </div>
 
+    <div
+      class="section p-2"
+      *ngIf="isActivityType() && activityDetails?.activity"
+    >
+      <div class="section-title">Activity Information</div>
+      <div class="charges">
+        <div class="row">
+          <span>Activity</span><strong>{{ activityDetails.activity.title }}</strong>
+        </div>
+        <div class="row" *ngIf="activityDetails.activity.confirmation_type">
+          <span>Confirmation Type</span
+          ><strong>{{ activityDetails.activity.confirmation_type }}</strong>
+        </div>
+        <div class="row" *ngIf="activityDetails.activity.duration_minutes">
+          <span>Duration</span
+          ><strong>{{ activityDetails.activity.duration_minutes }} min</strong>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="section p-2"
+      *ngIf="isActivityType() && activityRefundRulesView?.length"
+    >
+      <div class="section-title">Refund Rules</div>
+      <div class="table-wrapper">
+        <table class="w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th class="border p-2 text-left">Date</th>
+              <th class="border p-2 text-left">Days Before Activity</th>
+              <th class="border p-2 text-left">Penalty (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of activityRefundRulesView">
+              <td class="border p-2">{{ r.date }}</td>
+              <td class="border p-2">{{ r.days }}</td>
+              <td class="border p-2">{{ r.percentage }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="section p-2" *ngIf="requestDetailsView?.length">
       <div class="section-title">
         Cancellation Request Details
@@ -221,6 +266,10 @@
                 Base Amount: {{ format(r.baseAmount) }}
                 <br />
                 Final Amount: {{ format(r.finalAmount) }}
+                <br />
+                <span class="text-green-700 font-semibold">
+                  Refund to User: {{ format(refundForRow(r)) }}
+                </span>
               </div>
             </td>
           </ng-container>
@@ -230,6 +279,9 @@
         </table>
         <div class="section-total" *ngIf="amount !== null">
           Total Cancellation Amount: {{ format(amount) }}
+        </div>
+        <div class="section-total text-green-700" *ngIf="amount !== null">
+          Total Refund to User: {{ format(totalRefundToUser) }}
         </div>
       </div>
     </div>

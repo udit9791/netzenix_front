@@ -165,10 +165,7 @@ export class NavigationLoaderService {
     }
 
     // ✅ Activities section (search)
-    if (
-      this.hasPermission('view_holidays') ||
-      this.hasPermission('view_sales')
-    ) {
+    if (this.hasPermission('view_activity')) {
       nav.push({
         type: 'subheading',
         label: 'Activities',
@@ -242,6 +239,12 @@ export class NavigationLoaderService {
             label: 'Manage Activity',
             route: '/sale/manage-activity',
             icon: 'mat:event_note'
+          },
+          this.hasPermission('view_activity') && {
+            type: 'link',
+            label: 'Activity Bookings',
+            route: '/sale/activity-bookings',
+            icon: 'mat:fact_check'
           },
           this.hasPermission('view_flight_inventory') && {
             type: 'link',

@@ -4,6 +4,7 @@ import {
   FormArray,
   FormBuilder,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
@@ -18,12 +19,21 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { VexSecondaryToolbarComponent } from '@vex/components/vex-secondary-toolbar/vex-secondary-toolbar.component';
 import { VexBreadcrumbsComponent } from '@vex/components/vex-breadcrumbs/vex-breadcrumbs.component';
 import { MultiDatePickerComponent } from 'src/app/shared/multi-date-picker/multi-date-picker.component';
 import { UserService } from 'src/app/core/services/user.service';
 import { environment } from 'src/environments/environment';
+
+type InclusionItem = { text: string };
+type FaqItem = { question: string; answer: string };
 
 @Component({
   selector: 'vex-manage-activity',
@@ -32,6 +42,7 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./manage-activity.component.scss'],
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     RouterModule,
     MatFormFieldModule,
@@ -43,6 +54,12 @@ import { environment } from 'src/environments/environment';
     MatButtonModule,
     MatIconModule,
     MatCardModule,
+    MatStepperModule,
+    MatRadioModule,
+    MatTooltipModule,
+    MatChipsModule,
+    MatExpansionModule,
+    MatDividerModule,
     MatSnackBarModule,
     VexSecondaryToolbarComponent,
     VexBreadcrumbsComponent,
@@ -50,26 +67,68 @@ import { environment } from 'src/environments/environment';
   ]
 })
 export class ManageActivityComponent implements OnInit {
-  activityForm!: FormGroup;
+  basicsForm!: FormGroup;
+  contentForm!: FormGroup;
+  availabilityForm!: FormGroup;
+
   countries: any[] = [];
   states: any[] = [];
   cities: any[] = [];
+
+  countryFilter = '';
+  stateFilter = '';
+  cityFilter = '';
+
+  get filteredCountries(): any[] {
+    const q = this.countryFilter.trim().toLowerCase();
+    return q ? this.countries.filter(c => (c.name || '').toLowerCase().includes(q)) : this.countries;
+  }
+  get filteredStates(): any[] {
+    const q = this.stateFilter.trim().toLowerCase();
+    return q ? this.states.filter(s => (s.name || '').toLowerCase().includes(q)) : this.states;
+  }
+  get filteredCities(): any[] {
+    const q = this.cityFilter.trim().toLowerCase();
+    return q ? this.cities.filter(c => (c.name || '').toLowerCase().includes(q)) : this.cities;
+  }
+
   minDate: Date = new Date();
   timeOptions: string[] = [];
+
   isSubmitting = false;
   isEditMode = false;
   activityId: number | null = null;
+
   imgBaseUrl: string = environment.imgUrl;
+  private apiUrl = environment.apiUrl;
+
   currentCoverImagePath: string | null = null;
   coverPreviewUrl: string | null = null;
   existingImages: any[] = [];
   removedImageIds: number[] = [];
   galleryPreviews: { url: string }[] = [];
   newGalleryFiles: File[] = [];
-  private apiUrl = environment.apiUrl;
+  coverImageFile: File | null = null;
 
-  selectedCountryId: number | null = null;
-  selectedStateId: number | null = null;
+  newInclusion = '';
+  newExclusion = '';
+
+  voucherTypes = [
+    { value: 'mobile', label: 'Mobile voucher' },
+    { value: 'printed', label: 'Printed voucher' },
+    { value: 'both', label: 'Mobile or printed' }
+  ];
+
+  confirmationTypes = [
+    { value: 'instant', label: 'Instant confirmation' },
+    { value: 'request', label: 'On request' }
+  ];
+
+  cancellationTypes = [
+    { value: 'free', label: 'Free cancellation' },
+    { value: 'non_refundable', label: 'Non-refundable' },
+    { value: 'conditional', label: 'Conditional refund' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -81,72 +140,92 @@ export class ManageActivityComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.activityForm = this.fb.group({
+    this.minDate.setHours(0, 0, 0, 0);
+    this.timeOptions = this.buildTimeOptions();
+
+    this.basicsForm = this.fb.group({
       country_id: [null, Validators.required],
       state_id: [{ value: null, disabled: true }, Validators.required],
       city_id: [{ value: null, disabled: true }, Validators.required],
       title: ['', [Validators.required, Validators.maxLength(255)]],
-      description: ['', Validators.required],
-      cover_image: [null],
+      short_description: [''],
+      description: [''],
+      good_to_know: [''],
+      meeting_point: [''],
+      duration_minutes: [null, [Validators.min(0)]],
+      language: ['English'],
+      voucher_type: ['mobile'],
+      confirmation_type: ['instant'],
+      cancellation_policy_type: ['non_refundable'],
+      cancellation_policy_text: [''],
+      lead_time_hours: [0, [Validators.min(0)]],
+      cutoff_hours: [0, [Validators.min(0)]],
+      markup_type: [null],
+      markup_value: [null, [Validators.min(0)]]
+    });
+
+    this.contentForm = this.fb.group({
+      inclusions: this.fb.array([]),
+      exclusions: this.fb.array([]),
+      faqs: this.fb.array([]),
+      isRefundable: ['non-refundable'],
+      refund_rules: this.fb.array([])
+    });
+
+    this.availabilityForm = this.fb.group({
       has_time_slot: [false],
-      max_adults: [1, [Validators.required, Validators.min(1)]],
       allow_child: [false],
+      max_adults: [1, [Validators.required, Validators.min(1)]],
       max_children: [{ value: 0, disabled: true }],
+      child_min_age: [{ value: null, disabled: true }],
+      child_max_age: [{ value: null, disabled: true }],
       has_transportation: [false],
       transportation_description: [{ value: '', disabled: true }],
       dates: this.fb.array([]),
-      images: [[]],
       rangeStart: [null],
       rangeEnd: [null]
     });
 
-    this.minDate.setHours(0, 0, 0, 0);
-
-    this.timeOptions = this.buildTimeOptions();
-
-    this.activityForm
+    this.availabilityForm
       .get('allow_child')
       ?.valueChanges.subscribe((val: boolean) => {
-        const ctrl = this.activityForm.get('max_children');
-        if (!ctrl) return;
-        if (val) {
-          ctrl.enable();
-        } else {
-          ctrl.disable();
-          ctrl.setValue(0);
-        }
+        ['max_children', 'child_min_age', 'child_max_age'].forEach((k) => {
+          const ctrl = this.availabilityForm.get(k);
+          if (!ctrl) return;
+          if (val) {
+            ctrl.enable();
+          } else {
+            ctrl.disable();
+            if (k === 'max_children') ctrl.setValue(0);
+            else ctrl.setValue(null);
+          }
+        });
       });
 
-    this.activityForm
+    this.availabilityForm
       .get('has_transportation')
       ?.valueChanges.subscribe((val: boolean) => {
-        const ctrl = this.activityForm.get('transportation_description');
+        const ctrl = this.availabilityForm.get('transportation_description');
         if (!ctrl) return;
-        if (val) {
-          ctrl.enable();
-        } else {
+        if (val) ctrl.enable();
+        else {
           ctrl.disable();
           ctrl.setValue('');
         }
       });
 
-    this.activityForm.get('has_time_slot')?.valueChanges.subscribe(() => {
-      if (!this.isEditMode) {
-        this.resetDates();
-      }
-    });
+    this.availabilityForm
+      .get('has_time_slot')
+      ?.valueChanges.subscribe(() => {
+        if (!this.isEditMode) this.resetDates();
+      });
 
-    this.activityForm
+    this.basicsForm
       .get('country_id')
-      ?.valueChanges.subscribe((countryId: number) => {
-        this.onCountryChange(countryId);
-      });
-
-    this.activityForm
+      ?.valueChanges.subscribe((id: number) => this.onCountryChange(id));
+    this.basicsForm
       .get('state_id')
-      ?.valueChanges.subscribe((stateId: number) => {
-        this.onStateChange(stateId);
-      });
+      ?.valueChanges.subscribe((id: number) => this.onStateChange(id));
 
     this.loadCountries();
 
@@ -161,103 +240,76 @@ export class ManageActivityComponent implements OnInit {
     });
   }
 
-  loadActivity(id: number): void {
-    this.http.get(`${this.apiUrl}/activities/${id}`).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          const data = res.data;
-          const activity = data.activity;
-
-          this.activityForm.patchValue({
-            country_id: activity.country_id,
-            title: activity.title,
-            description: activity.description,
-            has_time_slot: !!activity.has_time_slot,
-            max_adults: activity.max_adults,
-            allow_child: !!activity.allow_child,
-            max_children: activity.max_children,
-            has_transportation: !!activity.has_transportation,
-            transportation_description: activity.transportation_description
-          });
-
-          this.currentCoverImagePath = activity.cover_image || null;
-          this.existingImages = Array.isArray(data.images) ? data.images : [];
-
-          // Handle state and city loading sequentially
-          this.userService
-            .getStatesByCountry(activity.country_id)
-            .subscribe((states: any) => {
-              this.states = Array.isArray(states)
-                ? states
-                : states?.data
-                  ? states.data
-                  : [];
-              this.activityForm.get('state_id')?.enable();
-              this.activityForm.patchValue({ state_id: activity.state_id });
-
-              this.userService
-                .getCitiesByState(activity.state_id)
-                .subscribe((cities: any) => {
-                  this.cities = Array.isArray(cities)
-                    ? cities
-                    : cities?.data
-                      ? cities.data
-                      : [];
-                  this.activityForm.get('city_id')?.enable();
-                  this.activityForm.patchValue({ city_id: activity.city_id });
-                });
-            });
-
-          // Clear existing dates
-          while (this.dates.length) {
-            this.dates.removeAt(0);
-          }
-
-          // Add dates and slots
-          data.dates.forEach((d: any) => {
-            const dateGroup = this.createDateGroup();
-            dateGroup.patchValue({
-              id: d.id,
-              date: new Date(d.activity_date),
-              adult_price: d.pricing?.adult_price,
-              child_price: d.pricing?.child_price
-            });
-
-            const slotsArray = dateGroup.get('slots') as FormArray;
-            d.time_slots.forEach((s: any) => {
-              const slotGroup = this.createSlotGroup();
-              slotGroup.patchValue({
-                id: s.id,
-                start_time: s.start_time.substring(0, 5), // HH:mm:ss to HH:mm
-                end_time: s.end_time.substring(0, 5),
-                max_capacity: s.max_capacity,
-                adult_price: s.pricing?.adult_price,
-                child_price: s.pricing?.child_price
-              });
-              slotsArray.push(slotGroup);
-            });
-
-            this.dates.push(dateGroup);
-          });
-        }
-      },
-      error: () => {
-        this.snackBar.open('Failed to load activity details', 'Close', {
-          duration: 3000
-        });
-        this.router.navigate(['/sale/manage-activity']);
-      }
-    });
-  }
-
+  /* ---------- accessors ---------- */
   get dates(): FormArray {
-    return this.activityForm.get('dates') as FormArray;
+    return this.availabilityForm.get('dates') as FormArray;
+  }
+  get inclusions(): FormArray {
+    return this.contentForm.get('inclusions') as FormArray;
+  }
+  get exclusions(): FormArray {
+    return this.contentForm.get('exclusions') as FormArray;
+  }
+  get faqs(): FormArray {
+    return this.contentForm.get('faqs') as FormArray;
+  }
+  get refundRules(): FormArray {
+    return this.contentForm.get('refund_rules') as FormArray;
+  }
+  isRefundable(): boolean {
+    return this.contentForm.get('isRefundable')?.value === 'refundable';
+  }
+  addRefundRule(): void {
+    this.refundRules.push(
+      this.fb.group({
+        days_before_checkin: [null, [Validators.required, Validators.min(1)]],
+        percentage: [
+          null,
+          [Validators.required, Validators.min(0), Validators.max(100)]
+        ]
+      })
+    );
+  }
+  removeRefundRule(i: number): void {
+    this.refundRules.removeAt(i);
   }
 
   hasTimeSlot(): boolean {
-    return !!this.activityForm.get('has_time_slot')?.value;
+    return !!this.availabilityForm.get('has_time_slot')?.value;
   }
 
+  /* ---------- inclusions / exclusions / FAQs ---------- */
+  addInclusion(text: string): void {
+    const v = (text || '').trim();
+    if (!v) return;
+    this.inclusions.push(this.fb.group({ text: [v, Validators.required] }));
+    this.newInclusion = '';
+  }
+  removeInclusion(i: number): void {
+    this.inclusions.removeAt(i);
+  }
+  addExclusion(text: string): void {
+    const v = (text || '').trim();
+    if (!v) return;
+    this.exclusions.push(this.fb.group({ text: [v, Validators.required] }));
+    this.newExclusion = '';
+  }
+  removeExclusion(i: number): void {
+    this.exclusions.removeAt(i);
+  }
+  addFaq(): void {
+    this.faqs.push(
+      this.fb.group({
+        question: ['', Validators.required],
+        answer: ['', Validators.required]
+      })
+    );
+  }
+  removeFaq(i: number): void {
+    this.faqs.removeAt(i);
+  }
+
+  /* ---------- date / slot groups ---------- */
   createDateGroup(): FormGroup {
     return this.fb.group({
       id: [null],
@@ -280,45 +332,15 @@ export class ManageActivityComponent implements OnInit {
 
     const startCtrl = group.get('start_time');
     const endCtrl = group.get('end_time');
-
     startCtrl?.valueChanges.subscribe((start) => {
-      if (!start || !endCtrl) {
-        return;
-      }
+      if (!start || !endCtrl) return;
       const minEnd = this.addMinutesToTime(start, 5);
       const currentEnd = endCtrl.value as string | null;
-      if (currentEnd) {
-        if (this.compareTimes(currentEnd, minEnd) < 0) {
-          endCtrl.setValue(null);
-        }
+      if (currentEnd && this.compareTimes(currentEnd, minEnd) < 0) {
+        endCtrl.setValue(null);
       }
     });
-
     return group;
-  }
-
-  private timeToMinutes(time: string): number {
-    const [hh, mm] = time.split(':').map((v) => parseInt(v, 10));
-    return hh * 60 + mm;
-  }
-
-  private minutesToTime(totalMinutes: number): string {
-    const hh = Math.floor(totalMinutes / 60)
-      .toString()
-      .padStart(2, '0');
-    const mm = (totalMinutes % 60).toString().padStart(2, '0');
-    return `${hh}:${mm}`;
-  }
-
-  private addMinutesToTime(time: string, minutes: number): string {
-    const total = this.timeToMinutes(time) + minutes;
-    return this.minutesToTime(total);
-  }
-
-  private compareTimes(a: string, b: string): number {
-    const ma = this.timeToMinutes(a);
-    const mb = this.timeToMinutes(b);
-    return ma - mb;
   }
 
   getSlots(dateIndex: number): FormArray {
@@ -328,47 +350,34 @@ export class ManageActivityComponent implements OnInit {
   addDate(): void {
     this.dates.push(this.createDateGroup());
   }
-
   removeDate(index: number): void {
-    if (this.dates.length > 1) {
-      this.dates.removeAt(index);
-    }
+    if (this.dates.length > 1) this.dates.removeAt(index);
   }
-
   addSlot(dateIndex: number): void {
     const slots = this.getSlots(dateIndex);
     const group = this.createSlotGroup();
-
     if (slots.length > 0) {
       const prev = slots.at(slots.length - 1) as FormGroup;
       const prevEnd = prev.get('end_time')?.value as string | null;
-      if (prevEnd) {
-        group.patchValue({ start_time: prevEnd });
-      }
+      if (prevEnd) group.patchValue({ start_time: prevEnd });
     }
-
     slots.push(group);
+  }
+  removeSlot(dateIndex: number, slotIndex: number): void {
+    this.getSlots(dateIndex).removeAt(slotIndex);
   }
 
   getEndTimeOptions(dateIndex: number, slotIndex: number): string[] {
     const slots = this.getSlots(dateIndex);
     const slot = slots.at(slotIndex) as FormGroup;
     const start = slot.get('start_time')?.value as string | null;
-    if (!start) {
-      return this.timeOptions;
-    }
+    if (!start) return this.timeOptions;
     const minEnd = this.addMinutesToTime(start, 5);
     return this.timeOptions.filter((t) => this.compareTimes(t, minEnd) >= 0);
   }
 
-  removeSlot(dateIndex: number, slotIndex: number): void {
-    this.getSlots(dateIndex).removeAt(slotIndex);
-  }
-
   resetDates(): void {
-    while (this.dates.length > 0) {
-      this.dates.removeAt(0);
-    }
+    while (this.dates.length > 0) this.dates.removeAt(0);
     this.addDate();
   }
 
@@ -377,11 +386,9 @@ export class ManageActivityComponent implements OnInit {
   }
 
   onRangeChange(): void {
-    const start = this.activityForm.get('rangeStart')?.value as Date | null;
-    const end = this.activityForm.get('rangeEnd')?.value as Date | null;
-    if (!start || !end) {
-      return;
-    }
+    const start = this.availabilityForm.get('rangeStart')?.value as Date | null;
+    const end = this.availabilityForm.get('rangeEnd')?.value as Date | null;
+    if (!start || !end) return;
     const dates: Date[] = [];
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -396,8 +403,7 @@ export class ManageActivityComponent implements OnInit {
 
   private setDatesFromList(dates: Date[]): void {
     if (this.isEditMode) {
-      // In edit mode, only add dates that don't already exist
-      const existingDates = this.dates.controls
+      const existing = this.dates.controls
         .map((c) => {
           const d = c.get('date')?.value;
           if (!d) return null;
@@ -406,28 +412,22 @@ export class ManageActivityComponent implements OnInit {
           return nd.getTime();
         })
         .filter((t) => t !== null);
-
       dates.forEach((d) => {
         const nd = new Date(d);
         nd.setHours(0, 0, 0, 0);
-        if (nd >= this.minDate && !existingDates.includes(nd.getTime())) {
-          const group = this.createDateGroup();
-          group.patchValue({ date: nd });
-          this.dates.push(group);
+        if (nd >= this.minDate && !existing.includes(nd.getTime())) {
+          const g = this.createDateGroup();
+          g.patchValue({ date: nd });
+          this.dates.push(g);
         }
       });
       return;
     }
-
-    while (this.dates.length > 0) {
-      this.dates.removeAt(0);
-    }
-
+    while (this.dates.length > 0) this.dates.removeAt(0);
     if (!dates || !dates.length) {
       this.addDate();
       return;
     }
-
     const normalized = dates
       .map((d) => {
         const nd = new Date(d);
@@ -436,16 +436,14 @@ export class ManageActivityComponent implements OnInit {
       })
       .filter((d) => d >= this.minDate)
       .sort((a, b) => a.getTime() - b.getTime());
-
     if (!normalized.length) {
       this.addDate();
       return;
     }
-
     normalized.forEach((d) => {
-      const group = this.createDateGroup();
-      group.patchValue({ date: d });
-      this.dates.push(group);
+      const g = this.createDateGroup();
+      g.patchValue({ date: d });
+      this.dates.push(g);
     });
   }
 
@@ -453,75 +451,75 @@ export class ManageActivityComponent implements OnInit {
     const options: string[] = [];
     for (let h = 0; h < 24; h++) {
       for (let m = 0; m < 60; m += 5) {
-        const hh = h.toString().padStart(2, '0');
-        const mm = m.toString().padStart(2, '0');
-        options.push(`${hh}:${mm}`);
+        options.push(
+          `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        );
       }
     }
     return options;
   }
 
+  private timeToMinutes(time: string): number {
+    const [hh, mm] = time.split(':').map((v) => parseInt(v, 10));
+    return hh * 60 + mm;
+  }
+  private minutesToTime(total: number): string {
+    const hh = Math.floor(total / 60).toString().padStart(2, '0');
+    const mm = (total % 60).toString().padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+  private addMinutesToTime(time: string, minutes: number): string {
+    return this.minutesToTime(this.timeToMinutes(time) + minutes);
+  }
+  private compareTimes(a: string, b: string): number {
+    return this.timeToMinutes(a) - this.timeToMinutes(b);
+  }
+
   applyPricesToAllDates(): void {
-    if (!this.dates.length) {
-      return;
-    }
-    const firstGroup = this.dates.at(0) as FormGroup;
-    const adult = firstGroup.get('adult_price')?.value;
-    const child = firstGroup.get('child_price')?.value;
+    if (!this.dates.length) return;
+    const first = this.dates.at(0) as FormGroup;
+    const adult = first.get('adult_price')?.value;
+    const child = first.get('child_price')?.value;
     for (let i = 1; i < this.dates.length; i++) {
-      const group = this.dates.at(i) as FormGroup;
-      group.patchValue({
+      (this.dates.at(i) as FormGroup).patchValue({
         adult_price: adult,
         child_price: child
       });
     }
   }
-
   applySlotsToAllDates(): void {
-    if (!this.dates.length) {
-      return;
-    }
-    const firstDateGroup = this.dates.at(0) as FormGroup;
-    const firstSlots = firstDateGroup.get('slots') as FormArray | null;
-    if (!firstSlots || !firstSlots.length) {
-      return;
-    }
+    if (!this.dates.length) return;
+    const firstDate = this.dates.at(0) as FormGroup;
+    const firstSlots = firstDate.get('slots') as FormArray | null;
+    if (!firstSlots || !firstSlots.length) return;
     for (let i = 1; i < this.dates.length; i++) {
-      const targetSlots = this.getSlots(i);
-      while (targetSlots.length > 0) {
-        targetSlots.removeAt(0);
-      }
+      const target = this.getSlots(i);
+      while (target.length > 0) target.removeAt(0);
       for (let j = 0; j < firstSlots.length; j++) {
-        const sourceSlot = firstSlots.at(j) as FormGroup;
+        const src = firstSlots.at(j) as FormGroup;
         const clone = this.createSlotGroup();
-        clone.patchValue(sourceSlot.getRawValue());
-        targetSlots.push(clone);
+        clone.patchValue(src.getRawValue());
+        target.push(clone);
       }
     }
   }
 
+  /* ---------- location ---------- */
   loadCountries(): void {
     this.userService.getCountries().subscribe({
       next: (res: any) => {
         this.countries = Array.isArray(res) ? res : res?.data ? res.data : [];
       },
-      error: () => {
-        this.countries = [];
-      }
+      error: () => (this.countries = [])
     });
   }
 
   onCountryChange(countryId: number): void {
-    this.selectedCountryId = countryId || null;
     this.states = [];
     this.cities = [];
-    this.selectedStateId = null;
-    this.activityForm.patchValue({
-      state_id: null,
-      city_id: null
-    });
-    const stateCtrl = this.activityForm.get('state_id');
-    const cityCtrl = this.activityForm.get('city_id');
+    this.basicsForm.patchValue({ state_id: null, city_id: null });
+    const stateCtrl = this.basicsForm.get('state_id');
+    const cityCtrl = this.basicsForm.get('city_id');
     stateCtrl?.enable();
     cityCtrl?.disable();
     if (countryId) {
@@ -529,35 +527,29 @@ export class ManageActivityComponent implements OnInit {
         next: (res: any) => {
           this.states = Array.isArray(res) ? res : res?.data ? res.data : [];
         },
-        error: () => {
-          this.states = [];
-        }
+        error: () => (this.states = [])
       });
     }
   }
 
   onStateChange(stateId: number): void {
-    this.selectedStateId = stateId || null;
     this.cities = [];
-    this.activityForm.patchValue({
-      city_id: null
-    });
-    const cityCtrl = this.activityForm.get('city_id');
+    this.basicsForm.patchValue({ city_id: null });
+    const cityCtrl = this.basicsForm.get('city_id');
     if (stateId) {
       cityCtrl?.enable();
       this.userService.getCitiesByState(stateId).subscribe({
         next: (res: any) => {
           this.cities = Array.isArray(res) ? res : res?.data ? res.data : [];
         },
-        error: () => {
-          this.cities = [];
-        }
+        error: () => (this.cities = [])
       });
     } else {
       cityCtrl?.disable();
     }
   }
 
+  /* ---------- images ---------- */
   onCoverImageChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files && input.files.length ? input.files[0] : null;
@@ -569,93 +561,197 @@ export class ManageActivityComponent implements OnInit {
       this.coverPreviewUrl = URL.createObjectURL(file);
       this.currentCoverImagePath = null;
     }
-    this.activityForm.patchValue({ cover_image: file });
+    this.coverImageFile = file;
   }
-
   onImagesChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
-    this.newGalleryFiles = files;
     this.galleryPreviews.forEach((p) => URL.revokeObjectURL(p.url));
-    this.galleryPreviews = this.newGalleryFiles.map((f) => ({
+    this.newGalleryFiles = files;
+    this.galleryPreviews = files.map((f) => ({
       url: URL.createObjectURL(f)
     }));
-    this.activityForm.patchValue({ images: this.newGalleryFiles });
   }
-
   removeExistingImage(image: any): void {
-    const id = image && image.id ? Number(image.id) : null;
+    const id = image?.id ? Number(image.id) : null;
     if (id && !this.removedImageIds.includes(id)) {
       this.removedImageIds.push(id);
     }
     this.existingImages = this.existingImages.filter((img) => img.id !== id);
   }
-
   removeNewImage(index: number): void {
-    if (index < 0 || index >= this.newGalleryFiles.length) {
-      return;
-    }
+    if (index < 0 || index >= this.newGalleryFiles.length) return;
     URL.revokeObjectURL(this.galleryPreviews[index].url);
     this.galleryPreviews.splice(index, 1);
     this.newGalleryFiles.splice(index, 1);
-    this.activityForm.patchValue({ images: this.newGalleryFiles });
   }
 
+  /* ---------- load existing ---------- */
+  loadActivity(id: number): void {
+    this.http.get(`${this.apiUrl}/activities/${id}`).subscribe({
+      next: (res: any) => {
+        if (!res?.success) return;
+        const data = res.data;
+        const a = data.activity;
+
+        this.basicsForm.patchValue({
+          country_id: a.country_id,
+          title: a.title,
+          short_description: a.short_description,
+          description: a.description,
+          good_to_know: a.good_to_know,
+          meeting_point: a.meeting_point,
+          duration_minutes: a.duration_minutes,
+          language: a.language || 'English',
+          voucher_type: a.voucher_type || 'mobile',
+          confirmation_type: a.confirmation_type || 'instant',
+          cancellation_policy_type: a.cancellation_policy_type || 'non_refundable',
+          cancellation_policy_text: a.cancellation_policy_text,
+          lead_time_hours: a.lead_time_hours || 0,
+          cutoff_hours: a.cutoff_hours || 0,
+          markup_type: a.markup_type || null,
+          markup_value: a.markup_value != null ? Number(a.markup_value) : null
+        });
+
+        // Refund policy + rules: 'non_refundable' policy → 'non-refundable' radio.
+        const isRef =
+          (a.cancellation_policy_type || 'non_refundable') !== 'non_refundable';
+        this.contentForm.patchValue({
+          isRefundable: isRef ? 'refundable' : 'non-refundable'
+        });
+        (data.refund_rules || []).forEach((r: any) =>
+          this.refundRules.push(
+            this.fb.group({
+              days_before_checkin: [
+                r.days_before_checkin,
+                [Validators.required, Validators.min(1)]
+              ],
+              percentage: [
+                r.percentage,
+                [Validators.required, Validators.min(0), Validators.max(100)]
+              ]
+            })
+          )
+        );
+
+        this.availabilityForm.patchValue({
+          has_time_slot: !!a.has_time_slot,
+          allow_child: !!a.allow_child,
+          max_adults: a.max_adults || 1,
+          max_children: a.max_children || 0,
+          child_min_age: a.child_min_age,
+          child_max_age: a.child_max_age,
+          has_transportation: !!a.has_transportation,
+          transportation_description: a.transportation_description
+        });
+
+        this.currentCoverImagePath = a.cover_image || null;
+        this.existingImages = Array.isArray(data.images) ? data.images : [];
+
+        // inclusions / exclusions / faqs
+        (data.inclusions || []).forEach((it: any) =>
+          this.inclusions.push(this.fb.group({ text: [it.text] }))
+        );
+        (data.exclusions || []).forEach((it: any) =>
+          this.exclusions.push(this.fb.group({ text: [it.text] }))
+        );
+        (data.faqs || []).forEach((f: any) =>
+          this.faqs.push(
+            this.fb.group({
+              question: [f.question, Validators.required],
+              answer: [f.answer, Validators.required]
+            })
+          )
+        );
+
+        // location chain
+        this.userService.getStatesByCountry(a.country_id).subscribe((s: any) => {
+          this.states = Array.isArray(s) ? s : s?.data ?? [];
+          this.basicsForm.get('state_id')?.enable();
+          this.basicsForm.patchValue({ state_id: a.state_id });
+          this.userService.getCitiesByState(a.state_id).subscribe((c: any) => {
+            this.cities = Array.isArray(c) ? c : c?.data ?? [];
+            this.basicsForm.get('city_id')?.enable();
+            this.basicsForm.patchValue({ city_id: a.city_id });
+          });
+        });
+
+        while (this.dates.length) this.dates.removeAt(0);
+        (data.dates || []).forEach((d: any) => {
+          const group = this.createDateGroup();
+          group.patchValue({
+            id: d.id,
+            date: new Date(d.activity_date),
+            adult_price: d.pricing?.adult_price,
+            child_price: d.pricing?.child_price
+          });
+          const slotsArr = group.get('slots') as FormArray;
+          (d.time_slots || []).forEach((s: any) => {
+            const sg = this.createSlotGroup();
+            sg.patchValue({
+              id: s.id,
+              start_time: (s.start_time || '').substring(0, 5),
+              end_time: (s.end_time || '').substring(0, 5),
+              max_capacity: s.max_capacity,
+              adult_price: s.pricing?.adult_price,
+              child_price: s.pricing?.child_price
+            });
+            slotsArr.push(sg);
+          });
+          this.dates.push(group);
+        });
+      },
+      error: () => {
+        this.snackBar.open('Failed to load activity details', 'Close', {
+          duration: 3000
+        });
+        this.router.navigate(['/sale/manage-activity']);
+      }
+    });
+  }
+
+  /* ---------- submit ---------- */
   submit(): void {
-    if (this.activityForm.invalid) {
-      this.activityForm.markAllAsTouched();
+    if (this.basicsForm.invalid || this.availabilityForm.invalid) {
+      this.basicsForm.markAllAsTouched();
+      this.availabilityForm.markAllAsTouched();
+      this.contentForm.markAllAsTouched();
       return;
     }
-    const raw = this.activityForm.getRawValue();
-    const hasTimeSlot = !!raw.has_time_slot;
-    const datesArray = Array.isArray(raw.dates) ? raw.dates : [];
 
-    const datesPayload = datesArray.map((d: any) => {
-      const dateValue = d?.date ? new Date(d.date) : null;
+    const basics = this.basicsForm.getRawValue();
+    const content = this.contentForm.getRawValue();
+    const avail = this.availabilityForm.getRawValue();
+    const hasTimeSlot = !!avail.has_time_slot;
+
+    const datesPayload = (avail.dates as any[]).map((d: any) => {
+      const dv = d?.date ? new Date(d.date) : null;
       let dateStr: string | null = null;
-      if (dateValue && !isNaN(dateValue.getTime())) {
-        const y = dateValue.getFullYear();
-        const m = (dateValue.getMonth() + 1).toString().padStart(2, '0');
-        const da = dateValue.getDate().toString().padStart(2, '0');
+      if (dv && !isNaN(dv.getTime())) {
+        const y = dv.getFullYear();
+        const m = (dv.getMonth() + 1).toString().padStart(2, '0');
+        const da = dv.getDate().toString().padStart(2, '0');
         dateStr = `${y}-${m}-${da}`;
       }
-
       const datePricing = !hasTimeSlot
         ? {
-            adult_price:
-              d?.adult_price !== undefined && d?.adult_price !== null
-                ? Number(d.adult_price)
-                : null,
-            child_price:
-              d?.child_price !== undefined && d?.child_price !== null
-                ? Number(d.child_price)
-                : null
+            adult_price: d?.adult_price != null ? Number(d.adult_price) : null,
+            child_price: d?.child_price != null ? Number(d.child_price) : null
           }
         : null;
-
       const slotsRaw = Array.isArray(d?.slots) ? d.slots : [];
       const timeSlots = hasTimeSlot
         ? slotsRaw.map((s: any) => ({
             id: s?.id || null,
             start_time: s?.start_time || null,
             end_time: s?.end_time || null,
-            max_capacity:
-              s?.max_capacity !== undefined && s?.max_capacity !== null
-                ? Number(s.max_capacity)
-                : null,
+            max_capacity: s?.max_capacity != null ? Number(s.max_capacity) : null,
             pricing: {
-              adult_price:
-                s?.adult_price !== undefined && s?.adult_price !== null
-                  ? Number(s.adult_price)
-                  : null,
-              child_price:
-                s?.child_price !== undefined && s?.child_price !== null
-                  ? Number(s.child_price)
-                  : null
+              adult_price: s?.adult_price != null ? Number(s.adult_price) : null,
+              child_price: s?.child_price != null ? Number(s.child_price) : null
             }
           }))
         : [];
-
       return {
         id: d?.id || null,
         activity_date: dateStr,
@@ -665,43 +761,63 @@ export class ManageActivityComponent implements OnInit {
       };
     });
 
-    const activityPayload: any = {
+    const payload: any = {
       id: this.activityId,
-      country_id: raw.country_id,
-      state_id: raw.state_id,
-      city_id: raw.city_id,
-      title: raw.title,
-      description: raw.description,
+      country_id: basics.country_id,
+      state_id: basics.state_id,
+      city_id: basics.city_id,
+      title: basics.title,
+      short_description: basics.short_description || null,
+      description: basics.description || null,
+      good_to_know: basics.good_to_know || null,
+      meeting_point: basics.meeting_point || null,
+      duration_minutes: basics.duration_minutes != null ? Number(basics.duration_minutes) : null,
+      language: basics.language || null,
+      voucher_type: basics.voucher_type || 'mobile',
+      confirmation_type: basics.confirmation_type || 'instant',
+      cancellation_policy_text: basics.cancellation_policy_text || null,
+      lead_time_hours: Number(basics.lead_time_hours || 0),
+      cutoff_hours: Number(basics.cutoff_hours || 0),
       has_time_slot: hasTimeSlot ? 1 : 0,
-      max_adults:
-        raw.max_adults !== undefined && raw.max_adults !== null
-          ? Number(raw.max_adults)
-          : null,
-      allow_child: raw.allow_child ? 1 : 0,
-      max_children:
-        raw.max_children !== undefined && raw.max_children !== null
-          ? Number(raw.max_children)
-          : 0,
-      has_transportation: raw.has_transportation ? 1 : 0,
-      transportation_description:
-        raw.transportation_description && raw.transportation_description !== ''
-          ? raw.transportation_description
-          : null,
+      allow_child: avail.allow_child ? 1 : 0,
+      max_adults: avail.max_adults != null ? Number(avail.max_adults) : null,
+      max_children: avail.max_children != null ? Number(avail.max_children) : 0,
+      child_min_age: avail.child_min_age != null ? Number(avail.child_min_age) : null,
+      child_max_age: avail.child_max_age != null ? Number(avail.child_max_age) : null,
+      has_transportation: avail.has_transportation ? 1 : 0,
+      transportation_description: avail.transportation_description || null,
       dates: datesPayload,
+      inclusions: (content.inclusions || []).map((x: InclusionItem) => x.text),
+      exclusions: (content.exclusions || []).map((x: InclusionItem) => x.text),
+      faqs: (content.faqs || []) as FaqItem[],
+      markup_type: basics.markup_type || null,
+      markup_value:
+        basics.markup_value != null && basics.markup_value !== ''
+          ? Number(basics.markup_value)
+          : null,
+      // Refund rules only when supplier marked the activity refundable.
+      refund_rules:
+        content.isRefundable === 'refundable'
+          ? (content.refund_rules || []).map((r: any) => ({
+              days_before_checkin:
+                r?.days_before_checkin != null ? Number(r.days_before_checkin) : null,
+              percentage: r?.percentage != null ? Number(r.percentage) : null
+            }))
+          : [],
+      // Sync cancellation policy type with the radio so the rest of the app stays consistent.
+      cancellation_policy_type:
+        content.isRefundable === 'refundable'
+          ? basics.cancellation_policy_type === 'non_refundable'
+            ? 'conditional'
+            : basics.cancellation_policy_type
+          : 'non_refundable',
       removed_image_ids: this.removedImageIds
     };
 
-    const coverImage: File | null = raw.cover_image ?? null;
-    const images: File[] = Array.isArray(raw.images) ? raw.images : [];
-
     const form = new FormData();
-    form.append('activity', JSON.stringify(activityPayload));
-    if (coverImage) {
-      form.append('cover_image', coverImage);
-    }
-    images.forEach((img) => {
-      form.append('images[]', img);
-    });
+    form.append('activity', JSON.stringify(payload));
+    if (this.coverImageFile) form.append('cover_image', this.coverImageFile);
+    this.newGalleryFiles.forEach((f) => form.append('images[]', f));
 
     this.isSubmitting = true;
     const url = this.isEditMode
@@ -714,9 +830,7 @@ export class ManageActivityComponent implements OnInit {
         this.snackBar.open(
           `Activity ${this.isEditMode ? 'updated' : 'saved'} successfully`,
           'Close',
-          {
-            duration: 3000
-          }
+          { duration: 3000 }
         );
         this.router.navigate(['/sale/manage-activity']);
       },
@@ -725,9 +839,7 @@ export class ManageActivityComponent implements OnInit {
         this.snackBar.open(
           `Failed to ${this.isEditMode ? 'update' : 'save'} activity`,
           'Close',
-          {
-            duration: 3000
-          }
+          { duration: 3000 }
         );
       }
     });

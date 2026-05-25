@@ -38,6 +38,7 @@ export class BookingCancellationComponent implements OnInit {
   orderDetails: any = null;
   flightDetails: any = null;
   hotelDetails: any = null;
+  activityDetails: any = null;
   loading: boolean = true;
   submitting: boolean = false;
   error: string = '';
@@ -91,6 +92,29 @@ export class BookingCancellationComponent implements OnInit {
   }
 
   private buildFareRulesMessage(): string {
+    if (this.isActivityType) {
+      const rules = this.getActivityRefundRules();
+      if (!rules || rules.length === 0) {
+        return 'No refund rules available for this activity.<br/>Are you sure you want to submit cancellation request?';
+      }
+      let html =
+        '<table style="width:100%;border-collapse:collapse;margin-top:8px;border:1px solid #000;">' +
+        '<thead><tr>' +
+        '<th style="text-align:left;padding:4px;border:1px solid #000;">Days Before Activity</th>' +
+        '<th style="text-align:left;padding:4px;border:1px solid #000;">Penalty Amount (₹)</th>' +
+        '<th style="text-align:left;padding:4px;border:1px solid #000;">Percentage (%)</th>' +
+        '</tr></thead><tbody>';
+      rules.forEach((r: any) => {
+        const days = r?.days_before_checkin ?? '-';
+        const amt = r?.amount ?? 0;
+        const pct = r?.percentage ?? '-';
+        html += `<tr><td style="padding:4px;border:1px solid #000;">${days}</td><td style="padding:4px;border:1px solid #000;">${amt}</td><td style="padding:4px;border:1px solid #000;">${pct}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      html +=
+        '<div style="margin-top:12px;">Are you sure you want to submit cancellation request with these refund rules?</div>';
+      return html;
+    }
     if (this.isHotelType) {
       const rules = this.getHotelRefundRules();
       if (!rules || rules.length === 0) {
@@ -172,6 +196,8 @@ export class BookingCancellationComponent implements OnInit {
           this.fetchFlightDetails(order.type_id);
         } else if (order?.type === 'hotel' && order?.type_id) {
           this.fetchHotelDetails(order.type_id);
+        } else if (order?.type === 'activity' && order?.type_id) {
+          this.fetchActivityDetails(order.type_id);
         } else if (order?.type === 'external_flight' && order?.external_id) {
           this.fetchExternalFlightDetails(order.external_id);
         } else {
@@ -209,6 +235,19 @@ export class BookingCancellationComponent implements OnInit {
       },
       error: () => {
         this.error = 'Failed to load hotel details';
+        this.loading = false;
+      }
+    });
+  }
+
+  private fetchActivityDetails(typeId: number) {
+    this.http.get(`${environment.apiUrl}/activities/${typeId}`).subscribe({
+      next: (res: any) => {
+        this.activityDetails = res?.data ?? res;
+        this.loading = false;
+      },
+      error: () => {
+        this.activityDetails = null;
         this.loading = false;
       }
     });
@@ -268,7 +307,7 @@ export class BookingCancellationComponent implements OnInit {
     this.cancelStatusMap = {};
 
     const orderType = String(this.orderDetails?.type || '').toLowerCase();
-    const isItinerary = orderType === 'itinerary';
+    const usesDetailOnly = orderType === 'itinerary' || orderType === 'activity';
 
     this.cancelRequests.forEach((r: any) => {
       if (Array.isArray(r.details)) {
@@ -278,7 +317,7 @@ export class BookingCancellationComponent implements OnInit {
 
           if (!orderDetailId) return;
 
-          if (isItinerary) {
+          if (usesDetailOnly) {
             segmentId = 0;
           } else {
             if (!segmentId) return;
@@ -355,6 +394,10 @@ export class BookingCancellationComponent implements OnInit {
     const t = String(this.orderDetails?.type || '').toLowerCase();
     if (t === 'itinerary') {
       this.submitItineraryCancellationRequests();
+      return;
+    }
+    if (t === 'activity') {
+      this.submitActivityCancellationRequests();
       return;
     }
     const pairs = this.getSelectedPairs();
@@ -588,5 +631,92 @@ export class BookingCancellationComponent implements OnInit {
           alert('Failed to submit cancellation request for passenger');
         }
       });
+  }
+
+  get isActivityType(): boolean {
+    return String(this.orderDetails?.type || '').toLowerCase() === 'activity';
+  }
+
+  private getActivityRefundRules(): any[] {
+    const rules = this.activityDetails?.refund_rules;
+    return Array.isArray(rules) ? rules : [];
+  }
+
+  canCancelActivityPassenger(t: any): boolean {
+    if (!this.isOrderOwner || !this.isActivityType) {
+      return false;
+    }
+    const detailId = Number(t?.id || 0);
+    if (detailId && this.isCancellationRequested(0, detailId)) {
+      return false;
+    }
+    const code = Number(t?.status ?? t?.status_id ?? 0);
+    // 4 = cancelled, 11 = requested. Other codes: allow.
+    if (code === 4 || code === 11) {
+      return false;
+    }
+    const raw = t?.status_name ?? '';
+    const s = String(raw).toLowerCase();
+    if (s.includes('cancel') || s.includes('request')) {
+      return false;
+    }
+    return true;
+  }
+
+  private submitActivityCancellationRequests(): void {
+    if (!this.orderDetails?.id) {
+      alert('Missing order ID');
+      return;
+    }
+    const pairs = this.getSelectedPairs();
+    if (!pairs.length) {
+      alert('Please select at least one passenger to cancel');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Confirm Cancellation Request',
+        message: this.buildFareRulesMessage(),
+        confirmText: 'Submit Cancellation',
+        cancelText: 'Close'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+      this.submitting = true;
+      const requests = pairs.map((p) => {
+        const detailId = p.orderDetailId;
+        const payload: any = { order_id: this.orderDetails.id };
+        if (detailId) {
+          payload.order_detail_id = detailId;
+          payload.detail_id = detailId;
+        }
+        return this.http.post(
+          `${environment.apiUrl}/orders/cancel-request`,
+          payload
+        );
+      });
+      forkJoin(requests).subscribe({
+        next: () => {
+          this.submitting = false;
+          alert('Cancellation request submitted');
+          this.router.navigate([
+            '/payment-confirmation',
+            this.orderDetails.id
+          ]);
+        },
+        error: (err: any) => {
+          this.submitting = false;
+          const msg =
+            err?.error?.message ||
+            'Failed to submit cancellation request';
+          alert(msg);
+        }
+      });
+    });
   }
 }

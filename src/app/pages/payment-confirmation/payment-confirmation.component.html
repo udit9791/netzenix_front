@@ -287,6 +287,151 @@
           </div>
       </div>
 
+      <!-- Activity Details Section -->
+      <div class="p-4 border-b" *ngIf="orderDetails?.type === 'activity'">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold">Activity Details</h2>
+        </div>
+
+        <!-- Activity header (image + title + location + meta) -->
+        <div class="bg-gray-50 p-4 rounded mb-4" *ngIf="activityDetails?.activity">
+          <div class="flex flex-col md:flex-row gap-4">
+            <div class="w-full md:w-1/3" *ngIf="activityDetails?.activity?.cover_image">
+              <img
+                [src]="fullImgUrl(activityDetails.activity.cover_image)"
+                [alt]="activityDetails.activity.title"
+                class="w-full h-40 object-cover rounded"
+              />
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-gray-500 mb-1">ACTIVITY</p>
+              <p class="font-semibold text-lg mb-2">{{ activityDetails.activity.title }}</p>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div *ngIf="activityDetails.activity.duration_minutes">
+                  <p class="text-xs text-gray-500">DURATION</p>
+                  <p class="font-semibold">
+                    {{ activityDetails.activity.duration_minutes }} min
+                  </p>
+                </div>
+                <div *ngIf="activityDetails.activity.language">
+                  <p class="text-xs text-gray-500">LANGUAGE</p>
+                  <p class="font-semibold">{{ activityDetails.activity.language }}</p>
+                </div>
+                <div *ngIf="activityDetails.activity.confirmation_type">
+                  <p class="text-xs text-gray-500">CONFIRMATION</p>
+                  <p class="font-semibold capitalize">
+                    {{ activityDetails.activity.confirmation_type }}
+                  </p>
+                </div>
+                <div *ngIf="activityDetails.activity.voucher_type">
+                  <p class="text-xs text-gray-500">VOUCHER</p>
+                  <p class="font-semibold capitalize">
+                    {{ activityDetails.activity.voucher_type }}
+                  </p>
+                </div>
+                <div *ngIf="activityDetails.activity.meeting_point">
+                  <p class="text-xs text-gray-500">MEETING POINT</p>
+                  <p class="font-semibold">{{ activityDetails.activity.meeting_point }}</p>
+                </div>
+                <div *ngIf="activityDetails.activity.cancellation_policy_type">
+                  <p class="text-xs text-gray-500">CANCELLATION POLICY</p>
+                  <p class="font-semibold capitalize">
+                    {{ activityDetails.activity.cancellation_policy_type.split('_').join(' ') }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-3" *ngIf="activityDetails.activity.short_description">
+                <p class="text-xs text-gray-500 mb-1">HIGHLIGHTS</p>
+                <p class="text-sm whitespace-pre-line">
+                  {{ activityDetails.activity.short_description }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booked items (per cart line) -->
+        <div class="bg-gray-50 p-4 rounded mb-4" *ngIf="additionalData?.items?.length">
+          <h3 class="text-md font-semibold mb-3">Booked Activity Item(s)</h3>
+          <div
+            *ngFor="let item of additionalData.items; let i = index"
+            class="mb-3 border border-gray-200 rounded p-3 last:mb-0 bg-white"
+          >
+            <p class="text-sm font-semibold mb-1">
+              {{ item.title || activityDetails?.activity?.title || 'Activity' }}
+            </p>
+            <p class="text-xs text-gray-500 mb-1">
+              <span class="font-semibold">Date:</span> {{ item.date }}
+              <span *ngIf="item.start_time">
+                • <span class="font-semibold">Slot:</span>
+                {{ item.start_time?.substring(0, 5) }}-{{ item.end_time?.substring(0, 5) }}
+              </span>
+            </p>
+            <p class="text-xs text-gray-500 mb-1">
+              <span class="font-semibold">Adults:</span> {{ item.adults }}
+              <span *ngIf="item.children">
+                • <span class="font-semibold">Children:</span> {{ item.children }}
+              </span>
+            </p>
+            <p class="text-xs text-gray-500" *ngIf="item.adult_price != null || item.child_price != null">
+              <span *ngIf="item.adult_price != null">
+                Adult unit: <span class="font-semibold">₹ {{ item.adult_price }}</span>
+              </span>
+              <span *ngIf="item.adult_price != null && item.child_price != null"> • </span>
+              <span *ngIf="item.child_price != null">
+                Child unit: <span class="font-semibold">₹ {{ item.child_price }}</span>
+              </span>
+            </p>
+            <p class="text-xs text-gray-500" *ngIf="item.total_price != null">
+              <span class="font-semibold">Item total:</span> ₹ {{ item.total_price }}
+            </p>
+            <p class="text-xs text-amber-700 mt-1" *ngIf="item.confirmation_type === 'request'">
+              Requires supplier confirmation
+            </p>
+          </div>
+        </div>
+
+        <!-- What to expect / good to know -->
+        <div class="bg-gray-50 p-4 rounded mb-4"
+          *ngIf="activityDetails?.activity?.description || activityDetails?.activity?.good_to_know">
+          <div *ngIf="activityDetails?.activity?.description" class="mb-3">
+            <p class="text-xs text-gray-500 mb-1">WHAT TO EXPECT</p>
+            <p class="text-sm whitespace-pre-line">{{ activityDetails.activity.description }}</p>
+          </div>
+          <div *ngIf="activityDetails?.activity?.good_to_know">
+            <p class="text-xs text-gray-500 mb-1">GOOD TO KNOW</p>
+            <p class="text-sm whitespace-pre-line">{{ activityDetails.activity.good_to_know }}</p>
+          </div>
+        </div>
+
+        <!-- Inclusions / Exclusions -->
+        <div class="bg-gray-50 p-4 rounded mb-4"
+          *ngIf="activityDetails?.inclusions?.length || activityDetails?.exclusions?.length">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div *ngIf="activityDetails?.inclusions?.length">
+              <p class="text-sm font-semibold mb-2 text-green-700">Included</p>
+              <ul class="text-sm space-y-1">
+                <li *ngFor="let inc of activityDetails.inclusions" class="flex items-start gap-1">
+                  <span class="text-green-600">✓</span>
+                  <span>{{ inc.text }}</span>
+                </li>
+              </ul>
+            </div>
+            <div *ngIf="activityDetails?.exclusions?.length">
+              <p class="text-sm font-semibold mb-2 text-red-700">Not included</p>
+              <ul class="text-sm space-y-1">
+                <li *ngFor="let exc of activityDetails.exclusions" class="flex items-start gap-1">
+                  <span class="text-red-600">✗</span>
+                  <span>{{ exc.text }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Hotel Details Section -->
       <div class="p-4 border-b" *ngIf="orderDetails?.type === 'hotel'">
         <div class="flex justify-between items-center mb-2">
@@ -587,7 +732,10 @@
         </div>
 
         <!-- Multiple Barcodes Display for each flight in flight_inventory_details -->
-        <div *ngIf="flightDetails?.details?.length > 0" class="mb-4 p-4 bg-gray-50 rounded">
+        <div
+          *ngIf="(orderDetails?.type === 'flight' || orderDetails?.type === 'external_flight') && flightDetails?.details?.length > 0"
+          class="mb-4 p-4 bg-gray-50 rounded">
+
           <div *ngFor="let detail of flightDetails?.details; let i = index" class="mb-4 pb-4" [ngClass]="{'border-b border-gray-200': i < flightDetails.details.length - 1}">
             <p class="text-sm font-semibold mb-1">Barcode(s) for your journey {{ detail?.from }}-{{ detail?.to }} on {{ detail?.airline }}</p>
             <p class="text-xs text-gray-600 mb-2" *ngIf="detail?.pnr">
@@ -669,6 +817,15 @@
             (click)="openBookingCancellation()"
           >
             Cancel Itinerary Booking
+          </button>
+          <button
+            mat-flat-button
+            color="warn"
+            class="text-xs ml-2"
+            *ngIf="canShowActivityCancelBooking()"
+            (click)="openBookingCancellation()"
+          >
+            Cancel Activity Booking
           </button>
           <button
             *ngIf="

@@ -17,6 +17,7 @@ import {
 } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ActivityCartService } from '../../core/services/activity-cart.service';
 
 @Component({
   selector: 'vex-payment-confirmation',
@@ -69,6 +70,7 @@ export class PaymentConfirmationComponent implements OnInit {
   cancelTarget: { traveler: any; index: number } | null = null;
 
   itineraryDetail: any = null;
+  activityDetails: any = null;
 
   get hasInstallmentSchedule(): boolean {
     const d = this.orderDetails;
@@ -208,8 +210,20 @@ export class PaymentConfirmationComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private fb: FormBuilder,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private activityCartService: ActivityCartService
   ) {}
+
+  private clearActivityCartIfPaid(): void {
+    const t = String(this.orderDetails?.type || '').toLowerCase();
+    if (t !== 'activity') return;
+    const status = Number(this.orderDetails?.status);
+    // Statuses 0 and 7 represent "Pending Payment". Anything else means
+    // the order has progressed past payment — safe to drop local cart.
+    if (status !== 0 && status !== 7) {
+      this.activityCartService.clear();
+    }
+  }
 
   ngOnInit() {
     this.currentUserId = this.getCurrentUserId();
@@ -386,6 +400,66 @@ export class PaymentConfirmationComponent implements OnInit {
     return html;
   }
 
+  private getActivityEarliestDate(): Date | null {
+    try {
+      const items = this.additionalData?.items;
+      if (!Array.isArray(items) || items.length === 0) return null;
+      let earliest: Date | null = null;
+      for (const it of items) {
+        const ds = it?.date;
+        if (!ds) continue;
+        const d = new Date(ds);
+        if (isNaN(d.getTime())) continue;
+        if (earliest === null || d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+      return earliest;
+    } catch {
+      return null;
+    }
+  }
+
+  private buildActivityRefundRulesMessage(): string {
+    const rules: any[] = Array.isArray(this.activityDetails?.refund_rules)
+      ? this.activityDetails.refund_rules
+      : [];
+    if (!rules.length) {
+      return 'No refund rules available for this activity.<br/>Are you sure you want to proceed to cancellation?';
+    }
+    const tripDate = this.getActivityEarliestDate();
+    let html =
+      '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">' +
+      '<thead><tr>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Date</th>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Days Before Activity</th>' +
+      '<th style="text-align:left;padding:4px 10px;border-bottom:1px solid #ddd;">Penalty (%)</th>' +
+      '</tr></thead><tbody>';
+    rules.forEach((r: any) => {
+      const daysRaw = r?.days_before_checkin;
+      const days =
+        typeof daysRaw === 'number'
+          ? daysRaw
+          : daysRaw != null
+            ? Number(daysRaw)
+            : 0;
+      let dateText = '-';
+      if (tripDate && !isNaN(days)) {
+        const d = new Date(tripDate);
+        d.setDate(d.getDate() - days);
+        dateText = d.toLocaleDateString('en-IN');
+      } else if (!isNaN(days)) {
+        dateText = `${days} days before activity`;
+      }
+      const pct = r?.percentage ?? '-';
+      html += `<tr><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${dateText}</td><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${days}</td><td style="padding:4px 10px;border-bottom:1px solid #f0f0f0;">${pct}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    html +=
+      '<div style="margin-top:12px;">Are you sure you want to proceed to cancellation with these penalty rules?</div>';
+    return html;
+  }
+
   private getItineraryVehicleById(id: number): any {
     const list =
       this.itineraryDetail && Array.isArray(this.itineraryDetail.vehicles)
@@ -477,6 +551,10 @@ export class PaymentConfirmationComponent implements OnInit {
             }
           } else if (this.orderDetails.type === 'itinerary') {
             this.fetchItineraryDetailForOrder();
+          } else if (this.orderDetails.type === 'activity') {
+            if (this.orderDetails.type_id) {
+              this.fetchActivityDetails(this.orderDetails.type_id);
+            }
           } else {
             if (this.orderDetails.type_id) {
               this.fetchFlightDetails(this.orderDetails.type_id);
@@ -490,6 +568,9 @@ export class PaymentConfirmationComponent implements OnInit {
 
           // Initialize passenger update form if required
           this.initPassengerUpdateFormIfNeeded();
+
+          // Activity cart should only be cleared after payment has succeeded.
+          this.clearActivityCartIfPaid();
         } else {
           // Handle direct response format
           console.log('Direct response format');
@@ -514,6 +595,10 @@ export class PaymentConfirmationComponent implements OnInit {
             }
           } else if (this.orderDetails.type === 'itinerary') {
             this.fetchItineraryDetailForOrder();
+          } else if (this.orderDetails.type === 'activity') {
+            if (this.orderDetails.type_id) {
+              this.fetchActivityDetails(this.orderDetails.type_id);
+            }
           } else {
             if (this.orderDetails.type_id) {
               this.fetchFlightDetails(this.orderDetails.type_id);
@@ -527,6 +612,9 @@ export class PaymentConfirmationComponent implements OnInit {
 
           // Initialize passenger update form if required
           this.initPassengerUpdateFormIfNeeded();
+
+          // Activity cart should only be cleared after payment has succeeded.
+          this.clearActivityCartIfPaid();
         }
 
         this.loading = false;
@@ -537,6 +625,19 @@ export class PaymentConfirmationComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  fetchActivityDetails(typeId: number) {
+    this.http
+      .get(`${environment.apiUrl}/activities/${typeId}`)
+      .subscribe({
+        next: (res: any) => {
+          this.activityDetails = res?.data ?? res ?? null;
+        },
+        error: () => {
+          this.activityDetails = null;
+        }
+      });
   }
 
   fetchHotelDetails(typeId: number) {
@@ -1238,6 +1339,21 @@ export class PaymentConfirmationComponent implements OnInit {
     return result;
   }
 
+  canShowActivityCancelBooking(): boolean {
+    const orderType = String(this.orderDetails?.type || '').toLowerCase();
+    if (orderType !== 'activity') {
+      return false;
+    }
+    const orderStatus = this.orderDetails?.status;
+    const condStatusNotBlocked =
+      orderStatus !== 2 &&
+      orderStatus !== 3 &&
+      orderStatus !== 4 &&
+      orderStatus !== 5 &&
+      orderStatus !== 8;
+    return condStatusNotBlocked && this.canManageHoldActions();
+  }
+
   canShowItineraryCancelBooking(): boolean {
     const orderType = String(this.orderDetails?.type || '').toLowerCase();
     if (orderType !== 'itinerary') {
@@ -1384,6 +1500,23 @@ export class PaymentConfirmationComponent implements OnInit {
       const dialogRef = this.dialog.open(ConfirmDialogComponent, {
         data: {
           title: 'Itinerary Cancellation',
+          message,
+          confirmText: 'Proceed',
+          cancelText: 'Close'
+        }
+      });
+      dialogRef.afterClosed().subscribe((confirmed) => {
+        if (confirmed) {
+          this.router.navigate(['/flights/booking-cancellation', id]);
+        }
+      });
+      return;
+    }
+    if (orderType === 'activity') {
+      const message = this.buildActivityRefundRulesMessage();
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Activity Cancellation',
           message,
           confirmText: 'Proceed',
           cancelText: 'Close'

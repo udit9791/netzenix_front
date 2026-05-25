@@ -1,0 +1,81 @@
+<vex-secondary-toolbar current="Activity Bookings">
+  <vex-breadcrumbs [crumbs]="['Sale', 'Activity Bookings']"></vex-breadcrumbs>
+</vex-secondary-toolbar>
+
+<div class="p-6 container-fluid">
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTab">
+    <mat-tab label="Pending"></mat-tab>
+    <mat-tab label="Confirmed"></mat-tab>
+    <mat-tab label="Rejected"></mat-tab>
+    <mat-tab label="All"></mat-tab>
+  </mat-tab-group>
+
+  <mat-progress-bar mode="indeterminate" *ngIf="loading" class="mt-2"></mat-progress-bar>
+
+  <div *ngIf="!loading && !bookings.length" class="text-center py-12 text-gray-500">
+    No bookings found.
+  </div>
+
+  <div class="grid gap-4 mt-4" *ngIf="bookings.length">
+    <mat-card *ngFor="let b of bookings">
+      <mat-card-content class="py-4">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="text-base font-semibold">Booking #{{ b.id }}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full" [ngClass]="statusClass(b.booking_status)">
+                {{ statusLabel(b.booking_status) }}
+              </span>
+              <span class="text-xs text-gray-500 ml-2">{{ b.created_at }}</span>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-1" *ngIf="b.contact">
+              <mat-icon class="text-base align-middle" style="font-size:16px;width:16px;height:16px">person</mat-icon>
+              {{ b.contact.first_name }} {{ b.contact.last_name }}
+              <span class="text-gray-500"> • {{ b.contact_email }} • {{ b.contact_phone }}</span>
+            </div>
+
+            <div class="mt-3 grid gap-2">
+              <div *ngFor="let item of b.items" class="border rounded p-2 text-sm">
+                <div class="font-medium">{{ item.title || ('Activity #' + item.activity_id) }}</div>
+                <div class="text-xs text-gray-600">
+                  <mat-icon class="text-base align-middle" style="font-size:14px;width:14px;height:14px">event</mat-icon>
+                  {{ item.date }}
+                  <span *ngIf="item.start_time">
+                    • {{ item.start_time?.substring(0, 5) }}-{{ item.end_time?.substring(0, 5) }}
+                  </span>
+                  <span class="ml-2">Adults {{ item.adults }}<span *ngIf="item.children"> • Children {{ item.children }}</span></span>
+                  <span *ngIf="item.total_price != null" class="ml-2 font-medium text-primary-600">
+                    ₹ {{ item.total_price }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="b.travelers?.length" class="mt-3 text-xs text-gray-600">
+              <span class="font-medium">Travelers:</span>
+              <span *ngFor="let t of b.travelers; let i = index">
+                {{ i > 0 ? ', ' : ' ' }}
+                {{ t.title }} {{ t.firstName }} {{ t.lastName }} <span class="text-gray-400">({{ t.type }})</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end gap-2 min-w-[160px]">
+            <div class="text-lg font-semibold text-primary-600" *ngIf="b.total_amount != null">
+              ₹ {{ b.total_amount }}
+            </div>
+            <div class="flex gap-2" *ngIf="b.booking_status === 0">
+              <button mat-flat-button color="primary" (click)="confirm(b)">
+                <mat-icon class="mr-1">check</mat-icon> Confirm
+              </button>
+              <button mat-stroked-button color="warn" (click)="reject(b)">
+                <mat-icon class="mr-1">close</mat-icon> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
